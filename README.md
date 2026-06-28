@@ -70,8 +70,12 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 brew install --cask z20240/tap/yabai-dockstack
 ```
 
-Universal (Apple Silicon + Intel). `brew install --cask` also removes the
-quarantine attribute, so the (unsigned) app launches without a Gatekeeper prompt.
+Universal (Apple Silicon + Intel). The app is ad-hoc signed but **not
+Apple-notarized**, so Gatekeeper would normally block it — the cask strips the
+quarantine attribute on install (postflight) so it opens without a prompt. If you
+download the release zip manually instead, run once:
+`xattr -dr com.apple.quarantine /Applications/yabai-dockstack.app` (or System
+Settings → Privacy & Security → **Open Anyway**).
 
 **yabai is required and is NOT installed automatically** (it lives in a third-party
 tap that a cask can't auto-tap). Install and start it:

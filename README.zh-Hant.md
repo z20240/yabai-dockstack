@@ -54,8 +54,11 @@ dock 預覽、視窗切換、選單列、Mission Control 替代</sub>
 brew install --cask z20240/tap/yabai-dockstack
 ```
 
-Universal(Apple Silicon + Intel)。`brew install --cask` 會自動移除 quarantine,
-所以未簽章的 app 也不會跳 Gatekeeper 警告。
+Universal(Apple Silicon + Intel)。app 是 ad-hoc 簽章但**沒有經過 Apple notarize**,
+原本會被 Gatekeeper 擋——cask 會在安裝後(postflight)移除 quarantine,所以不會跳警告。
+若你是手動下載 release zip,請執行一次:
+`xattr -dr com.apple.quarantine /Applications/yabai-dockstack.app`(或系統設定 →
+隱私權與安全性 → **仍要打開**)。
 
 **yabai 是必要的,但不會自動安裝**(它在第三方 tap,cask 無法自動 tap)。請自行安裝並啟動:
 
