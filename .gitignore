@@ -11,3 +11,6 @@ yabai-dockstack-*.zip
 # personal blog drafts (promo, not part of the project)
 docs/blog/
 docs/superpowers/
+
+# local working notes (not public)
+CLAUDE.md
