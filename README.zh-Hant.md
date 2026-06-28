@@ -2,6 +2,11 @@
 
 <img src="assets/banner.png" width="760" alt="yabai-dockstack — macOS 上 yabai 的視覺增強套件" />
 
+[![Release](https://img.shields.io/github/v/release/z20240/yabai-dockstack?label=release)](https://github.com/z20240/yabai-dockstack/releases)
+[![Stars](https://img.shields.io/github/stars/z20240/yabai-dockstack)](https://github.com/z20240/yabai-dockstack/stargazers)
+[![License](https://img.shields.io/github/license/z20240/yabai-dockstack)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
+
 [English](README.md) · 繁體中文
 
 <sub>靈感來自 [stackline](https://github.com/AdamWagner/stackline) 與 DockView ·

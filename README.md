@@ -2,6 +2,11 @@
 
 <img src="assets/banner.png" width="760" alt="yabai-dockstack — visual enhancements for yabai on macOS" />
 
+[![Release](https://img.shields.io/github/v/release/z20240/yabai-dockstack?label=release)](https://github.com/z20240/yabai-dockstack/releases)
+[![Stars](https://img.shields.io/github/stars/z20240/yabai-dockstack)](https://github.com/z20240/yabai-dockstack/stargazers)
+[![License](https://img.shields.io/github/license/z20240/yabai-dockstack)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
+
 English · [繁體中文](README.zh-Hant.md)
 
 <sub>Inspired by [stackline](https://github.com/AdamWagner/stackline) and DockView ·
