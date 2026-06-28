@@ -1,14 +1,32 @@
+<div align="center">
+
+<img src="assets/logo.png" width="160" alt="yabai-dockstack logo" />
+
 # yabai-dockstack
 
-Visualize [yabai](https://github.com/koekeishiya/yabai) window stacks on macOS —
-**without Hammerspoon**. A tiny native menu-bar agent that draws a floating
-indicator next to each window stack so you can tell at a glance which apps are
-in which stack and in what order, and **hover an indicator to see the window's
-title** (e.g. which project each VSCode window is).
+**A native visual enhancement suite for [yabai](https://github.com/koekeishiya/yabai) on macOS** —
+stack indicators, a cross-space window menu, and Dock window previews. No Hammerspoon.
 
-This is a clean Swift rewrite inspired by
-[AdamWagner/stackline](https://github.com/AdamWagner/stackline) (which required
-Hammerspoon). It is **not** a fork.
+English · [繁體中文](README.zh-Hant.md)
+
+<sub>Inspired by [stackline](https://github.com/AdamWagner/stackline) and DockView ·
+keywords: yabai, stackline, dockview, macOS window manager, tiling, stack indicator,
+dock preview, window switcher, menu bar, Mission Control alternative</sub>
+
+</div>
+
+---
+
+`yabai-dockstack` adds the visual layer that yabai lacks:
+
+- **Stack indicators** — a floating indicator next to each window stack so you see, at
+  a glance, which apps are stacked and in what order (inspired by **stackline**).
+- **Cross-space window menu** — every window grouped by Display → Space in the menu
+  bar; click to jump and focus.
+- **Dock window previews** — hover a Dock icon to peek an app's windows across all
+  spaces with thumbnails; click to jump (inspired by **DockView**).
+
+It is a clean Swift rewrite — **not** a fork of stackline (which required Hammerspoon).
 
 ## Features
 

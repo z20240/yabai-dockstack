@@ -60,6 +60,7 @@ n = build_icns(native, "AppIcon-native")
 build_icns(fullbleed, "AppIcon-fullbleed")
 shutil.copyfile(n, os.path.join(ASSETS, "AppIcon.icns"))  # default = native
 native.resize((36, 36), Image.LANCZOS).save(os.path.join(ASSETS, "menubar.png"))
+native.resize((512, 512), Image.LANCZOS).save(os.path.join(ASSETS, "logo.png"))  # for README
 
 pv = Image.new("RGBA", (256 * 2 + 60, 320), (240, 240, 240, 255))
 def place(img, x, label):
