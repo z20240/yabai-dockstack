@@ -19,6 +19,8 @@ public final class SettingsWindowController: NSObject {
     private let backgroundWell = NSColorWell()
     private let confineCheck = NSButton(checkboxWithTitle: "Keep inside window gap (don't cover the app)", target: nil, action: nil)
     private let fullWidthPopup = NSPopUpButton()
+    private let debounceField = NSTextField()
+    private let pollField = NSTextField()
     private let loginCheck = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
 
     public init(config: AppConfig,
@@ -76,6 +78,12 @@ public final class SettingsWindowController: NSObject {
         fullWidthPopup.addItems(withTitles: ["Left", "Right"])
         fullWidthPopup.target = self; fullWidthPopup.action = #selector(changed)
 
+        for f in [debounceField, pollField] {
+            f.alignment = .right
+            f.target = self; f.action = #selector(changed)
+            f.widthAnchor.constraint(equalToConstant: 80).isActive = true
+        }
+
         let grid = NSGridView(views: [
             row("Style:", stylePopup),
             row("Indicator size:", sizeSlider),
@@ -86,6 +94,8 @@ public final class SettingsWindowController: NSObject {
             row("Background color:", backgroundWell),
             [NSGridCell.emptyContentView, confineCheck],
             row("Full-width side:", fullWidthPopup),
+            row("Debounce (ms):", debounceField),
+            row("Poll interval (ms):", pollField),
             [NSGridCell.emptyContentView, loginCheck],
         ])
         grid.translatesAutoresizingMaskIntoConstraints = false
@@ -122,6 +132,8 @@ public final class SettingsWindowController: NSObject {
         backgroundWell.color = NSColor.fromHex(config.backgroundColor, fallback: NSColor(white: 0, alpha: 0.8))
         confineCheck.state = config.confineToGap ? .on : .off
         fullWidthPopup.selectItem(at: config.fullWidthSide == "right" ? 1 : 0)
+        debounceField.integerValue = Int((config.debounceSeconds * 1000).rounded())
+        pollField.integerValue = Int((config.pollSeconds * 1000).rounded())
         loginCheck.state = loginIsEnabled() ? .on : .off
     }
 
@@ -137,6 +149,9 @@ public final class SettingsWindowController: NSObject {
         config.backgroundColor = backgroundWell.color.hexString
         config.confineToGap = confineCheck.state == .on
         config.fullWidthSide = fullWidthPopup.indexOfSelectedItem == 1 ? "right" : "left"
+        // ms -> seconds, with sane floors
+        config.debounceSeconds = max(0.0, Double(debounceField.integerValue) / 1000.0)
+        config.pollSeconds = max(0.2, Double(pollField.integerValue) / 1000.0)
         onChange(config)
     }
 

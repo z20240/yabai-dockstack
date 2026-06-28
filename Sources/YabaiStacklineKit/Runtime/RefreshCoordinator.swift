@@ -1,18 +1,25 @@
 import Foundation
 
 public final class RefreshCoordinator {
-    private let config: AppConfig
+    private var config: AppConfig
     private let client: YabaiClient
     private let onStacks: ([Stack]) -> Void
     private let queue = DispatchQueue(label: "refresh.coordinator")
     private var pending: DispatchWorkItem?
     private var pollTimer: Timer?
+    private var started = false
     private var last: [Stack] = []
 
     public init(config: AppConfig, client: YabaiClient, onStacks: @escaping ([Stack]) -> Void) {
         self.config = config
         self.client = client
         self.onStacks = onStacks
+    }
+
+    /// Apply new timing (debounce / poll). Reschedules the poll timer.
+    public func updateConfig(_ config: AppConfig) {
+        self.config = config
+        if started { schedulePollTimer() }
     }
 
     public func requestRefresh() {
@@ -32,7 +39,13 @@ public final class RefreshCoordinator {
     }
 
     public func start() {
+        started = true
         requestRefresh()
+        schedulePollTimer()
+    }
+
+    private func schedulePollTimer() {
+        pollTimer?.invalidate()
         let timer = Timer(timeInterval: config.pollSeconds, repeats: true) { [weak self] _ in
             self?.requestRefresh()
         }
@@ -41,6 +54,7 @@ public final class RefreshCoordinator {
     }
 
     public func stop() {
+        started = false
         pollTimer?.invalidate()
         pollTimer = nil
         pending?.cancel()

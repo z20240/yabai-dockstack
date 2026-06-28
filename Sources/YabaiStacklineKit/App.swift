@@ -55,14 +55,9 @@ public enum YabaiStackline {
 
         let binaryPath = selfBinaryPath()
         let menu = MenuBarController()
-
-        func refreshMenuStatus() {
-            if client.isAvailable() {
-                menu.setStatus("yabai: connected ✓")
-            } else {
-                menu.setStatus("yabai: not found")
-            }
-        }
+        menu.statusProvider = { client.isAvailable() ? "yabai: connected ✓" : "yabai: not found" }
+        menu.windowListProvider = { WindowMenuModel.build(client.queryWindows()) }
+        menu.onSelectWindow = { id in client.focus(windowId: id) }
 
         // Auto-register yabai signals (idempotent) so the user never edits yabairc.
         func installSignals() {
@@ -78,6 +73,7 @@ public enum YabaiStackline {
                 config = c
                 config.save(to: configPath)
                 renderer.updateConfig(config)
+                coordinator.updateConfig(config)
                 coordinator.requestRefresh()
             },
             onLoginToggle: { enabled in _ = LoginItem.setEnabled(enabled) },
@@ -88,7 +84,6 @@ public enum YabaiStackline {
         menu.onReregisterSignals = {
             installSignals()
             coordinator.requestRefresh()
-            refreshMenuStatus()
         }
 
         // observe display changes
@@ -97,7 +92,6 @@ public enum YabaiStackline {
             object: nil, queue: .main) { _ in coordinator.requestRefresh() }
 
         installSignals()
-        refreshMenuStatus()
         listener.start()
         coordinator.start()
 

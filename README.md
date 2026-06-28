@@ -59,11 +59,14 @@ That's it. On launch the app:
 - **auto-registers** the yabai signals it needs (pointing at its own path), so you
   never edit `~/.yabairc`. This is idempotent — re-running is safe.
 
-The menu-bar menu shows **yabai: connected ✓** when it found yabai, and offers:
+The menu-bar menu shows **yabai: connected ✓** when it found yabai, then a live
+list of every window grouped by **Display → Space** (the focused window is
+checked). Clicking a window jumps to its space and focuses it. It also offers:
 
 - **Settings…** — a window to adjust style (icon/flag), indicator size, focused/
   unfocused opacity, flag color, background pill + color, "keep inside window gap",
-  full-width side, and **Start at login**. Changes apply live and are saved.
+  full-width side, **Debounce (ms)** / **Poll interval (ms)**, and **Start at
+  login**. Changes apply live and are saved.
 - **Re-register yabai signals** — re-applies the signals if yabai was restarted.
 
 > First launch of an unsigned app: macOS Gatekeeper will block it once. Right-click
