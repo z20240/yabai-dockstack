@@ -94,9 +94,14 @@ falls back to its default. All keys:
   "focusedAlpha": 1.0,
   "unfocusedAlpha": 0.4,
   "debounceSeconds": 0.3,
-  "pollSeconds": 3.0
+  "pollSeconds": 3.0,
+  "fullWidthSide": "left"
 }
 ```
+
+- `fullWidthSide`: which edge the indicator goes to for a near-full-width window
+  (≥90% of the screen), where there's no clear left/right bias. `"left"` (default)
+  or `"right"`. Narrower windows still follow their on-screen position.
 
 - `style`: `"icon"` or `"flag"`. The menu-bar "Toggle icon/flag" item flips this
   and writes it back to the config file.

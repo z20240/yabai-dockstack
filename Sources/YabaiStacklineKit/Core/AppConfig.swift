@@ -12,13 +12,16 @@ public struct AppConfig: Codable, Equatable {
     public var unfocusedAlpha: Double
     public var debounceSeconds: Double
     public var pollSeconds: Double
+    /// Which edge a near-full-width window's indicator defaults to: "left" or "right".
+    public var fullWidthSide: String
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
         socketPath: "/tmp/yabai-stackline.sock",
         style: .icon, cellSize: 32, offset: 4,
         focusedAlpha: 1.0, unfocusedAlpha: 0.4,
-        debounceSeconds: 0.3, pollSeconds: 3.0)
+        debounceSeconds: 0.3, pollSeconds: 3.0,
+        fullWidthSide: "left")
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

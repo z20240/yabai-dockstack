@@ -7,11 +7,19 @@ public struct IndicatorPlacement: Equatable {
 
 public enum IndicatorLayout {
     public static func place(stackFrame: YRect, screenFrame: YRect,
-                             cellSize: Double, count: Int, offset: Double) -> IndicatorPlacement {
+                             cellSize: Double, count: Int, offset: Double,
+                             fullWidthSide: IndicatorSide = .left,
+                             fullWidthThreshold: Double = 0.9) -> IndicatorPlacement {
         let h = cellSize * Double(max(count, 1))
         let stackCenterX = stackFrame.x + stackFrame.w / 2
         let screenCenterX = screenFrame.x + screenFrame.w / 2
-        let side: IndicatorSide = stackCenterX < screenCenterX ? .left : .right
+
+        // A near-full-width window has no clear left/right bias — use the
+        // configured default side instead of the position heuristic.
+        let nearFullWidth = stackFrame.w >= screenFrame.w * fullWidthThreshold
+        let side: IndicatorSide = nearFullWidth
+            ? fullWidthSide
+            : (stackCenterX < screenCenterX ? .left : .right)
 
         var x: Double
         switch side {

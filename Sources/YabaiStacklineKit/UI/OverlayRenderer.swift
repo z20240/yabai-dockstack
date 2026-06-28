@@ -32,7 +32,8 @@ public final class OverlayRenderer {
 
             let placement = IndicatorLayout.place(
                 stackFrame: stack.frame, screenFrame: screen.yabaiFrame,
-                cellSize: config.cellSize, count: stack.windows.count, offset: config.offset)
+                cellSize: config.cellSize, count: stack.windows.count, offset: config.offset,
+                fullWidthSide: config.fullWidthSide == "right" ? .right : .left)
             let cocoa = CoordinateMapper.toCocoa(placement.panel, primaryHeight: primaryH)
 
             if let panel = panels[stack.key] {

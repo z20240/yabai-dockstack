@@ -27,4 +27,26 @@ final class IndicatorLayoutTests: XCTestCase {
         let p = IndicatorLayout.place(stackFrame: stack, screenFrame: screen, cellSize: 32, count: 1, offset: 4)
         XCTAssertGreaterThanOrEqual(p.panel.x, screen.x)
     }
+
+    func testFullWidthDefaultsToLeft() {
+        let stack = YRect(x: 0, y: 50, w: 1600, h: 800)  // full width, center == screen center
+        let p = IndicatorLayout.place(stackFrame: stack, screenFrame: screen, cellSize: 32, count: 2, offset: 4)
+        XCTAssertEqual(p.side, .left)
+        XCTAssertGreaterThanOrEqual(p.panel.x, screen.x)
+    }
+
+    func testFullWidthCanBeConfiguredRight() {
+        let stack = YRect(x: 0, y: 50, w: 1600, h: 800)
+        let p = IndicatorLayout.place(stackFrame: stack, screenFrame: screen, cellSize: 32, count: 2, offset: 4,
+                                      fullWidthSide: .right)
+        XCTAssertEqual(p.side, .right)
+    }
+
+    func testNonFullWidthStillUsesPositionHeuristic() {
+        // a right-half window must still go right even with fullWidthSide = left
+        let stack = YRect(x: 900, y: 50, w: 600, h: 800)
+        let p = IndicatorLayout.place(stackFrame: stack, screenFrame: screen, cellSize: 32, count: 1, offset: 4,
+                                      fullWidthSide: .left)
+        XCTAssertEqual(p.side, .right)
+    }
 }
