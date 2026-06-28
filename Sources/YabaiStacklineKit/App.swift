@@ -3,6 +3,12 @@ import AppKit
 public enum YabaiStackline {
     public static func versionString() -> String { "yabai-stackline 0.1.0" }
 
+    /// Absolute path to the running binary — used as the yabai signal action target.
+    private static func selfBinaryPath() -> String {
+        let raw = Bundle.main.executablePath ?? CommandLine.arguments[0]
+        return (raw as NSString).standardizingPath
+    }
+
     public static func main() {
         let args = CommandLine.arguments
         let configPath = "~/.config/yabai-stackline/config.json"
@@ -16,7 +22,11 @@ public enum YabaiStackline {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)  // LSUIElement-equivalent at runtime
 
-        let client = YabaiClient(yabaiPath: config.yabaiPath)
+        // Auto-detect yabai: a valid configured path wins, otherwise search.
+        let resolvedYabai = YabaiLocator.resolve(configuredPath: config.yabaiPath) ?? config.yabaiPath
+        config.yabaiPath = resolvedYabai
+        let client = YabaiClient(yabaiPath: resolvedYabai)
+
         let renderer = OverlayRenderer(config: config)
         renderer.onClickWindow = { id in client.focus(windowId: id) }
 
@@ -37,12 +47,31 @@ public enum YabaiStackline {
             coordinator.requestRefresh()
         }
 
+        let binaryPath = selfBinaryPath()
         let menu = MenuBarController()
+
+        func refreshMenuStatus() {
+            if client.isAvailable() {
+                menu.setStatus("yabai: connected ✓")
+            } else {
+                menu.setStatus("yabai: not found")
+            }
+            menu.setLoginItemChecked(LoginItem.isEnabled)
+        }
+
+        // Auto-register yabai signals (idempotent) so the user never edits yabairc.
+        func installSignals() {
+            guard client.isAvailable() else { return }
+            SignalInstaller.install(client: client, appBinaryPath: binaryPath)
+        }
+
         menu.onQuit = { listener.stop(); coordinator.stop(); app.terminate(nil) }
         menu.onReload = {
             config = AppConfig.loadFromFile(configPath)
+            config.yabaiPath = resolvedYabai
             renderer.updateConfig(config)
             coordinator.requestRefresh()
+            refreshMenuStatus()
         }
         menu.onToggleStyle = {
             config.style = (config.style == .icon) ? .flag : .icon
@@ -50,12 +79,23 @@ public enum YabaiStackline {
             renderer.updateConfig(config)
             coordinator.requestRefresh()
         }
+        menu.onReregisterSignals = {
+            installSignals()
+            coordinator.requestRefresh()
+            refreshMenuStatus()
+        }
+        menu.onToggleLoginItem = {
+            _ = LoginItem.setEnabled(!LoginItem.isEnabled)
+            menu.setLoginItemChecked(LoginItem.isEnabled)
+        }
 
         // observe display changes
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main) { _ in coordinator.requestRefresh() }
 
+        installSignals()
+        refreshMenuStatus()
         listener.start()
         coordinator.start()
         _ = menu  // retain

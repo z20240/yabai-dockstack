@@ -73,6 +73,20 @@ check(RefreshDiff.shouldRedraw(old: [st("k", [1, 2], true)], new: [st("k", [1, 2
 check(RefreshDiff.shouldRedraw(old: [st("k", [1, 2], true)], new: [st("k", [1, 2], false)]) == true, "focus change")
 check(RefreshDiff.shouldRedraw(old: [st("k", [1, 2], true)], new: [st("k", [1, 2, 3], true)]) == true, "membership change")
 
+print("YabaiLocator")
+check(YabaiLocator.detect(candidates: ["/no/a", "/no/b"], exists: { _ in false }) == nil,
+      "no candidate exists -> nil")
+check(YabaiLocator.detect(candidates: ["/no/a", "/yes/b", "/yes/c"],
+                          exists: { $0.hasPrefix("/yes") }) == "/yes/b",
+      "returns first existing candidate")
+
+print("SignalInstaller")
+let specs = SignalInstaller.specs(appBinaryPath: "/Apps/yst.app/Contents/MacOS/yst")
+check(specs.count == SignalInstaller.events.count, "one spec per event")
+check(specs.first?.label == "yabai-stackline-window_focused", "label derived from event")
+check(specs.first?.action == "\"/Apps/yst.app/Contents/MacOS/yst\" --refresh",
+      "action quotes binary path and adds --refresh")
+
 // Socket round-trip: start a listener, send a poke, confirm the callback fires.
 print("Socket round-trip")
 do {
@@ -102,6 +116,21 @@ if CommandLine.arguments.count > 1 {
     print("  info: \(liveStacks.count) stack(s) detected")
     for s in liveStacks {
         print("    stack \(s.key): \(s.windows.map { "\($0.app)#\($0.stackIndex)" }.joined(separator: ", "))")
+    }
+}
+
+// Live signal install/uninstall against the real yabai (with cleanup).
+// Run: swift run yst-selftest --live-signals
+if CommandLine.arguments.contains("--live-signals") {
+    print("Live signal install/uninstall")
+    if let yabai = YabaiLocator.detect() {
+        let client = YabaiClient(yabaiPath: yabai)
+        SignalInstaller.install(client: client, appBinaryPath: "/tmp/yst-selftest-binary")
+        check(SignalInstaller.isInstalled(client: client), "signals registered with real yabai")
+        SignalInstaller.uninstall(client: client)
+        check(!SignalInstaller.isInstalled(client: client), "signals cleaned up")
+    } else {
+        print("  skip: yabai not found")
     }
 }
 

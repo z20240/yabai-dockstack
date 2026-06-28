@@ -47,30 +47,37 @@ to the binary inside it.
 > shipped with Command Line Tools). A toolchain-independent check is available
 > via `swift run yst-selftest` (see Testing).
 
-## Install
-
-### 1. Tell yabai to poke the app on window events
-
-Edit `examples/yabairc-signals.sh` so `BIN` points at the built binary, then add
-its contents to your `~/.yabairc` (or source the script from there). It registers
-yabai signals that call `yabai-stackline --refresh` — a one-liner that pokes the
-running app over a Unix socket. After editing `~/.yabairc`:
+## Install (zero manual config)
 
 ```sh
-yabai --restart-service
+open yabai-stackline.app
 ```
 
-### 2. Auto-start at login (optional)
+That's it. On launch the app:
 
-Edit `examples/com.yabai-stackline.agent.plist`, replacing
-`REPLACE_WITH_ABSOLUTE_PATH` with the absolute path to the built binary, then:
+- **auto-detects** the yabai binary (Homebrew Apple Silicon / Intel / nix, then `which`);
+- **auto-registers** the yabai signals it needs (pointing at its own path), so you
+  never edit `~/.yabairc`. This is idempotent — re-running is safe.
 
-```sh
-cp examples/com.yabai-stackline.agent.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.yabai-stackline.agent.plist
-```
+The menu-bar `▦` menu shows **yabai: connected ✓** when it found yabai, and offers:
 
-Or just `open yabai-stackline.app` to run it once.
+- **Start at login** — one-click toggle (uses `SMAppService`; no manual LaunchAgent).
+- **Re-register yabai signals** — re-applies the signals if yabai was restarted.
+
+> First launch of an unsigned app: macOS Gatekeeper will block it once. Right-click
+> the app → **Open**, or run `xattr -dr com.apple.quarantine yabai-stackline.app`.
+> To remove this step entirely you'd need an Apple Developer ID signature +
+> notarization.
+
+> Move `yabai-stackline.app` to `/Applications` before enabling **Start at login**
+> so the login item points at a stable location.
+
+### Manual setup (optional / fallback)
+
+If you prefer to manage signals yourself (e.g. persisted in your dotfiles), the
+legacy helpers are still provided: `examples/yabairc-signals.sh` (set `BIN`, source
+from `~/.yabairc`) and `examples/com.yabai-stackline.agent.plist` (a LaunchAgent).
+You don't need these for the default flow.
 
 ## Configuration
 
@@ -142,9 +149,10 @@ Accessibility permission.
 ## Acceptance checklist
 
 1. `./scripts/bundle.sh` produces `yabai-stackline.app`.
-2. `open yabai-stackline.app` → a `▦` item appears in the menu bar.
-3. Add the yabai signals and restart yabai.
-4. Create a stack: `yabai -m window --stack next`.
+2. `open yabai-stackline.app` → a `▦` item appears in the menu bar; the menu shows
+   **yabai: connected ✓** (signals were auto-registered — verify with
+   `yabai -m signal --list | grep yabai-stackline`).
+3. Create a stack: `yabai -m window --stack next`.
 5. Icons appear beside the stacked window, top→bottom in stack order; the focused
    window's icon is brightest.
 6. Hover an icon → a tooltip shows that window's title (multiple VSCode windows
