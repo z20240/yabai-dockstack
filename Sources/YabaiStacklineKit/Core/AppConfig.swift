@@ -19,6 +19,11 @@ public struct AppConfig: Codable, Equatable {
     public var edgeInset: Double
     /// Flag-mode bar color as "#RRGGBB" (or "#RRGGBBAA").
     public var flagColor: String
+    /// Draw a rounded backing pill behind the indicators so they read as a
+    /// floating chip (helps when overlapping a full-width window).
+    public var showBackground: Bool
+    /// Backing pill color as "#RRGGBB" / "#RRGGBBAA".
+    public var backgroundColor: String
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
@@ -28,7 +33,9 @@ public struct AppConfig: Codable, Equatable {
         debounceSeconds: 0.05, pollSeconds: 3.0,
         fullWidthSide: "left",
         edgeInset: 6,
-        flagColor: "#4C8DFF")
+        flagColor: "#4C8DFF",
+        showBackground: true,
+        backgroundColor: "#1E1E1ECC")
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

@@ -107,6 +107,13 @@ falls back to its default. All keys:
 - `edgeInset`: extra pixels to keep the indicator off the very screen edge when it
   would otherwise clamp there (so it doesn't sit on a window's rounded corner).
 - `flagColor`: flag-mode bar color, `"#RRGGBB"` or `"#RRGGBBAA"`.
+- `showBackground`: draw a rounded backing pill behind the indicators so they read
+  as a floating chip (helpful over full-width windows). `true`/`false`.
+- `backgroundColor`: backing pill color, `"#RRGGBB"` / `"#RRGGBBAA"`.
+
+The config file is created automatically on first launch at
+`~/.config/yabai-stackline/config.json`. Edit it, then choose **Reload config**
+from the menu bar.
 - `debounceSeconds`: lower = snappier focus highlight, higher = fewer redraws
   during window drags.
 

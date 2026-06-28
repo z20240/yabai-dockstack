@@ -28,12 +28,27 @@ public final class IndicatorView: NSView {
         let cell = config.cellSize
         let flagColor = NSColor.fromHex(config.flagColor, fallback: .systemBlue)
 
-        // Drop shadow so indicators stand out over whatever window is behind them.
+        // Drop shadow so the indicator stands out over whatever window is behind it.
         let shadow = NSShadow()
         shadow.shadowColor = NSColor.black.withAlphaComponent(0.55)
         shadow.shadowOffset = NSSize(width: 0, height: -1)
-        shadow.shadowBlurRadius = 3
-        shadow.set()
+        shadow.shadowBlurRadius = 4
+
+        // Backing pill: makes the indicator read as a deliberate floating chip
+        // rather than icons pressed onto the app. It carries the shadow; the
+        // cells are then drawn on top without their own shadow.
+        if config.showBackground {
+            NSGraphicsContext.saveGraphicsState()
+            shadow.set()
+            let bg = NSColor.fromHex(config.backgroundColor,
+                                     fallback: NSColor(white: 0, alpha: 0.8))
+            bg.setFill()
+            NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1),
+                         xRadius: 8, yRadius: 8).fill()
+            NSGraphicsContext.restoreGraphicsState()
+        } else {
+            shadow.set()
+        }
 
         for (i, win) in stack.windows.enumerated() {
             // top→bottom: index 0 at top

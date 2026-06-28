@@ -40,6 +40,12 @@ public enum YabaiStackline {
             return
         }
 
+        // Write a default config file on first run so it's discoverable/editable.
+        let expandedConfig = (configPath as NSString).expandingTildeInPath
+        if !FileManager.default.fileExists(atPath: expandedConfig) {
+            config.save(to: configPath)
+        }
+
         let coordinator = RefreshCoordinator(config: config, client: client) { stacks in
             renderer.update(stacks)
         }
