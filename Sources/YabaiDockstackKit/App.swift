@@ -65,6 +65,10 @@ public enum YabaiDockstack {
             WindowMenuModel.build(client.queryWindows(), spaceLabels: client.querySpaceLabels())
         }
         menu.onSelectWindow = { id in client.focus(windowId: id) }
+        menu.permissionWarning = {
+            (config.dockPreview && !PermissionsHelper.allGranted)
+                ? "⚠️ Grant permissions for Dock previews…" : nil
+        }
 
         // Auto-register yabai signals (idempotent) so the user never edits yabairc.
         func installSignals() {

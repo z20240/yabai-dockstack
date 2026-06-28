@@ -29,6 +29,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let axButton = NSButton(title: "Grant…", target: nil, action: nil)
     private let srStatus = NSTextField(labelWithString: "")
     private let srButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private let permissionBanner = NSView()
     private var permTimer: Timer?
 
     /// Set by the app: trigger the request + open the right System Settings pane.
@@ -83,6 +84,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         srStatus.stringValue = sr ? "✓ granted" : "✗ not granted"
         srStatus.textColor = sr ? .systemGreen : .systemRed
         srButton.isEnabled = !sr
+        permissionBanner.isHidden = (ax && sr) || !config.dockPreview
     }
 
     // MARK: - Build
@@ -157,20 +159,43 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         grid.columnSpacing = 12
         grid.rowSpacing = 12
 
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
+        // Prominent warning banner, shown only when a required permission is missing.
+        permissionBanner.wantsLayer = true
+        permissionBanner.layer?.backgroundColor = NSColor.systemYellow.withAlphaComponent(0.22).cgColor
+        permissionBanner.layer?.cornerRadius = 8
+        let bannerLabel = NSTextField(wrappingLabelWithString:
+            "⚠️  Dock window previews are off until you grant Accessibility + Screen Recording — use the Grant… buttons below.")
+        bannerLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        bannerLabel.translatesAutoresizingMaskIntoConstraints = false
+        permissionBanner.addSubview(bannerLabel)
+        NSLayoutConstraint.activate([
+            bannerLabel.leadingAnchor.constraint(equalTo: permissionBanner.leadingAnchor, constant: 12),
+            bannerLabel.trailingAnchor.constraint(equalTo: permissionBanner.trailingAnchor, constant: -12),
+            bannerLabel.topAnchor.constraint(equalTo: permissionBanner.topAnchor, constant: 8),
+            bannerLabel.bottomAnchor.constraint(equalTo: permissionBanner.bottomAnchor, constant: -8),
+        ])
+
+        let stack = NSStackView(views: [permissionBanner, grid])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 14
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 420),
                            styleMask: [.titled, .closable],
                            backing: .buffered, defer: false)
         win.title = "yabai-dockstack Settings"
         win.isReleasedWhenClosed = false
         win.delegate = self
         let content = NSView()
-        content.addSubview(grid)
+        content.addSubview(stack)
         win.contentView = content
         NSLayoutConstraint.activate([
-            grid.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
-            grid.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
-            grid.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            grid.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
+            permissionBanner.widthAnchor.constraint(equalTo: grid.widthAnchor),
             sizeSlider.widthAnchor.constraint(equalToConstant: 200),
         ])
         window = win

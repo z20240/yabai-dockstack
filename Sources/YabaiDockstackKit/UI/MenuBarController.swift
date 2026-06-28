@@ -10,6 +10,8 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
     public var onSelectWindow: ((Int) -> Void)?
     public var statusProvider: (() -> String)?
     public var windowListProvider: (() -> [WindowMenuModel.DisplayGroup])?
+    /// Non-nil → show a prominent warning item (e.g. permissions missing).
+    public var permissionWarning: (() -> String?)?
 
     public override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -53,6 +55,17 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         let status = NSMenuItem(title: statusProvider?() ?? "yabai: …", action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
+
+        if let warning = permissionWarning?() {
+            let warn = NSMenuItem(title: warning, action: #selector(settingsAction), keyEquivalent: "")
+            warn.target = self
+            warn.attributedTitle = NSAttributedString(string: warning, attributes: [
+                .foregroundColor: NSColor.systemOrange,
+                .font: NSFont.menuFont(ofSize: 0),
+            ])
+            menu.addItem(warn)
+        }
+
         menu.addItem(.separator())
 
         let groups = windowListProvider?() ?? []
