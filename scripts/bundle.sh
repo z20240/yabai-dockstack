@@ -10,5 +10,8 @@ cp scripts/Info.plist.template "$APP/Contents/Info.plist"
 # App icon (default: native/padded). Swap to assets/AppIcon-fullbleed.icns if preferred.
 [ -f assets/AppIcon.icns ] && cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 [ -f assets/menubar.png ] && cp assets/menubar.png "$APP/Contents/Resources/menubar.png"
+# Ad-hoc code sign so macOS lets the Accessibility/Screen-Recording toggles stick
+# (fully-unsigned apps often can't be granted reliably). Sign last (after Info.plist).
+codesign --force --deep --sign - --identifier com.yabai-dockstack.agent "$APP"
 echo "Built $APP"
 echo "Absolute path: $(pwd)/$APP/Contents/MacOS/yabai-dockstack"

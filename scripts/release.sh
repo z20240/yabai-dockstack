@@ -21,6 +21,9 @@ cp scripts/Info.plist.template "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
 
+# Ad-hoc sign (after Info.plist edits) so TCC toggles stick for users.
+codesign --force --deep --sign - --identifier com.yabai-dockstack.agent "$APP"
+
 ZIP="yabai-dockstack-$VERSION.zip"
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
