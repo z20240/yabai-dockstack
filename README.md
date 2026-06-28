@@ -186,6 +186,23 @@ Accessibility permission.
 9. On a second display, indicators appear correctly placed on that screen.
 10. LaunchAgent makes it start at login.
 
+## Dock window previews
+
+Hover a **Dock app icon** to pop up that app's windows across all spaces; click one
+to jump to its space and focus it (like a Windows-taskbar peek / DockView).
+
+- **Thumbnails:** a live thumbnail is shown for windows on a currently-visible
+  space. For windows on **other spaces** macOS cannot produce a live image
+  (verified: ScreenCaptureKit returns `-3811` for off-screen windows), so the app
+  shows the **last cached thumbnail** (captured while the window was on-screen) or,
+  if none, the **app icon + title**. Either way the entry is clickable.
+- **Permissions:** this feature needs **Accessibility** (to detect the hovered
+  Dock icon) and **Screen Recording** (to capture thumbnails). You'll be prompted
+  on first enable; grant both in System Settings → Privacy & Security. If a
+  permission is missing the feature stays dormant — the core stack indicators need
+  no permissions at all.
+- **Toggle:** Settings → **Dock window previews** (on by default).
+
 ## App icon
 
 The icon lives in `assets/`. Two variants are generated from

@@ -21,6 +21,7 @@ public final class SettingsWindowController: NSObject {
     private let fullWidthPopup = NSPopUpButton()
     private let debounceField = NSTextField()
     private let pollField = NSTextField()
+    private let dockPreviewCheck = NSButton(checkboxWithTitle: "Dock window previews (needs Accessibility + Screen Recording)", target: nil, action: nil)
     private let loginCheck = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
 
     public init(config: AppConfig,
@@ -73,6 +74,7 @@ public final class SettingsWindowController: NSObject {
         backgroundWell.target = self; backgroundWell.action = #selector(changed)
         backgroundCheck.target = self; backgroundCheck.action = #selector(changed)
         confineCheck.target = self; confineCheck.action = #selector(changed)
+        dockPreviewCheck.target = self; dockPreviewCheck.action = #selector(changed)
         loginCheck.target = self; loginCheck.action = #selector(loginChanged)
 
         fullWidthPopup.addItems(withTitles: ["Left", "Right"])
@@ -93,6 +95,7 @@ public final class SettingsWindowController: NSObject {
             [NSGridCell.emptyContentView, backgroundCheck],
             row("Background color:", backgroundWell),
             [NSGridCell.emptyContentView, confineCheck],
+            [NSGridCell.emptyContentView, dockPreviewCheck],
             row("Full-width side:", fullWidthPopup),
             row("Debounce (ms):", debounceField),
             row("Poll interval (ms):", pollField),
@@ -131,6 +134,7 @@ public final class SettingsWindowController: NSObject {
         backgroundCheck.state = config.showBackground ? .on : .off
         backgroundWell.color = NSColor.fromHex(config.backgroundColor, fallback: NSColor(white: 0, alpha: 0.8))
         confineCheck.state = config.confineToGap ? .on : .off
+        dockPreviewCheck.state = config.dockPreview ? .on : .off
         fullWidthPopup.selectItem(at: config.fullWidthSide == "right" ? 1 : 0)
         debounceField.integerValue = Int((config.debounceSeconds * 1000).rounded())
         pollField.integerValue = Int((config.pollSeconds * 1000).rounded())
@@ -148,6 +152,7 @@ public final class SettingsWindowController: NSObject {
         config.showBackground = backgroundCheck.state == .on
         config.backgroundColor = backgroundWell.color.hexString
         config.confineToGap = confineCheck.state == .on
+        config.dockPreview = dockPreviewCheck.state == .on
         config.fullWidthSide = fullWidthPopup.indexOfSelectedItem == 1 ? "right" : "left"
         // ms -> seconds, with sane floors
         config.debounceSeconds = max(0.0, Double(debounceField.integerValue) / 1000.0)

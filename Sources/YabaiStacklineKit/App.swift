@@ -80,6 +80,14 @@ public enum YabaiStackline {
                 renderer.updateConfig(config)
                 coordinator.updateConfig(config)
                 coordinator.requestRefresh()
+                if config.dockPreview && dockController == nil {
+                    if !PermissionsHelper.hasScreenRecording() { PermissionsHelper.requestScreenRecording() }
+                    if !PermissionsHelper.hasAccessibility() { PermissionsHelper.requestAccessibility() }
+                    let dc = DockPreviewController(client: client, cache: thumbCache)
+                    dc.start(); dockController = dc
+                } else if !config.dockPreview, let dc = dockController {
+                    dc.stop(); dockController = nil
+                }
             },
             onLoginToggle: { enabled in _ = LoginItem.setEnabled(enabled) },
             loginIsEnabled: { LoginItem.isEnabled })
