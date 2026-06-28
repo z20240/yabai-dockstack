@@ -41,7 +41,10 @@ dock 預覽、視窗切換、選單列、Mission Control 替代</sub>
 ## 需求
 
 - macOS 14+
-- [yabai](https://github.com/koekeishiya/yabai) 已安裝並執行中
+- **[yabai](https://github.com/koekeishiya/yabai) —— 必要。** yabai-dockstack 是 yabai 的
+  輔助工具,沒有 yabai 就**完全無法運作**:所有功能都靠 `yabai -m query` 取得視窗/stack
+  狀態。沒有 yabai 時選單列只會顯示 **「yabai: not found」**。yabai 必須**安裝、執行中、
+  且設定到能建立 stack**(請參考 yabai 的安裝/設定說明)。
 
 ## 安裝
 
@@ -52,11 +55,18 @@ brew install --cask z20240/tap/yabai-dockstack
 ```
 
 Universal(Apple Silicon + Intel)。`brew install --cask` 會自動移除 quarantine,
-所以未簽章的 app 也不會跳 Gatekeeper 警告。接著開啟:
+所以未簽章的 app 也不會跳 Gatekeeper 警告。
+
+cask 已把 yabai 宣告為相依,所以 Homebrew 會**順便幫你裝 yabai**——但你仍需自己
+**啟動並設定** yabai:
 
 ```sh
+brew services start yabai      # 啟動 yabai(完整設定見其官方文件)
 open -a yabai-dockstack
 ```
+
+若選單顯示 **「yabai: not found」**,代表 yabai 不在預期路徑或沒在跑——把它啟動,
+或到 **Settings → yabai path** 指定路徑。
 
 ### 從原始碼建置
 

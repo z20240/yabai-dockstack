@@ -56,7 +56,11 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 ## Requirements
 
 - macOS 14+
-- [yabai](https://github.com/koekeishiya/yabai) installed and running.
+- **[yabai](https://github.com/koekeishiya/yabai) — required.** yabai-dockstack is a
+  companion for yabai and does nothing on its own: every feature reads window/stack
+  state from `yabai -m query`. Without it the menu bar just shows
+  **"yabai: not found"**. yabai must be installed, **running**, and set up enough to
+  create stacks (see yabai's install/configuration guide).
 
 ## Install
 
@@ -68,11 +72,17 @@ brew install --cask z20240/tap/yabai-dockstack
 
 Universal (Apple Silicon + Intel). `brew install --cask` also removes the
 quarantine attribute, so the (unsigned) app launches without a Gatekeeper prompt.
-Then launch it:
+
+The cask declares yabai as a dependency, so Homebrew installs it for you — but you
+still need to **start and configure** yabai:
 
 ```sh
+brew services start yabai      # start yabai (see its docs for full setup)
 open -a yabai-dockstack
 ```
+
+If the menu shows **"yabai: not found"**, yabai isn't on the expected path or isn't
+running — start it, or set the path in **Settings → yabai path**.
 
 ### Build from source
 
