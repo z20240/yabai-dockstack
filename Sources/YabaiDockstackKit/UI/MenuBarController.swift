@@ -12,6 +12,9 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
     public var windowListProvider: (() -> [WindowMenuModel.DisplayGroup])?
     /// Non-nil → show a prominent warning item (e.g. permissions missing).
     public var permissionWarning: (() -> String?)?
+    /// True → show a prominent "yabai not found — set up…" item.
+    public var yabaiMissing: (() -> Bool)?
+    public var onOpenYabaiSetup: (() -> Void)?
 
     public override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -55,6 +58,16 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         let status = NSMenuItem(title: statusProvider?() ?? "yabai: …", action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
+
+        if yabaiMissing?() == true {
+            let item = NSMenuItem(title: "⚠️ yabai not found — set up…",
+                                  action: #selector(yabaiSetupAction), keyEquivalent: "")
+            item.target = self
+            item.attributedTitle = NSAttributedString(
+                string: "⚠️ yabai not found — set up…",
+                attributes: [.foregroundColor: NSColor.systemRed, .font: NSFont.menuFont(ofSize: 0)])
+            menu.addItem(item)
+        }
 
         if let warning = permissionWarning?() {
             let warn = NSMenuItem(title: warning, action: #selector(settingsAction), keyEquivalent: "")
@@ -114,6 +127,7 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         if let id = sender.representedObject as? Int { onSelectWindow?(id) }
     }
     @objc private func settingsAction() { onOpenSettings?() }
+    @objc private func yabaiSetupAction() { onOpenYabaiSetup?() }
     @objc private func reregisterAction() { onReregisterSignals?() }
     @objc private func quitAction() { onQuit?() }
 }

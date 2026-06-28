@@ -81,8 +81,9 @@ brew services start yabai      # start yabai (see its docs for full setup)
 open -a yabai-dockstack
 ```
 
-If the menu shows **"yabai: not found"**, yabai isn't on the expected path or isn't
-running — start it, or set the path in **Settings → yabai path**.
+If yabai isn't found on launch, the app shows a **setup guide** (Install yabai via
+Terminal · Open install guide · Set yabai path) and a red **"yabai not found — set
+up…"** item in the menu bar. It starts working automatically once yabai is running.
 
 ### Build from source
 

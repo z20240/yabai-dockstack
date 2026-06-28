@@ -69,6 +69,9 @@ public enum YabaiDockstack {
             (config.dockPreview && !PermissionsHelper.allGranted)
                 ? "⚠️ Grant permissions for Dock previews…" : nil
         }
+        menu.yabaiMissing = { !client.isAvailable() }
+
+        let yabaiGuide = YabaiSetupGuide()
 
         // Auto-register yabai signals (idempotent) so the user never edits yabairc.
         func installSignals() {
@@ -120,8 +123,10 @@ public enum YabaiDockstack {
             PermissionsHelper.openScreenRecordingSettings()
         }
 
+        yabaiGuide.onSetPath = { settings.show() }
         menu.onQuit = { listener.stop(); coordinator.stop(); app.terminate(nil) }
         menu.onOpenSettings = { settings.show() }
+        menu.onOpenYabaiSetup = { yabaiGuide.show() }
         menu.onReregisterSignals = {
             installSignals()
             coordinator.requestRefresh()
@@ -133,11 +138,15 @@ public enum YabaiDockstack {
             object: nil, queue: .main) { _ in coordinator.requestRefresh() }
 
         ensureDockController()
-        // First-run guidance: if previews are on but permissions are missing, open
-        // Settings so the user can grant them deliberately (one button each),
-        // instead of firing two system prompts that collide.
-        if config.dockPreview && !PermissionsHelper.allGranted {
-            settings.show()
+        // First-run guidance (deferred so the run loop is active for the modal).
+        // yabai missing is the priority — nothing works without it. Otherwise, if
+        // previews are on but permissions are missing, open Settings to grant them.
+        DispatchQueue.main.async {
+            if !client.isAvailable() {
+                yabaiGuide.show()
+            } else if config.dockPreview && !PermissionsHelper.allGranted {
+                settings.show()
+            }
         }
 
         installSignals()

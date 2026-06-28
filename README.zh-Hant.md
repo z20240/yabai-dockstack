@@ -65,8 +65,9 @@ brew services start yabai      # 啟動 yabai(完整設定見其官方文件)
 open -a yabai-dockstack
 ```
 
-若選單顯示 **「yabai: not found」**,代表 yabai 不在預期路徑或沒在跑——把它啟動,
-或到 **Settings → yabai path** 指定路徑。
+若啟動時找不到 yabai,app 會跳出**設定導引**(用 Terminal 安裝 yabai · 開啟安裝說明 ·
+設定 yabai 路徑),選單列也會出現紅色 **「yabai not found — set up…」**。yabai 一旦
+啟動,功能會自動開始運作。
 
 ### 從原始碼建置
 
