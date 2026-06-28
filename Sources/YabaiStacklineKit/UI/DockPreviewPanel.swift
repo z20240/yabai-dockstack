@@ -17,6 +17,10 @@ public struct PreviewItem {
 public final class DockPreviewPanel {
     private var panel: NSPanel?
     private var onClick: ((Int) -> Void)?
+    /// Called when the cursor enters/leaves the panel, so the controller can keep
+    /// it alive while the user moves onto it to click a thumbnail.
+    public var onMouseEnter: (() -> Void)?
+    public var onMouseExit: (() -> Void)?
 
     public init() {}
     public var isVisible: Bool { panel?.isVisible ?? false }
@@ -40,7 +44,9 @@ public final class DockPreviewPanel {
         let p = panel ?? makePanel()
         p.setFrame(frame, display: true)
 
-        let content = FlippedView(frame: CGRect(origin: .zero, size: frame.size))
+        let content = TrackingView(frame: CGRect(origin: .zero, size: frame.size))
+        content.onEnter = { [weak self] in self?.onMouseEnter?() }
+        content.onExit = { [weak self] in self?.onMouseExit?() }
         content.wantsLayer = true
         content.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.85).cgColor
         content.layer?.cornerRadius = 10
@@ -69,7 +75,21 @@ public final class DockPreviewPanel {
     }
 }
 
-final class FlippedView: NSView { override var isFlipped: Bool { true } }
+final class TrackingView: NSView {
+    var onEnter: (() -> Void)?
+    var onExit: (() -> Void)?
+    override var isFlipped: Bool { true }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds,
+                                       options: [.mouseEnteredAndExited, .activeAlways],
+                                       owner: self, userInfo: nil))
+    }
+    override func mouseEntered(with event: NSEvent) { onEnter?() }
+    override func mouseExited(with event: NSEvent) { onExit?() }
+}
 
 final class PreviewCell: NSView {
     private let windowID: Int

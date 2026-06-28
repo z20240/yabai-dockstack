@@ -18,6 +18,10 @@ public final class DockPreviewController {
 
     public func start() {
         guard PermissionsHelper.hasAccessibility() else { return }
+        // Moving the cursor onto the panel keeps it open (the global mouse monitor
+        // doesn't see events over our own panel, so the panel reports them itself).
+        panel.onMouseEnter = { [weak self] in self?.hideWork?.cancel() }
+        panel.onMouseExit = { [weak self] in self?.scheduleHide() }
         let w = DockWatcher { [weak self] hover in self?.handle(hover) }
         w.start()
         watcher = w
