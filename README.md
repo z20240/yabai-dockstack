@@ -73,11 +73,13 @@ brew install --cask z20240/tap/yabai-dockstack
 Universal (Apple Silicon + Intel). `brew install --cask` also removes the
 quarantine attribute, so the (unsigned) app launches without a Gatekeeper prompt.
 
-The cask declares yabai as a dependency, so Homebrew installs it for you — but you
-still need to **start and configure** yabai:
+**yabai is required and is NOT installed automatically** (it lives in a third-party
+tap that a cask can't auto-tap). Install and start it:
 
 ```sh
-brew services start yabai      # start yabai (see its docs for full setup)
+brew tap koekeishiya/formulae
+brew install yabai
+yabai --start-service          # see yabai's docs for full setup (incl. SIP)
 open -a yabai-dockstack
 ```
 

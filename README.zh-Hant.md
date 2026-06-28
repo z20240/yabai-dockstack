@@ -57,11 +57,12 @@ brew install --cask z20240/tap/yabai-dockstack
 Universal(Apple Silicon + Intel)。`brew install --cask` 會自動移除 quarantine,
 所以未簽章的 app 也不會跳 Gatekeeper 警告。
 
-cask 已把 yabai 宣告為相依,所以 Homebrew 會**順便幫你裝 yabai**——但你仍需自己
-**啟動並設定** yabai:
+**yabai 是必要的,但不會自動安裝**(它在第三方 tap,cask 無法自動 tap)。請自行安裝並啟動:
 
 ```sh
-brew services start yabai      # 啟動 yabai(完整設定見其官方文件)
+brew tap koekeishiya/formulae
+brew install yabai
+yabai --start-service          # 完整設定(含 SIP)見 yabai 官方文件
 open -a yabai-dockstack
 ```
 
