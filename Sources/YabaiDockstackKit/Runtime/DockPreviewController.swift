@@ -66,12 +66,33 @@ public final class DockPreviewController {
         }
     }
 
+    private var bundleIDCache: [Int: String] = [:]
+    private func bundleID(pid: Int) -> String? {
+        if let c = bundleIDCache[pid] { return c }
+        let b = NSRunningApplication(processIdentifier: pid_t(pid))?.bundleIdentifier
+        if let b { bundleIDCache[pid] = b }
+        return b
+    }
+
+    /// Windows belonging to the hovered Dock app. Prefer bundle-id matching (robust
+    /// across display-name vs yabai-app-name mismatches like "Visual Studio Code"
+    /// vs "Code"); fall back to app-name matching.
+    private func windows(for hover: DockHover) -> [YabaiWindow] {
+        let all = client.queryWindows()
+        if let bid = hover.bundleID {
+            let matched = all.filter { bundleID(pid: $0.pid) == bid }
+                .sorted { ($0.space, $0.stackIndex, $0.id) < ($1.space, $1.stackIndex, $1.id) }
+            if !matched.isEmpty { return matched }
+        }
+        return AppWindowGrouper.windows(of: hover.appTitle, in: all)
+    }
+
     private func handle(_ hover: DockHover?) {
         // hover == nil (cursor left Dock items) is ignored here; the keep-timer
         // decides when to hide based on the cursor's position.
         guard let hover else { return }
 
-        let wins = AppWindowGrouper.windows(of: hover.appTitle, in: client.queryWindows())
+        let wins = windows(for: hover)
         guard !wins.isEmpty else { hidePanel(); return }
 
         iconFrame = hover.iconFrame

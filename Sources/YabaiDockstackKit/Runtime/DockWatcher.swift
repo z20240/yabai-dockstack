@@ -3,6 +3,7 @@ import ApplicationServices
 
 public struct DockHover: Equatable {
     public let appTitle: String
+    public let bundleID: String?   // from the Dock item's AXURL; preferred for matching
     public let iconFrame: CGRect   // Cocoa screen coords (bottom-left origin)
 }
 
@@ -64,7 +65,15 @@ public final class DockWatcher {
         let cocoa = CGRect(x: pos.x, y: screenH - pos.y - size.height,
                            width: size.width, height: size.height)
 
-        onHover(DockHover(appTitle: title, iconFrame: cocoa))
+        // The Dock item's AXURL points at the .app bundle — use it to get a stable
+        // bundle id (the title is a display name that may not match yabai's app name,
+        // e.g. Dock "Visual Studio Code" vs yabai "Code").
+        var urlRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(el, "AXURL" as CFString, &urlRef)
+        var bundleID: String?
+        if let nsurl = urlRef as? NSURL { bundleID = Bundle(url: nsurl as URL)?.bundleIdentifier }
+
+        onHover(DockHover(appTitle: title, bundleID: bundleID, iconFrame: cocoa))
     }
 
     private func reportNil() {
