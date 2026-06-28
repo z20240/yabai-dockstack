@@ -77,13 +77,15 @@ final class FlippedView: NSView { override var isFlipped: Bool { true } }
 final class PreviewCell: NSView {
     private let windowID: Int
     private let onClick: (Int) -> Void
+    private static let idleBG = NSColor.white.withAlphaComponent(0.06).cgColor
+    private static let hoverBG = NSColor.white.withAlphaComponent(0.20).cgColor
 
     init(frame: NSRect, item: PreviewItem, onClick: @escaping (Int) -> Void) {
         self.windowID = item.windowID
         self.onClick = onClick
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+        layer?.backgroundColor = Self.idleBG
         layer?.cornerRadius = 6
 
         let imgView = NSImageView(frame: NSRect(x: 6, y: 24, width: frame.width - 12, height: frame.height - 30))
@@ -101,5 +103,18 @@ final class PreviewCell: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds,
+                                       options: [.mouseEnteredAndExited, .activeAlways],
+                                       owner: self, userInfo: nil))
+        // If the cursor is already inside when the cell is (re)built, show hover.
+        if let w = window, bounds.contains(convert(w.mouseLocationOutsideOfEventStream, from: nil)) {
+            layer?.backgroundColor = Self.hoverBG
+        }
+    }
+    override func mouseEntered(with event: NSEvent) { layer?.backgroundColor = Self.hoverBG }
+    override func mouseExited(with event: NSEvent) { layer?.backgroundColor = Self.idleBG }
     override func mouseDown(with event: NSEvent) { onClick(windowID) }
 }
