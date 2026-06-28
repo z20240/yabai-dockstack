@@ -100,6 +100,19 @@ public enum YabaiStackline {
         refreshMenuStatus()
         listener.start()
         coordinator.start()
+
+        // Self-heal: yabai's CLI-registered signals are wiped whenever yabai
+        // restarts. Periodically re-add ours if they've gone missing, so the
+        // instant event path keeps working without a relaunch.
+        let signalHealth = Timer(timeInterval: 5, repeats: true) { _ in
+            guard client.isAvailable() else { return }
+            if !SignalInstaller.isInstalled(client: client) {
+                installSignals()
+                coordinator.requestRefresh()
+            }
+        }
+        RunLoop.main.add(signalHealth, forMode: .common)
+
         _ = menu  // retain
         app.run()
     }
