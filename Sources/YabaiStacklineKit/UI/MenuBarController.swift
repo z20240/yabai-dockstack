@@ -13,7 +13,13 @@ public final class MenuBarController {
 
     public init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "▦"
+        if let path = Bundle.main.url(forResource: "menubar", withExtension: "png"),
+           let img = NSImage(contentsOf: path) {
+            img.size = NSSize(width: 18, height: 18)
+            statusItem.button?.image = img
+        } else {
+            statusItem.button?.title = "▦"
+        }
 
         // All stored properties must be initialized before `self` is used.
         statusInfoItem = NSMenuItem(title: "yabai: …", action: nil, keyEquivalent: "")

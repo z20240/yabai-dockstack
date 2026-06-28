@@ -162,6 +162,26 @@ Accessibility permission.
 9. On a second display, indicators appear correctly placed on that screen.
 10. LaunchAgent makes it start at login.
 
+## App icon
+
+The icon lives in `assets/`. Two variants are generated from
+`assets/icon-source.png`:
+
+- `AppIcon-native.icns` — content padded on a transparent canvas with rounded
+  corners (macOS HIG style). **This is the bundled default** (`AppIcon.icns`).
+- `AppIcon-fullbleed.icns` — the source as-is, square corners.
+
+See `assets/icon-preview.png` for a side-by-side. To switch the bundled icon to
+full-bleed, copy `assets/AppIcon-fullbleed.icns` over `assets/AppIcon.icns` and
+rebuild. To regenerate everything after editing the source:
+
+```sh
+python3 scripts/make-icons.py   # requires Pillow + macOS iconutil
+```
+
+> Note: the name/logo use "yabai". This is an **unofficial** community tool and is
+> not affiliated with the yabai project.
+
 ## License
 
 MIT.
