@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" width="160" alt="yabai-dockstack logo" />
-
-# yabai-dockstack
-
-**macOS 上 [yabai](https://github.com/koekeishiya/yabai) 的原生視覺增強套件** —— stack 指示器、跨 space 視窗選單、Dock 視窗預覽。不需要 Hammerspoon。
+<img src="assets/banner.png" width="760" alt="yabai-dockstack — macOS 上 yabai 的視覺增強套件" />
 
 [English](README.md) · 繁體中文
 

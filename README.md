@@ -1,11 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" width="160" alt="yabai-dockstack logo" />
-
-# yabai-dockstack
-
-**A native visual enhancement suite for [yabai](https://github.com/koekeishiya/yabai) on macOS** —
-stack indicators, a cross-space window menu, and Dock window previews. No Hammerspoon.
+<img src="assets/banner.png" width="760" alt="yabai-dockstack — visual enhancements for yabai on macOS" />
 
 English · [繁體中文](README.zh-Hant.md)
 
