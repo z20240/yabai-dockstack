@@ -20,6 +20,24 @@ dock 預覽、視窗切換、選單列、Mission Control 替代</sub>
 
 這是用 Swift 重寫的乾淨版本,**不是** stackline 的 fork(stackline 需要 Hammerspoon)。
 
+## Demo
+
+**Stack 指示器** —— 一眼看出哪些 app 疊在一起、在哪裡。
+
+<img src="assets/demo-stack-indicators.gif" width="760" alt="stack 指示器 demo" />
+
+**跨 space 視窗選單** —— 所有視窗依 Display → Space 分組,點一下跳轉。
+
+<img src="assets/demo-window-menu.gif" width="760" alt="跨 space 視窗選單 demo" />
+
+**跨 space 跳轉聚焦** —— 一鍵跳到該視窗所在的 space。
+
+<img src="assets/demo-jump-focus.gif" width="760" alt="跳轉聚焦 demo" />
+
+**Dock 視窗預覽** —— 滑鼠移到 Dock 圖示偏看該 app 的視窗,點一下跳轉。
+
+<img src="assets/demo-dock-previews.gif" width="760" alt="Dock 視窗預覽 demo" />
+
 ## 需求
 
 - macOS 14+

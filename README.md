@@ -23,6 +23,24 @@ dock preview, window switcher, menu bar, Mission Control alternative</sub>
 
 It is a clean Swift rewrite — **not** a fork of stackline (which required Hammerspoon).
 
+## Demo
+
+**Stack indicators** — see at a glance which apps are stacked and where.
+
+<img src="assets/demo-stack-indicators.gif" width="760" alt="stack indicators demo" />
+
+**Cross-space window menu** — every window grouped by Display → Space; click to jump.
+
+<img src="assets/demo-window-menu.gif" width="760" alt="cross-space window menu demo" />
+
+**Jump & focus across spaces** — one click brings you to the window's space.
+
+<img src="assets/demo-jump-focus.gif" width="760" alt="jump and focus demo" />
+
+**Dock window previews** — hover a Dock icon to peek an app's windows; click to jump.
+
+<img src="assets/demo-dock-previews.gif" width="760" alt="dock window previews demo" />
+
 ## Features
 
 - 🚦 One floating indicator per stack, placed at the window's outer screen edge.
