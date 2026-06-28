@@ -1,4 +1,4 @@
-# yabai-stackline
+# yabai-dockstack
 
 Visualize [yabai](https://github.com/koekeishiya/yabai) window stacks on macOS —
 **without Hammerspoon**. A tiny native menu-bar agent that draws a floating
@@ -34,7 +34,7 @@ Hammerspoon). It is **not** a fork.
 ./scripts/bundle.sh
 ```
 
-This produces `yabai-stackline.app` in the repo root and prints the absolute path
+This produces `yabai-dockstack.app` in the repo root and prints the absolute path
 to the binary inside it.
 
 > **Toolchain note.** The app builds with either full Xcode or the standalone
@@ -50,7 +50,7 @@ to the binary inside it.
 ## Install (zero manual config)
 
 ```sh
-open yabai-stackline.app
+open yabai-dockstack.app
 ```
 
 That's it. On launch the app:
@@ -70,29 +70,29 @@ checked). Clicking a window jumps to its space and focuses it. It also offers:
 - **Re-register yabai signals** — re-applies the signals if yabai was restarted.
 
 > First launch of an unsigned app: macOS Gatekeeper will block it once. Right-click
-> the app → **Open**, or run `xattr -dr com.apple.quarantine yabai-stackline.app`.
+> the app → **Open**, or run `xattr -dr com.apple.quarantine yabai-dockstack.app`.
 > To remove this step entirely you'd need an Apple Developer ID signature +
 > notarization.
 
-> Move `yabai-stackline.app` to `/Applications` before enabling **Start at login**
+> Move `yabai-dockstack.app` to `/Applications` before enabling **Start at login**
 > so the login item points at a stable location.
 
 ### Manual setup (optional / fallback)
 
 If you prefer to manage signals yourself (e.g. persisted in your dotfiles), the
 legacy helpers are still provided: `examples/yabairc-signals.sh` (set `BIN`, source
-from `~/.yabairc`) and `examples/com.yabai-stackline.agent.plist` (a LaunchAgent).
+from `~/.yabairc`) and `examples/com.yabai-dockstack.agent.plist` (a LaunchAgent).
 You don't need these for the default flow.
 
 ## Configuration
 
-Optional config file at `~/.config/yabai-stackline/config.json`. Any omitted key
+Optional config file at `~/.config/yabai-dockstack/config.json`. Any omitted key
 falls back to its default. All keys:
 
 ```json
 {
   "yabaiPath": "/opt/homebrew/bin/yabai",
-  "socketPath": "/tmp/yabai-stackline.sock",
+  "socketPath": "/tmp/yabai-dockstack.sock",
   "style": "icon",
   "cellSize": 32,
   "offset": 4,
@@ -118,7 +118,7 @@ falls back to its default. All keys:
 
 Most of these are adjustable from **Settings…** in the menu bar (no file editing
 needed). The config file is still created automatically on first launch at
-`~/.config/yabai-stackline/config.json` for anyone who prefers editing by hand.
+`~/.config/yabai-dockstack/config.json` for anyone who prefers editing by hand.
 - `debounceSeconds`: lower = snappier focus highlight, higher = fewer redraws
   during window drags.
 
@@ -133,7 +133,7 @@ Use **Reload config** in the menu after editing the file by hand.
 ## How it works
 
 ```
-yabai window event ──▶ ~/.yabairc signal runs: yabai-stackline --refresh
+yabai window event ──▶ ~/.yabairc signal runs: yabai-dockstack --refresh
                                                     │ (pokes unix socket)
                                                     ▼
                        SignalListener ──▶ RefreshCoordinator (debounced)
@@ -167,15 +167,15 @@ Accessibility permission.
 - **Replay mode** — render indicators from a static JSON dump without live yabai,
   for visual checks:
   ```sh
-  .build/debug/yabai-stackline --replay Tests/YabaiStacklineKitTests/Fixtures/query-sample.json
+  .build/debug/yabai-dockstack --replay Tests/YabaiDockstackKitTests/Fixtures/query-sample.json
   ```
 
 ## Acceptance checklist
 
-1. `./scripts/bundle.sh` produces `yabai-stackline.app`.
-2. `open yabai-stackline.app` → a `▦` item appears in the menu bar; the menu shows
+1. `./scripts/bundle.sh` produces `yabai-dockstack.app`.
+2. `open yabai-dockstack.app` → a `▦` item appears in the menu bar; the menu shows
    **yabai: connected ✓** (signals were auto-registered — verify with
-   `yabai -m signal --list | grep yabai-stackline`).
+   `yabai -m signal --list | grep yabai-dockstack`).
 3. Create a stack: `yabai -m window --stack next`.
 5. Icons appear beside the stacked window, top→bottom in stack order; the focused
    window's icon is brightest.

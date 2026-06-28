@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>yabai-stackline</string>
-  <key>CFBundleIdentifier</key><string>com.yabai-stackline.agent</string>
+  <key>CFBundleName</key><string>yabai-dockstack</string>
+  <key>CFBundleIdentifier</key><string>com.yabai-dockstack.agent</string>
   <key>CFBundleVersion</key><string>0.1.0</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleExecutable</key><string>yabai-stackline</string>
+  <key>CFBundleExecutable</key><string>yabai-dockstack</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIconName</key><string>AppIcon</string>
   <key>LSUIElement</key><true/>

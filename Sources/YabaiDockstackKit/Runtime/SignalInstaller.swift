@@ -15,7 +15,7 @@ public enum SignalInstaller {
         "application_front_switched",
     ]
 
-    public static func label(for event: String) -> String { "yabai-stackline-\(event)" }
+    public static func label(for event: String) -> String { "yabai-dockstack-\(event)" }
 
     public struct Spec: Equatable {
         public let event: String

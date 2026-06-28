@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class VisibleSpaceFilterTests: XCTestCase {
     private func win(_ id: Int, space: Int, visible: Bool) -> YabaiWindow {

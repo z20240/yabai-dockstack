@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class AutoSetupTests: XCTestCase {
     func testLocatorReturnsNilWhenNoCandidateExists() {
@@ -20,7 +20,7 @@ final class AutoSetupTests: XCTestCase {
     func testSignalSpecLabelAndAction() {
         let specs = SignalInstaller.specs(appBinaryPath: "/Apps/yst.app/Contents/MacOS/yst")
         let first = specs[0]
-        XCTAssertEqual(first.label, "yabai-stackline-window_focused")
+        XCTAssertEqual(first.label, "yabai-dockstack-window_focused")
         XCTAssertEqual(first.action, "\"/Apps/yst.app/Contents/MacOS/yst\" --refresh")
     }
 }

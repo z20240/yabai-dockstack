@@ -1,6 +1,6 @@
 import XCTest
 import CoreGraphics
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class ThumbnailCacheTests: XCTestCase {
     private func img() -> CGImage {

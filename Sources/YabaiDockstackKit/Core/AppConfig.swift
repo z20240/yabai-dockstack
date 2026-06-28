@@ -34,7 +34,7 @@ public struct AppConfig: Codable, Equatable {
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
-        socketPath: "/tmp/yabai-stackline.sock",
+        socketPath: "/tmp/yabai-dockstack.sock",
         style: .icon, cellSize: 32, offset: 4,
         focusedAlpha: 1.0, unfocusedAlpha: 0.4,
         debounceSeconds: 0.05, pollSeconds: 3.0,

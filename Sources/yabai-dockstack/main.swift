@@ -1,0 +1,3 @@
+import YabaiDockstackKit
+
+YabaiDockstack.main()

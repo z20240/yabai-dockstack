@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class YabaiWindowDecodeTests: XCTestCase {
     private func fixtureData() throws -> Data {

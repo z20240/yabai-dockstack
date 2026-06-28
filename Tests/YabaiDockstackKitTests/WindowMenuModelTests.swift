@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class WindowMenuModelTests: XCTestCase {
     private func win(_ id: Int, app: String, display: Int, space: Int, idx: Int, focus: Bool = false) -> YabaiWindow {

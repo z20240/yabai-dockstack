@@ -1,7 +1,7 @@
 import AppKit
 
-public enum YabaiStackline {
-    public static func versionString() -> String { "yabai-stackline 0.1.0" }
+public enum YabaiDockstack {
+    public static func versionString() -> String { "yabai-dockstack 0.1.0" }
 
     /// Absolute path to the running binary — used as the yabai signal action target.
     private static func selfBinaryPath() -> String {
@@ -11,7 +11,7 @@ public enum YabaiStackline {
 
     public static func main() {
         let args = CommandLine.arguments
-        let configPath = "~/.config/yabai-stackline/config.json"
+        let configPath = "~/.config/yabai-dockstack/config.json"
         var config = AppConfig.loadFromFile(configPath)
 
         if args.contains("--refresh") {

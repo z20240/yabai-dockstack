@@ -1,6 +1,6 @@
 import XCTest
 import AppKit
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class ColorHexTests: XCTestCase {
     func testValidSixDigitHex() {

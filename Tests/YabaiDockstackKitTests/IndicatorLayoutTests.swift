@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class IndicatorLayoutTests: XCTestCase {
     let screen = YRect(x: 0, y: 0, w: 1600, h: 1000)

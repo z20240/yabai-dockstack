@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class StackBuilderTests: XCTestCase {
     private func win(_ id: Int, _ app: String, _ idx: Int, _ frame: YRect, focus: Bool = false) -> YabaiWindow {

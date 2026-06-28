@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class RefreshDiffTests: XCTestCase {
     private func stack(_ key: String, ids: [Int], focused: Bool) -> Stack {

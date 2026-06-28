@@ -3,7 +3,7 @@
 import Foundation
 import CoreGraphics
 import AppKit
-import YabaiStacklineKit
+import YabaiDockstackKit
 
 var failures = 0
 func check(_ cond: Bool, _ msg: String) {
@@ -129,7 +129,7 @@ check(YabaiLocator.detect(candidates: ["/no/a", "/yes/b", "/yes/c"],
 print("SignalInstaller")
 let specs = SignalInstaller.specs(appBinaryPath: "/Apps/yst.app/Contents/MacOS/yst")
 check(specs.count == SignalInstaller.events.count, "one spec per event")
-check(specs.first?.label == "yabai-stackline-window_focused", "label derived from event")
+check(specs.first?.label == "yabai-dockstack-window_focused", "label derived from event")
 check(specs.first?.action == "\"/Apps/yst.app/Contents/MacOS/yst\" --refresh",
       "action quotes binary path and adds --refresh")
 

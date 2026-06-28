@@ -1,5 +1,5 @@
 import XCTest
-@testable import YabaiStacklineKit
+@testable import YabaiDockstackKit
 
 final class AppWindowGrouperTests: XCTestCase {
     private func w(_ id: Int, _ app: String, space: Int, idx: Int) -> YabaiWindow {

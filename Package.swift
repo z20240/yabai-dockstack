@@ -2,21 +2,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "yabai-stackline",
+    name: "yabai-dockstack",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "YabaiStacklineKit"),
+        .target(name: "YabaiDockstackKit"),
         .executableTarget(
-            name: "yabai-stackline",
-            dependencies: ["YabaiStacklineKit"]
+            name: "yabai-dockstack",
+            dependencies: ["YabaiDockstackKit"]
         ),
         .executableTarget(
             name: "yst-selftest",
-            dependencies: ["YabaiStacklineKit"]
+            dependencies: ["YabaiDockstackKit"]
         ),
         .testTarget(
-            name: "YabaiStacklineKitTests",
-            dependencies: ["YabaiStacklineKit"],
+            name: "YabaiDockstackKitTests",
+            dependencies: ["YabaiDockstackKit"],
             resources: [.copy("Fixtures")]
         ),
     ]

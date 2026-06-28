@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.yabai-stackline.agent</string>
+  <key>Label</key><string>com.yabai-dockstack.agent</string>
   <key>ProgramArguments</key>
-  <array><string>REPLACE_WITH_ABSOLUTE_PATH/yabai-stackline.app/Contents/MacOS/yabai-stackline</string></array>
+  <array><string>REPLACE_WITH_ABSOLUTE_PATH/yabai-dockstack.app/Contents/MacOS/yabai-dockstack</string></array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
 </dict>
