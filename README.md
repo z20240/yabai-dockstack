@@ -219,10 +219,12 @@ to jump to its space and focus it (like a Windows-taskbar peek / DockView).
   shows the **last cached thumbnail** (captured while the window was on-screen) or,
   if none, the **app icon + title**. Either way the entry is clickable.
 - **Permissions:** this feature needs **Accessibility** (to detect the hovered
-  Dock icon) and **Screen Recording** (to capture thumbnails). You'll be prompted
-  on first enable; grant both in System Settings → Privacy & Security. If a
-  permission is missing the feature stays dormant — the core stack indicators need
-  no permissions at all.
+  Dock icon) and **Screen Recording** (to capture thumbnails). Open **Settings →
+  Permissions**: it shows each permission's live status (✓ / ✗) with a **Grant…**
+  button that requests the permission and opens the exact System Settings pane —
+  one at a time, so the two prompts don't collide. Once Accessibility is granted
+  the feature activates automatically (no relaunch). If a permission is missing it
+  stays dormant — the core stack indicators need no permissions at all.
 - **Toggle:** Settings → **Dock window previews** (on by default).
 
 ## App icon

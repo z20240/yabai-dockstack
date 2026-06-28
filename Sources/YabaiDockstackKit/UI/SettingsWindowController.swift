@@ -2,7 +2,7 @@ import AppKit
 
 /// A simple preferences window so all appearance settings are adjustable from the
 /// UI — no config-file editing. Changes apply live and persist via `onChange`.
-public final class SettingsWindowController: NSObject {
+public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var config: AppConfig
     private let onChange: (AppConfig) -> Void
@@ -24,6 +24,18 @@ public final class SettingsWindowController: NSObject {
     private let yabaiPathField = NSTextField()
     private let dockPreviewCheck = NSButton(checkboxWithTitle: "Dock window previews (needs Accessibility + Screen Recording)", target: nil, action: nil)
     private let loginCheck = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
+    // Permissions (for Dock previews)
+    private let axStatus = NSTextField(labelWithString: "")
+    private let axButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private let srStatus = NSTextField(labelWithString: "")
+    private let srButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private var permTimer: Timer?
+
+    /// Set by the app: trigger the request + open the right System Settings pane.
+    public var onGrantAccessibility: (() -> Void)?
+    public var onGrantScreenRecording: (() -> Void)?
+    /// Returns (accessibilityGranted, screenRecordingGranted).
+    public var permissionStatus: (() -> (Bool, Bool))?
 
     public init(config: AppConfig,
                 onChange: @escaping (AppConfig) -> Void,
@@ -47,6 +59,30 @@ public final class SettingsWindowController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         window?.center()
+        startPermTimer()
+    }
+
+    // Live-refresh permission status while the window is open (so granting in
+    // System Settings and switching back flips the indicator to ✓).
+    private func startPermTimer() {
+        permTimer?.invalidate()
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.syncPermissions() }
+        RunLoop.main.add(t, forMode: .common)
+        permTimer = t
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        permTimer?.invalidate(); permTimer = nil
+    }
+
+    private func syncPermissions() {
+        let (ax, sr) = permissionStatus?() ?? (false, false)
+        axStatus.stringValue = ax ? "✓ granted" : "✗ not granted"
+        axStatus.textColor = ax ? .systemGreen : .systemRed
+        axButton.isEnabled = !ax
+        srStatus.stringValue = sr ? "✓ granted" : "✗ not granted"
+        srStatus.textColor = sr ? .systemGreen : .systemRed
+        srButton.isEnabled = !sr
     }
 
     // MARK: - Build
@@ -91,7 +127,15 @@ public final class SettingsWindowController: NSObject {
         yabaiPathField.target = self; yabaiPathField.action = #selector(changed)
         yabaiPathField.widthAnchor.constraint(equalToConstant: 240).isActive = true
 
+        axButton.target = self; axButton.action = #selector(grantAX)
+        srButton.target = self; srButton.action = #selector(grantSR)
+        axButton.controlSize = .small; srButton.controlSize = .small
+        let axCell = NSStackView(views: [axStatus, axButton]); axCell.spacing = 8
+        let srCell = NSStackView(views: [srStatus, srButton]); srCell.spacing = 8
+
         let grid = NSGridView(views: [
+            row("Accessibility:", axCell),
+            row("Screen Recording:", srCell),
             row("Style:", stylePopup),
             row("Indicator size:", sizeSlider),
             row("Focused opacity:", focusedSlider),
@@ -118,6 +162,7 @@ public final class SettingsWindowController: NSObject {
                            backing: .buffered, defer: false)
         win.title = "yabai-dockstack Settings"
         win.isReleasedWhenClosed = false
+        win.delegate = self
         let content = NSView()
         content.addSubview(grid)
         win.contentView = content
@@ -146,6 +191,7 @@ public final class SettingsWindowController: NSObject {
         pollField.integerValue = Int((config.pollSeconds * 1000).rounded())
         yabaiPathField.stringValue = config.yabaiPath
         loginCheck.state = loginIsEnabled() ? .on : .off
+        syncPermissions()
     }
 
     // MARK: - Actions
@@ -172,4 +218,7 @@ public final class SettingsWindowController: NSObject {
         onLoginToggle(loginCheck.state == .on)
         loginCheck.state = loginIsEnabled() ? .on : .off
     }
+
+    @objc private func grantAX() { onGrantAccessibility?() }
+    @objc private func grantSR() { onGrantScreenRecording?() }
 }

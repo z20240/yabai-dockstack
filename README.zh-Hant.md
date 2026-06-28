@@ -76,8 +76,11 @@ space 並聚焦。
 - **縮圖**:目前可見 space 的視窗顯示即時縮圖;其他 space 的視窗 macOS 無法即時擷取
   (ScreenCaptureKit 會回 `-3811`),所以顯示**快取的最後一次縮圖**,沒有就退回
   **app 圖示 + 標題**。都可點擊。
-- **權限**:需要 **Accessibility**(偵測 Dock hover)+ **Screen Recording**(擷取縮圖);
-  首次啟用會提示。缺權限時此功能靜默不啟用,核心的 stack 指示器則完全不需要權限。
+- **權限**:需要 **Accessibility**(偵測 Dock hover)+ **Screen Recording**(擷取縮圖)。
+  打開 **Settings → Permissions**:會顯示每個權限的即時狀態(✓ / ✗),並各有一個
+  **Grant…** 按鈕——按下會請求該權限並直接開到對應的系統設定頁面,一次一個,
+  避免兩個 prompt 互相蓋掉。授權 Accessibility 後功能會自動啟用(不用重開)。
+  缺權限時此功能靜默不啟用;核心的 stack 指示器則完全不需要權限。
 - **開關**:Settings →「Dock window previews」(預設開啟)。
 
 ## 安裝到 Homebrew(發佈者)

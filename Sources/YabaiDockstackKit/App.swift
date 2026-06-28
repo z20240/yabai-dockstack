@@ -72,6 +72,18 @@ public enum YabaiDockstack {
             SignalInstaller.install(client: client, appBinaryPath: binaryPath)
         }
 
+        // Start/stop the Dock-preview controller to match config + permission state.
+        // The watcher needs Accessibility; Screen Recording only affects thumbnails.
+        func ensureDockController() {
+            if config.dockPreview, PermissionsHelper.hasAccessibility(), dockController == nil {
+                let dc = DockPreviewController(client: client, cache: thumbCache)
+                dc.start()
+                dockController = dc
+            } else if !config.dockPreview, let dc = dockController {
+                dc.stop(); dockController = nil
+            }
+        }
+
         let settings = SettingsWindowController(
             config: config,
             onChange: { newConfig in
@@ -85,17 +97,24 @@ public enum YabaiDockstack {
                 coordinator.updateConfig(config)
                 installSignals()
                 coordinator.requestRefresh()
-                if config.dockPreview && dockController == nil {
-                    if !PermissionsHelper.hasScreenRecording() { PermissionsHelper.requestScreenRecording() }
-                    if !PermissionsHelper.hasAccessibility() { PermissionsHelper.requestAccessibility() }
-                    let dc = DockPreviewController(client: client, cache: thumbCache)
-                    dc.start(); dockController = dc
-                } else if !config.dockPreview, let dc = dockController {
-                    dc.stop(); dockController = nil
-                }
+                ensureDockController()
             },
             onLoginToggle: { enabled in _ = LoginItem.setEnabled(enabled) },
             loginIsEnabled: { LoginItem.isEnabled })
+
+        // Permissions section: request the permission AND open the right pane, one
+        // at a time (avoids the two prompts colliding at launch).
+        settings.permissionStatus = {
+            (PermissionsHelper.hasAccessibility(), PermissionsHelper.hasScreenRecording())
+        }
+        settings.onGrantAccessibility = {
+            PermissionsHelper.requestAccessibility()
+            PermissionsHelper.openAccessibilitySettings()
+        }
+        settings.onGrantScreenRecording = {
+            PermissionsHelper.requestScreenRecording()
+            PermissionsHelper.openScreenRecordingSettings()
+        }
 
         menu.onQuit = { listener.stop(); coordinator.stop(); app.terminate(nil) }
         menu.onOpenSettings = { settings.show() }
@@ -109,12 +128,12 @@ public enum YabaiDockstack {
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main) { _ in coordinator.requestRefresh() }
 
-        if config.dockPreview {
-            if !PermissionsHelper.hasAccessibility() { PermissionsHelper.requestAccessibility() }
-            if !PermissionsHelper.hasScreenRecording() { PermissionsHelper.requestScreenRecording() }
-            let dc = DockPreviewController(client: client, cache: thumbCache)
-            dc.start()
-            dockController = dc
+        ensureDockController()
+        // First-run guidance: if previews are on but permissions are missing, open
+        // Settings so the user can grant them deliberately (one button each),
+        // instead of firing two system prompts that collide.
+        if config.dockPreview && !PermissionsHelper.allGranted {
+            settings.show()
         }
 
         installSignals()
@@ -125,6 +144,8 @@ public enum YabaiDockstack {
         // restarts. Periodically re-add ours if they've gone missing, so the
         // instant event path keeps working without a relaunch.
         let signalHealth = Timer(timeInterval: 5, repeats: true) { _ in
+            // Activate Dock previews once Accessibility is granted (no relaunch).
+            ensureDockController()
             guard client.isAvailable() else { return }
             if !SignalInstaller.isInstalled(client: client) {
                 installSignals()
