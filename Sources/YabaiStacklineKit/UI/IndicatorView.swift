@@ -37,15 +37,15 @@ public final class IndicatorView: NSView {
                                     from: .zero, operation: .sourceOver,
                                     fraction: CGFloat(alpha))
             case .flag:
-                // slim horizontal bar centered in the cell (not a full square)
-                let barHeight = cell * 0.30
-                let sideInset: CGFloat = 5
-                let barRect = NSRect(x: sideInset,
+                // slim vertical bar centered in the cell (taller than wide)
+                let barWidth = cell * 0.28
+                let barHeight = cell * 0.60
+                let barRect = NSRect(x: (cell - barWidth) / 2,
                                      y: y + (cell - barHeight) / 2,
-                                     width: cell - sideInset * 2,
+                                     width: barWidth,
                                      height: barHeight)
                 let path = NSBezierPath(roundedRect: barRect,
-                                        xRadius: barHeight / 2, yRadius: barHeight / 2)
+                                        xRadius: barWidth / 2, yRadius: barWidth / 2)
                 NSColor.systemBlue.withAlphaComponent(CGFloat(alpha)).setFill()
                 path.fill()
             }
