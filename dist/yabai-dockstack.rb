@@ -16,9 +16,20 @@ cask "yabai-dockstack" do
   desc "Visual enhancement suite for yabai: stack indicators, window menu, Dock previews"
   homepage "https://github.com/z20240/yabai-dockstack"
 
-  depends_on formula: "koekeishiya/formulae/yabai"
-
   app "yabai-dockstack.app"
+
+  # yabai is required but lives in a third-party tap, which `depends_on` can't
+  # auto-tap — so we guide the user instead (the app also guides on first launch).
+  caveats <<~EOS
+    yabai-dockstack requires yabai (not installed automatically). Install + start it:
+
+      brew tap koekeishiya/formulae
+      brew install yabai
+      yabai --start-service
+
+    Full window management also needs yabai's own setup (partially disabling SIP).
+    See: https://github.com/koekeishiya/yabai/wiki
+  EOS
 
   zap trash: [
     "~/.config/yabai-dockstack",
