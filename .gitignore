@@ -4,3 +4,6 @@
 
 # build output
 yabai-dockstack.app/
+
+# release artifacts
+yabai-dockstack-*.zip
