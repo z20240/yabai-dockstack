@@ -109,6 +109,9 @@ let menuGroups = WindowMenuModel.build(menuWins)
 check(menuGroups.map { $0.display } == [1, 2], "menu grouped by display, sorted")
 check(menuGroups[0].spaces[0].windows.map { $0.id } == [2, 1], "windows ordered by stack index")
 check(menuGroups[0].spaces[0].windows[0].pid == 20, "entry carries pid for icon")
+let labeled = WindowMenuModel.build(menuWins, spaceLabels: [1: "work"])
+check(labeled[0].spaces[0].name == "work", "space name uses custom label when set")
+check(labeled[1].spaces[0].name == "Space 5", "space name falls back to index")
 
 print("VisibleSpaceFilter")
 let vsfWins = [

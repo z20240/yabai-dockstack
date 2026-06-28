@@ -61,7 +61,9 @@ public enum YabaiDockstack {
         let binaryPath = selfBinaryPath()
         let menu = MenuBarController()
         menu.statusProvider = { client.isAvailable() ? "yabai: connected ✓" : "yabai: not found" }
-        menu.windowListProvider = { WindowMenuModel.build(client.queryWindows()) }
+        menu.windowListProvider = {
+            WindowMenuModel.build(client.queryWindows(), spaceLabels: client.querySpaceLabels())
+        }
         menu.onSelectWindow = { id in client.focus(windowId: id) }
 
         // Auto-register yabai signals (idempotent) so the user never edits yabairc.

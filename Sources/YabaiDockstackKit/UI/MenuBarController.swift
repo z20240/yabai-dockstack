@@ -62,7 +62,7 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
             for (di, display) in groups.enumerated() {
                 menu.addItem(disabledHeader("Display \(display.display)", indent: 0))
                 for space in display.spaces {
-                    menu.addItem(disabledHeader("Space \(space.space)", indent: 1))
+                    menu.addItem(disabledHeader(space.name, indent: 1))
                     for win in space.windows {
                         let label = win.title.isEmpty ? win.app : "\(win.app) — \(win.title)"
                         let item = NSMenuItem(title: truncate(label),

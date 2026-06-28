@@ -61,7 +61,9 @@ That's it. On launch the app:
 
 The menu-bar menu shows **yabai: connected ✓** when it found yabai, then a live
 list of every window grouped by **Display → Space** (the focused window is
-checked). Clicking a window jumps to its space and focuses it. It also offers:
+checked). Spaces show their custom yabai label if set (`yabai -m space --label`),
+otherwise "Space N". Clicking a window jumps to its space and focuses it. It also
+offers:
 
 - **Settings…** — a window to adjust style (icon/flag), indicator size, focused/
   unfocused opacity, flag color, background pill + color, "keep inside window gap",

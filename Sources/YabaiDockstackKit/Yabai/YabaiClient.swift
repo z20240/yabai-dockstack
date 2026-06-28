@@ -38,6 +38,22 @@ public final class YabaiClient {
         _ = run(["-m", "signal", "--remove", label])
     }
 
+    /// Map of space index → custom label (only spaces that have a non-empty label).
+    public func querySpaceLabels() -> [Int: String] {
+        guard let data = run(["-m", "query", "--spaces"]),
+              let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return [:]
+        }
+        var out: [Int: String] = [:]
+        for s in arr {
+            if let idx = s["index"] as? Int,
+               let label = s["label"] as? String, !label.isEmpty {
+                out[idx] = label
+            }
+        }
+        return out
+    }
+
     public func listSignalLabels() -> [String] {
         guard let data = run(["-m", "signal", "--list"]),
               let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {

@@ -9,6 +9,8 @@ public enum WindowMenuModel {
     }
     public struct SpaceGroup: Equatable {
         public let space: Int
+        /// Display name: the space's custom label if set, else "Space N".
+        public let name: String
         public let windows: [Entry]
     }
     public struct DisplayGroup: Equatable {
@@ -17,8 +19,10 @@ public enum WindowMenuModel {
     }
 
     /// Group windows by display, then space; windows ordered by stack index then
-    /// id. Displays and spaces are sorted ascending.
-    public static func build(_ windows: [YabaiWindow]) -> [DisplayGroup] {
+    /// id. Displays and spaces are sorted ascending. `spaceLabels` maps a space
+    /// index to its custom yabai label; spaces without one show "Space N".
+    public static func build(_ windows: [YabaiWindow],
+                             spaceLabels: [Int: String] = [:]) -> [DisplayGroup] {
         let byDisplay = Dictionary(grouping: windows, by: { $0.display })
         return byDisplay.keys.sorted().map { display in
             let bySpace = Dictionary(grouping: byDisplay[display] ?? [], by: { $0.space })
@@ -26,7 +30,9 @@ public enum WindowMenuModel {
                 let wins = (bySpace[space] ?? [])
                     .sorted { ($0.stackIndex, $0.id) < ($1.stackIndex, $1.id) }
                     .map { Entry(id: $0.id, pid: $0.pid, app: $0.app, title: $0.title, focused: $0.hasFocus) }
-                return SpaceGroup(space: space, windows: wins)
+                let label = spaceLabels[space]
+                let name = (label?.isEmpty == false) ? label! : "Space \(space)"
+                return SpaceGroup(space: space, name: name, windows: wins)
             }
             return DisplayGroup(display: display, spaces: spaces)
         }

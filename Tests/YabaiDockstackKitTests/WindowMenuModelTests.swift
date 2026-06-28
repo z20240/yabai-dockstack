@@ -28,4 +28,14 @@ final class WindowMenuModelTests: XCTestCase {
         let groups = WindowMenuModel.build([win(7, app: "X", display: 1, space: 1, idx: 1)])
         XCTAssertEqual(groups[0].spaces[0].windows[0].pid, 70)
     }
+
+    func testSpaceNameUsesLabelWhenPresentElseIndex() {
+        let wins = [
+            win(1, app: "A", display: 1, space: 1, idx: 1),
+            win(2, app: "B", display: 1, space: 2, idx: 1),
+        ]
+        let groups = WindowMenuModel.build(wins, spaceLabels: [1: "work"])
+        XCTAssertEqual(groups[0].spaces[0].name, "work")     // labeled
+        XCTAssertEqual(groups[0].spaces[1].name, "Space 2")  // unlabeled -> index
+    }
 }
