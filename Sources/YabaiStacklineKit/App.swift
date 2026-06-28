@@ -46,8 +46,13 @@ public enum YabaiStackline {
             config.save(to: configPath)
         }
 
+        // Dock window previews (gated; needs Accessibility + Screen Recording).
+        let thumbCache = ThumbnailCache()
+        var dockController: DockPreviewController?
+
         let coordinator = RefreshCoordinator(config: config, client: client) { stacks in
             renderer.update(stacks)
+            dockController?.warmCache()
         }
         let listener = SignalListener(socketPath: config.socketPath) {
             coordinator.requestRefresh()
@@ -90,6 +95,14 @@ public enum YabaiStackline {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main) { _ in coordinator.requestRefresh() }
+
+        if config.dockPreview {
+            if !PermissionsHelper.hasAccessibility() { PermissionsHelper.requestAccessibility() }
+            if !PermissionsHelper.hasScreenRecording() { PermissionsHelper.requestScreenRecording() }
+            let dc = DockPreviewController(client: client, cache: thumbCache)
+            dc.start()
+            dockController = dc
+        }
 
         installSignals()
         listener.start()
