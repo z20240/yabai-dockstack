@@ -23,7 +23,7 @@ public final class RefreshCoordinator {
     }
 
     private func run() {
-        let windows = client.queryWindows()
+        let windows = VisibleSpaceFilter.apply(client.queryWindows())
         let stacks = StackBuilder.build(windows)
         if RefreshDiff.shouldRedraw(old: last, new: stacks) {
             last = stacks

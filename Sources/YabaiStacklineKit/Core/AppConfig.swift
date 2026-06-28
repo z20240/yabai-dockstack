@@ -20,7 +20,7 @@ public struct AppConfig: Codable, Equatable {
         socketPath: "/tmp/yabai-stackline.sock",
         style: .icon, cellSize: 32, offset: 4,
         focusedAlpha: 1.0, unfocusedAlpha: 0.4,
-        debounceSeconds: 0.3, pollSeconds: 3.0,
+        debounceSeconds: 0.05, pollSeconds: 3.0,
         fullWidthSide: "left")
 
     public static func load(from data: Data?) -> AppConfig {

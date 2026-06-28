@@ -14,7 +14,10 @@ public final class IndicatorPanel: NSPanel {
         isOpaque = false
         hasShadow = false
         ignoresMouseEvents = false
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        // Stay on the space where created (do NOT join all spaces), so a stack's
+        // indicator only shows on the space the stack actually lives on. Panels are
+        // recreated per space on space_changed, so they always land on the right one.
+        collectionBehavior = [.ignoresCycle]
         indicatorView.frame = CGRect(origin: .zero, size: frame.size)
         contentView = indicatorView
         indicatorView.updateTrackingAreas()

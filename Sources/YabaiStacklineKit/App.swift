@@ -34,7 +34,7 @@ public enum YabaiStackline {
         if let idx = args.firstIndex(of: "--replay"), idx + 1 < args.count {
             let path = (args[idx + 1] as NSString).expandingTildeInPath
             let data = (try? Data(contentsOf: URL(fileURLWithPath: path))) ?? Data()
-            let stacks = StackBuilder.build(YabaiWindow.decodeList(data))
+            let stacks = StackBuilder.build(VisibleSpaceFilter.apply(YabaiWindow.decodeList(data)))
             renderer.update(stacks)
             app.run()
             return
