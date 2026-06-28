@@ -262,6 +262,32 @@ to jump to its space and focus it (like a Windows-taskbar peek / DockView).
   stays dormant — the core stack indicators need no permissions at all.
 - **Toggle:** Settings → **Dock window previews** (on by default).
 
+## Is it safe? (signing & permissions)
+
+yabai-dockstack is open-source (MIT) and free. It is **intentionally not signed
+with a paid Apple Developer ID nor notarized** — that costs $99/yr and this is a
+community project, not a paid product. Consequences and what that means for you:
+
+- **Gatekeeper warns on first open.** Open it once via right-click → **Open**,
+  or System Settings → Privacy & Security → **Open Anyway**, or
+  `xattr -dr com.apple.quarantine /Applications/yabai-dockstack.app`. The Homebrew
+  cask strips quarantine for you, so `brew install --cask` just opens.
+- **Don't want to trust a prebuilt binary?** Build it yourself:
+  `./scripts/bundle.sh`. It's a few hundred lines of Swift you can read end to end.
+- **No network, no analytics, no phone-home.** It only shells out to your local
+  `yabai` and (for previews) captures windows locally.
+
+**Permissions — only what each feature needs:**
+
+| Feature | Permissions |
+|---|---|
+| Stack indicators + cross-space window menu | **none** (just `yabai -m query` / `--focus`) |
+| Dock window previews | **Accessibility** (detect the hovered Dock icon) + **Screen Recording** (window thumbnails) |
+
+If you don't use Dock previews, you can grant nothing at all. Permissions are
+requested only when that feature is enabled, and the app stays functional without
+them.
+
 ## App icon
 
 The icon lives in `assets/`. Two variants are generated from

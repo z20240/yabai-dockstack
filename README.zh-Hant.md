@@ -122,6 +122,28 @@ space 並聚焦。
 2. 開一個 `homebrew-tap` repo,把 `dist/yabai-dockstack.rb` 放進 `Casks/`(填入 sha256)。
 3. 使用者:`brew install --cask <帳號>/tap/yabai-dockstack`。
 
+## 安全嗎?(簽章與權限)
+
+yabai-dockstack 是開源(MIT)且免費的,**刻意不做付費的 Apple Developer ID 簽章與
+notarize**——那要 $99/年,而這是社群專案、不是付費產品。對你的影響:
+
+- **第一次開啟 Gatekeeper 會擋。** 開啟方式:對 app 右鍵 →「**打開**」,或系統設定 →
+  隱私權與安全性 →「**仍要打開**」,或
+  `xattr -dr com.apple.quarantine /Applications/yabai-dockstack.app`。用 Homebrew cask
+  安裝會自動移除 quarantine,直接就能開。
+- **不想信任預編的二進位?** 自己 build:`./scripts/bundle.sh`。整個 app 就幾百行 Swift,
+  可以從頭讀到尾。
+- **無網路、無分析、不回傳。** 只會呼叫你本機的 `yabai`,以及(預覽時)在本機擷取視窗。
+
+**權限——每個功能只要它需要的:**
+
+| 功能 | 權限 |
+|---|---|
+| Stack 指示器 + 跨 space 視窗選單 | **不需要**(只用 `yabai -m query` / `--focus`) |
+| Dock 視窗預覽 | **Accessibility**(偵測 hover 的 Dock 圖示)+ **Screen Recording**(視窗縮圖) |
+
+不用 Dock 預覽的話可以完全不授權。權限只在啟用該功能時才請求,沒給也不影響其他功能。
+
 ## 授權
 
 MIT。
