@@ -7,7 +7,8 @@ cd "$(dirname "$0")/.."
 VERSION="${1:-0.1.0}"
 APP="yabai-dockstack.app"
 
-swift build -c release --arch arm64 --arch x86_64
+# Prefer a universal build (needs full Xcode); fall back to native arch (CLT).
+swift build -c release --arch arm64 --arch x86_64 || swift build -c release
 BIN=".build/apple/Products/Release/yabai-dockstack"
 [ -f "$BIN" ] || BIN=".build/release/yabai-dockstack"   # fallback (single-arch)
 
