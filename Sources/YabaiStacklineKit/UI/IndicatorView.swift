@@ -25,7 +25,8 @@ public final class IndicatorView: NSView {
     }
 
     public override func draw(_ dirtyRect: NSRect) {
-        let cell = config.cellSize
+        // Cell size is the panel width: it may have been shrunk to fit a gap.
+        let cell = bounds.width
         let flagColor = NSColor.fromHex(config.flagColor, fallback: .systemBlue)
 
         // Drop shadow so the indicator stands out over whatever window is behind it.
@@ -43,8 +44,9 @@ public final class IndicatorView: NSView {
             let bg = NSColor.fromHex(config.backgroundColor,
                                      fallback: NSColor(white: 0, alpha: 0.8))
             bg.setFill()
+            let r = min(8, cell * 0.25)
             NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1),
-                         xRadius: 8, yRadius: 8).fill()
+                         xRadius: r, yRadius: r).fill()
             NSGraphicsContext.restoreGraphicsState()
         } else {
             shadow.set()
@@ -57,7 +59,8 @@ public final class IndicatorView: NSView {
             let alpha = win.hasFocus ? config.focusedAlpha : config.unfocusedAlpha
             switch config.style {
             case .icon:
-                icon(for: win).draw(in: rect.insetBy(dx: 3, dy: 3),
+                let inset = cell * 0.12
+                icon(for: win).draw(in: rect.insetBy(dx: inset, dy: inset),
                                     from: .zero, operation: .sourceOver,
                                     fraction: CGFloat(alpha))
             case .flag:
@@ -80,7 +83,7 @@ public final class IndicatorView: NSView {
 
     private func cellIndexAt(_ pointInWindow: NSPoint) -> Int? {
         let p = convert(pointInWindow, from: nil)
-        let cell = config.cellSize
+        let cell = bounds.width
         let i = Int((bounds.height - p.y) / cell)
         return (i >= 0 && i < stack.windows.count) ? i : nil
     }
@@ -90,7 +93,7 @@ public final class IndicatorView: NSView {
     public override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        let cell = config.cellSize
+        let cell = bounds.width
         for (i, _) in stack.windows.enumerated() {
             let y = bounds.height - CGFloat(i + 1) * cell
             let rect = NSRect(x: 0, y: y, width: cell, height: cell)
@@ -129,7 +132,7 @@ public final class IndicatorView: NSView {
         label.frame = NSRect(x: pad, y: pad, width: label.frame.width, height: label.frame.height)
         panel.contentView?.addSubview(label)
         // position to the right of the cell, in screen coords
-        let cell = config.cellSize
+        let cell = bounds.width
         let cellY = bounds.height - CGFloat(i + 1) * cell
         let originInWindow = convert(NSPoint(x: bounds.width + 4, y: cellY), to: nil)
         let screenPoint = parent.convertPoint(toScreen: originInWindow)

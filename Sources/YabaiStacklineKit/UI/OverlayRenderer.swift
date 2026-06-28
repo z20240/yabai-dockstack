@@ -34,7 +34,8 @@ public final class OverlayRenderer {
                 stackFrame: stack.frame, screenFrame: screen.yabaiFrame,
                 cellSize: config.cellSize, count: stack.windows.count, offset: config.offset,
                 fullWidthSide: config.fullWidthSide == "right" ? .right : .left,
-                edgeInset: config.edgeInset)
+                edgeInset: config.edgeInset,
+                confineToGap: config.confineToGap)
             let cocoa = CoordinateMapper.toCocoa(placement.panel, primaryHeight: primaryH)
 
             if let panel = panels[stack.key] {

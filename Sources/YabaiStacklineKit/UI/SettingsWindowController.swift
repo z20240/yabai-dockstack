@@ -1,0 +1,147 @@
+import AppKit
+
+/// A simple preferences window so all appearance settings are adjustable from the
+/// UI — no config-file editing. Changes apply live and persist via `onChange`.
+public final class SettingsWindowController: NSObject {
+    private var window: NSWindow?
+    private var config: AppConfig
+    private let onChange: (AppConfig) -> Void
+    private let onLoginToggle: (Bool) -> Void
+    private let loginIsEnabled: () -> Bool
+
+    // controls
+    private let stylePopup = NSPopUpButton()
+    private let sizeSlider = NSSlider()
+    private let focusedSlider = NSSlider()
+    private let unfocusedSlider = NSSlider()
+    private let flagWell = NSColorWell()
+    private let backgroundCheck = NSButton(checkboxWithTitle: "Show background pill", target: nil, action: nil)
+    private let backgroundWell = NSColorWell()
+    private let confineCheck = NSButton(checkboxWithTitle: "Keep inside window gap (don't cover the app)", target: nil, action: nil)
+    private let fullWidthPopup = NSPopUpButton()
+    private let loginCheck = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
+
+    public init(config: AppConfig,
+                onChange: @escaping (AppConfig) -> Void,
+                onLoginToggle: @escaping (Bool) -> Void,
+                loginIsEnabled: @escaping () -> Bool) {
+        self.config = config
+        self.onChange = onChange
+        self.onLoginToggle = onLoginToggle
+        self.loginIsEnabled = loginIsEnabled
+        super.init()
+    }
+
+    public func updateConfig(_ config: AppConfig) {
+        self.config = config
+        if window != nil { syncControls() }
+    }
+
+    public func show() {
+        if window == nil { build() }
+        syncControls()
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+        window?.center()
+    }
+
+    // MARK: - Build
+
+    private func row(_ label: String, _ control: NSView) -> [NSView] {
+        let l = NSTextField(labelWithString: label)
+        l.alignment = .right
+        return [l, control]
+    }
+
+    private func build() {
+        NSColorPanel.shared.showsAlpha = true
+
+        stylePopup.addItems(withTitles: ["Icon", "Flag"])
+        stylePopup.target = self; stylePopup.action = #selector(changed)
+
+        sizeSlider.minValue = 12; sizeSlider.maxValue = 48
+        sizeSlider.target = self; sizeSlider.action = #selector(changed)
+
+        for s in [focusedSlider, unfocusedSlider] {
+            s.minValue = 0.1; s.maxValue = 1.0
+            s.target = self; s.action = #selector(changed)
+        }
+
+        flagWell.target = self; flagWell.action = #selector(changed)
+        backgroundWell.target = self; backgroundWell.action = #selector(changed)
+        backgroundCheck.target = self; backgroundCheck.action = #selector(changed)
+        confineCheck.target = self; confineCheck.action = #selector(changed)
+        loginCheck.target = self; loginCheck.action = #selector(loginChanged)
+
+        fullWidthPopup.addItems(withTitles: ["Left", "Right"])
+        fullWidthPopup.target = self; fullWidthPopup.action = #selector(changed)
+
+        let grid = NSGridView(views: [
+            row("Style:", stylePopup),
+            row("Indicator size:", sizeSlider),
+            row("Focused opacity:", focusedSlider),
+            row("Unfocused opacity:", unfocusedSlider),
+            row("Flag color:", flagWell),
+            [NSGridCell.emptyContentView, backgroundCheck],
+            row("Background color:", backgroundWell),
+            [NSGridCell.emptyContentView, confineCheck],
+            row("Full-width side:", fullWidthPopup),
+            [NSGridCell.emptyContentView, loginCheck],
+        ])
+        grid.translatesAutoresizingMaskIntoConstraints = false
+        grid.column(at: 0).xPlacement = NSGridCell.Placement.trailing
+        grid.rowAlignment = NSGridRow.Alignment.firstBaseline
+        grid.columnSpacing = 12
+        grid.rowSpacing = 12
+
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
+                           styleMask: [.titled, .closable],
+                           backing: .buffered, defer: false)
+        win.title = "yabai-stackline Settings"
+        win.isReleasedWhenClosed = false
+        let content = NSView()
+        content.addSubview(grid)
+        win.contentView = content
+        NSLayoutConstraint.activate([
+            grid.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            grid.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            grid.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
+            grid.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
+            sizeSlider.widthAnchor.constraint(equalToConstant: 200),
+        ])
+        window = win
+    }
+
+    private func syncControls() {
+        stylePopup.selectItem(at: config.style == .flag ? 1 : 0)
+        sizeSlider.doubleValue = config.cellSize
+        focusedSlider.doubleValue = config.focusedAlpha
+        unfocusedSlider.doubleValue = config.unfocusedAlpha
+        flagWell.color = NSColor.fromHex(config.flagColor, fallback: .systemBlue)
+        backgroundCheck.state = config.showBackground ? .on : .off
+        backgroundWell.color = NSColor.fromHex(config.backgroundColor, fallback: NSColor(white: 0, alpha: 0.8))
+        confineCheck.state = config.confineToGap ? .on : .off
+        fullWidthPopup.selectItem(at: config.fullWidthSide == "right" ? 1 : 0)
+        loginCheck.state = loginIsEnabled() ? .on : .off
+    }
+
+    // MARK: - Actions
+
+    @objc private func changed() {
+        config.style = stylePopup.indexOfSelectedItem == 1 ? .flag : .icon
+        config.cellSize = sizeSlider.doubleValue.rounded()
+        config.focusedAlpha = focusedSlider.doubleValue
+        config.unfocusedAlpha = unfocusedSlider.doubleValue
+        config.flagColor = flagWell.color.hexString
+        config.showBackground = backgroundCheck.state == .on
+        config.backgroundColor = backgroundWell.color.hexString
+        config.confineToGap = confineCheck.state == .on
+        config.fullWidthSide = fullWidthPopup.indexOfSelectedItem == 1 ? "right" : "left"
+        onChange(config)
+    }
+
+    @objc private func loginChanged() {
+        onLoginToggle(loginCheck.state == .on)
+        loginCheck.state = loginIsEnabled() ? .on : .off
+    }
+}

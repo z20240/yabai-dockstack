@@ -27,4 +27,16 @@ extension NSColor {
     public static func fromHex(_ hex: String, fallback: NSColor) -> NSColor {
         NSColor(hex: hex) ?? fallback
     }
+
+    /// "#RRGGBB" (or "#RRGGBBAA" when not fully opaque), sRGB.
+    public var hexString: String {
+        guard let c = usingColorSpace(.sRGB) else { return "#000000" }
+        let r = Int(round(c.redComponent * 255))
+        let g = Int(round(c.greenComponent * 255))
+        let b = Int(round(c.blueComponent * 255))
+        let a = Int(round(c.alphaComponent * 255))
+        return a == 255
+            ? String(format: "#%02X%02X%02X", r, g, b)
+            : String(format: "#%02X%02X%02X%02X", r, g, b, a)
+    }
 }

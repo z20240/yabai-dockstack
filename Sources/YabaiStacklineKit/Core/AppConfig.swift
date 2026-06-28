@@ -24,6 +24,10 @@ public struct AppConfig: Codable, Equatable {
     public var showBackground: Bool
     /// Backing pill color as "#RRGGBB" / "#RRGGBBAA".
     public var backgroundColor: String
+    /// Place the indicator inside the gap between the window and the screen edge
+    /// (e.g. yabai's external padding) so it doesn't cover the app. The indicator
+    /// shrinks to fit the gap. Falls back to overlapping if the gap is too small.
+    public var confineToGap: Bool
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
@@ -35,7 +39,8 @@ public struct AppConfig: Codable, Equatable {
         edgeInset: 6,
         flagColor: "#4C8DFF",
         showBackground: true,
-        backgroundColor: "#1E1E1ECC")
+        backgroundColor: "#1E1E1ECC",
+        confineToGap: true)
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

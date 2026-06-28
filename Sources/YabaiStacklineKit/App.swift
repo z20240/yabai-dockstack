@@ -62,7 +62,6 @@ public enum YabaiStackline {
             } else {
                 menu.setStatus("yabai: not found")
             }
-            menu.setLoginItemChecked(LoginItem.isEnabled)
         }
 
         // Auto-register yabai signals (idempotent) so the user never edits yabairc.
@@ -71,28 +70,25 @@ public enum YabaiStackline {
             SignalInstaller.install(client: client, appBinaryPath: binaryPath)
         }
 
+        let settings = SettingsWindowController(
+            config: config,
+            onChange: { newConfig in
+                var c = newConfig
+                c.yabaiPath = resolvedYabai
+                config = c
+                config.save(to: configPath)
+                renderer.updateConfig(config)
+                coordinator.requestRefresh()
+            },
+            onLoginToggle: { enabled in _ = LoginItem.setEnabled(enabled) },
+            loginIsEnabled: { LoginItem.isEnabled })
+
         menu.onQuit = { listener.stop(); coordinator.stop(); app.terminate(nil) }
-        menu.onReload = {
-            config = AppConfig.loadFromFile(configPath)
-            config.yabaiPath = resolvedYabai
-            renderer.updateConfig(config)
-            coordinator.requestRefresh()
-            refreshMenuStatus()
-        }
-        menu.onToggleStyle = {
-            config.style = (config.style == .icon) ? .flag : .icon
-            config.save(to: configPath)
-            renderer.updateConfig(config)
-            coordinator.requestRefresh()
-        }
+        menu.onOpenSettings = { settings.show() }
         menu.onReregisterSignals = {
             installSignals()
             coordinator.requestRefresh()
             refreshMenuStatus()
-        }
-        menu.onToggleLoginItem = {
-            _ = LoginItem.setEnabled(!LoginItem.isEnabled)
-            menu.setLoginItemChecked(LoginItem.isEnabled)
         }
 
         // observe display changes

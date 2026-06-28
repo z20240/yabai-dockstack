@@ -59,9 +59,11 @@ That's it. On launch the app:
 - **auto-registers** the yabai signals it needs (pointing at its own path), so you
   never edit `~/.yabairc`. This is idempotent — re-running is safe.
 
-The menu-bar `▦` menu shows **yabai: connected ✓** when it found yabai, and offers:
+The menu-bar menu shows **yabai: connected ✓** when it found yabai, and offers:
 
-- **Start at login** — one-click toggle (uses `SMAppService`; no manual LaunchAgent).
+- **Settings…** — a window to adjust style (icon/flag), indicator size, focused/
+  unfocused opacity, flag color, background pill + color, "keep inside window gap",
+  full-width side, and **Start at login**. Changes apply live and are saved.
 - **Re-register yabai signals** — re-applies the signals if yabai was restarted.
 
 > First launch of an unsigned app: macOS Gatekeeper will block it once. Right-click
@@ -111,9 +113,9 @@ falls back to its default. All keys:
   as a floating chip (helpful over full-width windows). `true`/`false`.
 - `backgroundColor`: backing pill color, `"#RRGGBB"` / `"#RRGGBBAA"`.
 
-The config file is created automatically on first launch at
-`~/.config/yabai-stackline/config.json`. Edit it, then choose **Reload config**
-from the menu bar.
+Most of these are adjustable from **Settings…** in the menu bar (no file editing
+needed). The config file is still created automatically on first launch at
+`~/.config/yabai-stackline/config.json` for anyone who prefers editing by hand.
 - `debounceSeconds`: lower = snappier focus highlight, higher = fewer redraws
   during window drags.
 

@@ -52,6 +52,14 @@ let full = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800)
 check(full.side == .left, "full-width window defaults to left")
 let fullR = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800), screenFrame: screen, cellSize: 32, count: 2, offset: 4, fullWidthSide: .right)
 check(fullR.side == .right, "full-width side configurable to right")
+// confine-to-gap: window inset by 14px padding on a full-width-ish layout
+let gapStack = YRect(x: 14, y: 50, w: 1572, h: 800)  // 14px gap each side
+let confined = IndicatorLayout.place(stackFrame: gapStack, screenFrame: screen, cellSize: 32, count: 2, offset: 4, confineToGap: true)
+check(confined.panel.w == 14, "confined indicator shrinks to the 14px gap")
+check(confined.panel.x == 0, "confined left indicator sits flush in the gap (x=0)")
+check(confined.panel.h == 28, "confined height = shrunk cell * count")
+let noGap = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800), screenFrame: screen, cellSize: 32, count: 1, offset: 4, confineToGap: true)
+check(noGap.panel.w == 32, "no gap -> falls back to full cell (overlap)")
 
 print("IndicatorLayout edgeInset")
 let inset = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800),
