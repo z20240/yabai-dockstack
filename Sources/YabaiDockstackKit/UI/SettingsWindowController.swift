@@ -21,6 +21,7 @@ public final class SettingsWindowController: NSObject {
     private let fullWidthPopup = NSPopUpButton()
     private let debounceField = NSTextField()
     private let pollField = NSTextField()
+    private let yabaiPathField = NSTextField()
     private let dockPreviewCheck = NSButton(checkboxWithTitle: "Dock window previews (needs Accessibility + Screen Recording)", target: nil, action: nil)
     private let loginCheck = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
 
@@ -86,6 +87,10 @@ public final class SettingsWindowController: NSObject {
             f.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
 
+        yabaiPathField.placeholderString = "auto-detect"
+        yabaiPathField.target = self; yabaiPathField.action = #selector(changed)
+        yabaiPathField.widthAnchor.constraint(equalToConstant: 240).isActive = true
+
         let grid = NSGridView(views: [
             row("Style:", stylePopup),
             row("Indicator size:", sizeSlider),
@@ -99,6 +104,7 @@ public final class SettingsWindowController: NSObject {
             row("Full-width side:", fullWidthPopup),
             row("Debounce (ms):", debounceField),
             row("Poll interval (ms):", pollField),
+            row("yabai path:", yabaiPathField),
             [NSGridCell.emptyContentView, loginCheck],
         ])
         grid.translatesAutoresizingMaskIntoConstraints = false
@@ -138,6 +144,7 @@ public final class SettingsWindowController: NSObject {
         fullWidthPopup.selectItem(at: config.fullWidthSide == "right" ? 1 : 0)
         debounceField.integerValue = Int((config.debounceSeconds * 1000).rounded())
         pollField.integerValue = Int((config.pollSeconds * 1000).rounded())
+        yabaiPathField.stringValue = config.yabaiPath
         loginCheck.state = loginIsEnabled() ? .on : .off
     }
 
@@ -157,6 +164,7 @@ public final class SettingsWindowController: NSObject {
         // ms -> seconds, with sane floors
         config.debounceSeconds = max(0.0, Double(debounceField.integerValue) / 1000.0)
         config.pollSeconds = max(0.2, Double(pollField.integerValue) / 1000.0)
+        config.yabaiPath = yabaiPathField.stringValue.trimmingCharacters(in: .whitespaces)
         onChange(config)
     }
 

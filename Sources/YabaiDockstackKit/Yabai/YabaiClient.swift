@@ -1,12 +1,14 @@
 import Foundation
 
-public struct YabaiClient {
-    private let yabaiPath: String
-    public init(yabaiPath: String) { self.yabaiPath = yabaiPath }
+public final class YabaiClient {
+    /// Mutable so the path can be changed at runtime (Settings). All holders share
+    /// this instance, so an update applies everywhere immediately.
+    public var path: String
+    public init(yabaiPath: String) { self.path = yabaiPath }
 
     private func run(_ args: [String]) -> Data? {
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: yabaiPath)
+        proc.executableURL = URL(fileURLWithPath: path)
         proc.arguments = args
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -46,8 +48,6 @@ public struct YabaiClient {
 
     /// Returns true if the yabai binary is present and executable.
     public func isAvailable() -> Bool {
-        FileManager.default.isExecutableFile(atPath: yabaiPath)
+        FileManager.default.isExecutableFile(atPath: path)
     }
-
-    public var path: String { yabaiPath }
 }

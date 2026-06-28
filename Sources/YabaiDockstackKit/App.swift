@@ -73,12 +73,15 @@ public enum YabaiDockstack {
         let settings = SettingsWindowController(
             config: config,
             onChange: { newConfig in
-                var c = newConfig
-                c.yabaiPath = resolvedYabai
-                config = c
+                config = newConfig
+                // Re-resolve the yabai path (blank field → auto-detect) and apply
+                // it live to the shared client, then re-register signals.
+                let resolved = YabaiLocator.resolve(configuredPath: config.yabaiPath) ?? config.yabaiPath
+                client.path = resolved
                 config.save(to: configPath)
                 renderer.updateConfig(config)
                 coordinator.updateConfig(config)
+                installSignals()
                 coordinator.requestRefresh()
                 if config.dockPreview && dockController == nil {
                     if !PermissionsHelper.hasScreenRecording() { PermissionsHelper.requestScreenRecording() }

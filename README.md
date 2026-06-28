@@ -65,7 +65,8 @@ checked). Clicking a window jumps to its space and focuses it. It also offers:
 
 - **Settings…** — a window to adjust style (icon/flag), indicator size, focused/
   unfocused opacity, flag color, background pill + color, "keep inside window gap",
-  full-width side, **Debounce (ms)** / **Poll interval (ms)**, and **Start at
+  full-width side, **Debounce (ms)** / **Poll interval (ms)**, **yabai path**
+  (blank = auto-detect; a manual escape hatch if detection fails), and **Start at
   login**. Changes apply live and are saved.
 - **Re-register yabai signals** — re-applies the signals if yabai was restarted.
 
