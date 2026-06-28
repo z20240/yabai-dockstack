@@ -37,36 +37,42 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 
 ## Requirements
 
-- macOS 13+
+- macOS 14+
 - [yabai](https://github.com/koekeishiya/yabai) installed and running.
-- To **build**: the Swift toolchain (Xcode or Command Line Tools — see note below).
 
-## Build
+## Install
+
+### Homebrew (recommended)
 
 ```sh
-./scripts/bundle.sh
+brew install --cask z20240/tap/yabai-dockstack
 ```
 
-This produces `yabai-dockstack.app` in the repo root and prints the absolute path
-to the binary inside it.
-
-> **Toolchain note.** The app builds with either full Xcode or the standalone
-> Command Line Tools. If `swift build` complains about the Xcode license, either
-> run `sudo xcodebuild -license accept`, or build against Command Line Tools:
-> ```sh
-> DEVELOPER_DIR=/Library/Developer/CommandLineTools ./scripts/bundle.sh
-> ```
-> Running the **XCTest** suite (`swift test`) requires full Xcode (XCTest is not
-> shipped with Command Line Tools). A toolchain-independent check is available
-> via `swift run yst-selftest` (see Testing).
-
-## Install (zero manual config)
+Universal (Apple Silicon + Intel). `brew install --cask` also removes the
+quarantine attribute, so the (unsigned) app launches without a Gatekeeper prompt.
+Then launch it:
 
 ```sh
+open -a yabai-dockstack
+```
+
+### Build from source
+
+```sh
+./scripts/bundle.sh        # produces yabai-dockstack.app
 open yabai-dockstack.app
 ```
 
-That's it. On launch the app:
+> **Toolchain note.** Builds with full Xcode or standalone Command Line Tools. If
+> `swift build` complains about the Xcode license, run `sudo xcodebuild -license
+> accept`, or build against CLT:
+> `DEVELOPER_DIR=/Library/Developer/CommandLineTools ./scripts/bundle.sh`.
+> The XCTest suite needs full Xcode; a toolchain-independent check is
+> `swift run yst-selftest`.
+
+### First launch
+
+On launch the app:
 
 - **auto-detects** the yabai binary (Homebrew Apple Silicon / Intel / nix, then `which`);
 - **auto-registers** the yabai signals it needs (pointing at its own path), so you

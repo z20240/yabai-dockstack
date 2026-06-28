@@ -24,24 +24,33 @@ dock 預覽、視窗切換、選單列、Mission Control 替代</sub>
 
 - macOS 14+
 - [yabai](https://github.com/koekeishiya/yabai) 已安裝並執行中
-- 建置需要 Swift 工具鏈(Xcode 或 Command Line Tools)
 
-## 建置
+## 安裝
+
+### Homebrew(推薦)
 
 ```sh
-./scripts/bundle.sh
+brew install --cask z20240/tap/yabai-dockstack
 ```
 
-會在專案根目錄產生 `yabai-dockstack.app`。
-
-> 若 `swift build` 抱怨 Xcode 授權,可改用 Command Line Tools:
-> `DEVELOPER_DIR=/Library/Developer/CommandLineTools ./scripts/bundle.sh`
-
-## 安裝(零設定)
+Universal(Apple Silicon + Intel)。`brew install --cask` 會自動移除 quarantine,
+所以未簽章的 app 也不會跳 Gatekeeper 警告。接著開啟:
 
 ```sh
+open -a yabai-dockstack
+```
+
+### 從原始碼建置
+
+```sh
+./scripts/bundle.sh        # 產生 yabai-dockstack.app
 open yabai-dockstack.app
 ```
+
+> 若 `swift build` 抱怨 Xcode 授權,執行 `sudo xcodebuild -license accept`,或改用
+> Command Line Tools:`DEVELOPER_DIR=/Library/Developer/CommandLineTools ./scripts/bundle.sh`。
+
+### 首次啟動
 
 啟動後 app 會:
 
