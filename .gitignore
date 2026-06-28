@@ -1,3 +1,6 @@
 .build/
 *.xcodeproj
 .DS_Store
+
+# build output
+yabai-stackline.app/

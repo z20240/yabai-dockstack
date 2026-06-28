@@ -1,0 +1,3 @@
+import YabaiStacklineKit
+
+YabaiStackline.main()
