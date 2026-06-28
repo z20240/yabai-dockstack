@@ -11,6 +11,8 @@
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIconName</key><string>AppIcon</string>
   <key>LSUIElement</key><true/>
-  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>Capture window thumbnails for Dock previews.</string>
 </dict>
 </plist>

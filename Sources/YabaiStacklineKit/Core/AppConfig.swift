@@ -28,6 +28,9 @@ public struct AppConfig: Codable, Equatable {
     /// (e.g. yabai's external padding) so it doesn't cover the app. The indicator
     /// shrinks to fit the gap. Falls back to overlapping if the gap is too small.
     public var confineToGap: Bool
+    /// Show a window-preview popover when hovering a Dock app icon
+    /// (needs Accessibility + Screen Recording).
+    public var dockPreview: Bool
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
@@ -40,7 +43,8 @@ public struct AppConfig: Codable, Equatable {
         flagColor: "#4C8DFF",
         showBackground: true,
         backgroundColor: "#1E1E1ECC",
-        confineToGap: true)
+        confineToGap: true,
+        dockPreview: true)
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

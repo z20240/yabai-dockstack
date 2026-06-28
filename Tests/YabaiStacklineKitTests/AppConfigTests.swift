@@ -17,6 +17,11 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(c.offset, AppConfig.defaults.offset)  // untouched
     }
 
+    func testDockPreviewDefaultsOn() {
+        XCTAssertTrue(AppConfig.defaults.dockPreview)
+        XCTAssertTrue(AppConfig.load(from: nil).dockPreview)
+    }
+
     func testGarbageFallsBackToDefaults() {
         let c = AppConfig.load(from: "not json".data(using: .utf8))
         XCTAssertEqual(c, AppConfig.defaults)
