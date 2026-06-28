@@ -2,6 +2,7 @@
 // logic can be verified without a full Xcode install. Exits non-zero on failure.
 import Foundation
 import CoreGraphics
+import AppKit
 import YabaiStacklineKit
 
 var failures = 0
@@ -51,6 +52,19 @@ let full = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800)
 check(full.side == .left, "full-width window defaults to left")
 let fullR = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800), screenFrame: screen, cellSize: 32, count: 2, offset: 4, fullWidthSide: .right)
 check(fullR.side == .right, "full-width side configurable to right")
+
+print("IndicatorLayout edgeInset")
+let inset = IndicatorLayout.place(stackFrame: YRect(x: 0, y: 50, w: 1600, h: 800),
+                                  screenFrame: screen, cellSize: 32, count: 1, offset: 4,
+                                  edgeInset: 6)
+check(inset.panel.x == 6, "clamped left panel respects edgeInset")
+
+print("ColorHex")
+check(NSColor(hex: "#FF0000") != nil, "valid hex parses")
+check(NSColor(hex: "nope") == nil, "invalid hex -> nil")
+let red = NSColor(hex: "FF0000")?.usingColorSpace(.sRGB)
+check(red != nil && abs((red?.redComponent ?? 0) - 1.0) < 0.001 && abs((red?.greenComponent ?? 1)) < 0.001,
+      "hex FF0000 -> red")
 
 print("CoordinateMapper")
 let c = CoordinateMapper.toCocoa(YRect(x: 100, y: 50, w: 32, h: 64), primaryHeight: 1000)

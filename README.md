@@ -93,15 +93,22 @@ falls back to its default. All keys:
   "offset": 4,
   "focusedAlpha": 1.0,
   "unfocusedAlpha": 0.4,
-  "debounceSeconds": 0.3,
+  "debounceSeconds": 0.05,
   "pollSeconds": 3.0,
-  "fullWidthSide": "left"
+  "fullWidthSide": "left",
+  "edgeInset": 6,
+  "flagColor": "#4C8DFF"
 }
 ```
 
 - `fullWidthSide`: which edge the indicator goes to for a near-full-width window
   (≥90% of the screen), where there's no clear left/right bias. `"left"` (default)
   or `"right"`. Narrower windows still follow their on-screen position.
+- `edgeInset`: extra pixels to keep the indicator off the very screen edge when it
+  would otherwise clamp there (so it doesn't sit on a window's rounded corner).
+- `flagColor`: flag-mode bar color, `"#RRGGBB"` or `"#RRGGBBAA"`.
+- `debounceSeconds`: lower = snappier focus highlight, higher = fewer redraws
+  during window drags.
 
 - `style`: `"icon"` or `"flag"`. The menu-bar "Toggle icon/flag" item flips this
   and writes it back to the config file.

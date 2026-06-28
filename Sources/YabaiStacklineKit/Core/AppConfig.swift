@@ -14,6 +14,11 @@ public struct AppConfig: Codable, Equatable {
     public var pollSeconds: Double
     /// Which edge a near-full-width window's indicator defaults to: "left" or "right".
     public var fullWidthSide: String
+    /// Extra inset from the screen edge when the indicator would otherwise clamp
+    /// to the very edge (keeps it off a window's rounded corner).
+    public var edgeInset: Double
+    /// Flag-mode bar color as "#RRGGBB" (or "#RRGGBBAA").
+    public var flagColor: String
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
@@ -21,7 +26,9 @@ public struct AppConfig: Codable, Equatable {
         style: .icon, cellSize: 32, offset: 4,
         focusedAlpha: 1.0, unfocusedAlpha: 0.4,
         debounceSeconds: 0.05, pollSeconds: 3.0,
-        fullWidthSide: "left")
+        fullWidthSide: "left",
+        edgeInset: 6,
+        flagColor: "#4C8DFF")
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

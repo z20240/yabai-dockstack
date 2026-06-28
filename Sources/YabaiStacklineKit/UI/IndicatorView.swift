@@ -26,6 +26,15 @@ public final class IndicatorView: NSView {
 
     public override func draw(_ dirtyRect: NSRect) {
         let cell = config.cellSize
+        let flagColor = NSColor.fromHex(config.flagColor, fallback: .systemBlue)
+
+        // Drop shadow so indicators stand out over whatever window is behind them.
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.55)
+        shadow.shadowOffset = NSSize(width: 0, height: -1)
+        shadow.shadowBlurRadius = 3
+        shadow.set()
+
         for (i, win) in stack.windows.enumerated() {
             // top→bottom: index 0 at top
             let y = bounds.height - CGFloat(i + 1) * cell
@@ -46,7 +55,7 @@ public final class IndicatorView: NSView {
                                      height: barHeight)
                 let path = NSBezierPath(roundedRect: barRect,
                                         xRadius: barWidth / 2, yRadius: barWidth / 2)
-                NSColor.systemBlue.withAlphaComponent(CGFloat(alpha)).setFill()
+                flagColor.withAlphaComponent(CGFloat(alpha)).setFill()
                 path.fill()
             }
         }
