@@ -10,6 +10,10 @@ let package = Package(
             name: "yabai-stackline",
             dependencies: ["YabaiStacklineKit"]
         ),
+        .executableTarget(
+            name: "yst-selftest",
+            dependencies: ["YabaiStacklineKit"]
+        ),
         .testTarget(
             name: "YabaiStacklineKitTests",
             dependencies: ["YabaiStacklineKit"],

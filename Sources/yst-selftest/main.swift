@@ -1,0 +1,110 @@
+// CLT-compatible self-test (no XCTest). Mirrors the unit tests so the pure
+// logic can be verified without a full Xcode install. Exits non-zero on failure.
+import Foundation
+import CoreGraphics
+import YabaiStacklineKit
+
+var failures = 0
+func check(_ cond: Bool, _ msg: String) {
+    if cond { print("  ok: \(msg)") }
+    else { failures += 1; print("  FAIL: \(msg)") }
+}
+
+func win(_ id: Int, _ app: String, _ idx: Int, _ frame: YRect, _ focus: Bool = false) -> YabaiWindow {
+    YabaiWindow(id: id, pid: id, app: app, title: app, frame: frame,
+                display: 1, space: 1, stackIndex: idx, hasFocus: focus)
+}
+
+print("YabaiWindow.decodeList")
+let json = """
+[
+  {"id":1,"pid":100,"app":"Code","title":"projA — Visual Studio Code","frame":{"x":0.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":1,"has-focus":true},
+  {"id":2,"pid":101,"app":"Code","title":"projB","frame":{"x":0.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":2,"has-focus":false},
+  {"id":3,"pid":102,"app":"Safari","title":"news","frame":{"x":800.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":0,"has-focus":false},
+  {"id":4,"pid":103,"app":"Broken","frame":{"x":0.0},"display":1,"space":1,"stack-index":0}
+]
+""".data(using: .utf8)!
+let wins = YabaiWindow.decodeList(json)
+check(wins.count == 3, "skips malformed entry (count == 3)")
+check(wins.first { $0.id == 1 }?.title == "projA — Visual Studio Code", "title decoded")
+check(wins.first { $0.id == 1 }?.hasFocus == true, "has-focus decoded")
+
+print("StackBuilder")
+let f = YRect(x: 0, y: 25, w: 800, h: 900)
+let other = YRect(x: 800, y: 25, w: 800, h: 900)
+let stacks = StackBuilder.build([win(2, "Code", 2, f), win(1, "Code", 1, f, true), win(3, "Safari", 0, other)])
+check(stacks.count == 1, "one stack built")
+check(stacks.first?.windows.map { $0.id } == [1, 2], "sorted by stack index")
+check(stacks.first?.isFocused == true, "stack focused")
+check(StackBuilder.build([win(1, "A", 0, f), win(2, "B", 0, f)]).isEmpty, "stack-index 0 is not a stack")
+
+print("IndicatorLayout")
+let screen = YRect(x: 0, y: 0, w: 1600, h: 1000)
+let left = IndicatorLayout.place(stackFrame: YRect(x: 100, y: 50, w: 600, h: 800), screenFrame: screen, cellSize: 32, count: 2, offset: 4)
+check(left.side == .left, "left-half window -> left edge")
+check(left.panel.x == 100 - 32 - 4, "left x correct")
+check(left.panel.h == 64, "panel height = cell*count")
+let right = IndicatorLayout.place(stackFrame: YRect(x: 900, y: 50, w: 600, h: 800), screenFrame: screen, cellSize: 32, count: 3, offset: 4)
+check(right.side == .right, "right-half window -> right edge")
+check(right.panel.x == 900 + 600 + 4, "right x correct")
+
+print("CoordinateMapper")
+let c = CoordinateMapper.toCocoa(YRect(x: 100, y: 50, w: 32, h: 64), primaryHeight: 1000)
+check(c.origin.x == 100 && c.origin.y == 1000 - 50 - 64, "y flipped about primary height")
+let c2 = CoordinateMapper.toCocoa(YRect(x: -1158, y: -1015, w: 100, h: 100), primaryHeight: 1000)
+check(c2.origin.x == -1158 && c2.origin.y == 1000 - (-1015) - 100, "negative secondary-display coords preserved")
+
+print("AppConfig")
+check(AppConfig.load(from: nil) == AppConfig.defaults, "nil -> defaults")
+let partial = AppConfig.load(from: #"{"style":"flag","cellSize":24}"#.data(using: .utf8))
+check(partial.style == .flag && partial.cellSize == 24 && partial.offset == AppConfig.defaults.offset, "partial merge over defaults")
+check(AppConfig.load(from: "not json".data(using: .utf8)) == AppConfig.defaults, "garbage -> defaults")
+let tmp = NSTemporaryDirectory() + "yst-selftest-config.json"
+var saved = AppConfig.defaults; saved.style = .flag; saved.save(to: tmp)
+check(AppConfig.loadFromFile(tmp).style == .flag, "save/reload round-trips")
+try? FileManager.default.removeItem(atPath: tmp)
+
+print("RefreshDiff")
+func st(_ key: String, _ ids: [Int], _ focused: Bool) -> Stack {
+    let ws = ids.map { win($0, "A", $0, YRect(x: 0, y: 0, w: 1, h: 1), focused && $0 == ids.first) }
+    return Stack(frame: YRect(x: 0, y: 0, w: 1, h: 1), display: 1, space: 1, windows: ws, isFocused: focused, key: key)
+}
+check(RefreshDiff.shouldRedraw(old: [st("k", [1, 2], true)], new: [st("k", [1, 2], true)]) == false, "no change")
+check(RefreshDiff.shouldRedraw(old: [st("k", [1, 2], true)], new: [st("k", [1, 2], false)]) == true, "focus change")
+check(RefreshDiff.shouldRedraw(old: [st("k", [1, 2], true)], new: [st("k", [1, 2, 3], true)]) == true, "membership change")
+
+// Socket round-trip: start a listener, send a poke, confirm the callback fires.
+print("Socket round-trip")
+do {
+    let sockPath = NSTemporaryDirectory() + "yst-selftest.sock"
+    var poked = false
+    let listener = SignalListener(socketPath: sockPath) { poked = true }
+    listener.start()
+    Thread.sleep(forTimeInterval: 0.1)  // let bind/listen settle
+    RefreshClient.sendPoke(socketPath: sockPath)
+    // onPoke dispatches to main; pump the main runloop briefly.
+    let deadline = Date().addingTimeInterval(2.0)
+    while !poked && Date() < deadline {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+    listener.stop()
+    check(poked, "poke delivered through unix socket to listener callback")
+}
+
+// Optional: decode a real `yabai -m query --windows` dump passed as argv[1].
+if CommandLine.arguments.count > 1 {
+    let path = CommandLine.arguments[1]
+    print("Live decode: \(path)")
+    let data = (try? Data(contentsOf: URL(fileURLWithPath: path))) ?? Data()
+    let liveWins = YabaiWindow.decodeList(data)
+    let liveStacks = StackBuilder.build(liveWins)
+    check(!liveWins.isEmpty, "live query decoded \(liveWins.count) windows")
+    print("  info: \(liveStacks.count) stack(s) detected")
+    for s in liveStacks {
+        print("    stack \(s.key): \(s.windows.map { "\($0.app)#\($0.stackIndex)" }.joined(separator: ", "))")
+    }
+}
+
+print("")
+if failures == 0 { print("ALL SELF-TESTS PASSED") }
+else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
