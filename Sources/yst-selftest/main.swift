@@ -304,6 +304,23 @@ check(ManagedRegion.extract(from: tw.currentText()) == "SEED", "seed body preser
 try? FileManager.default.removeItem(atPath: tPath)
 try? FileManager.default.removeItem(atPath: tw.backupPath)
 
+print("ConfigEngine")
+let engY = NSTemporaryDirectory() + "yst-eng.rc"
+try? FileManager.default.removeItem(atPath: engY)
+let eng = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                       yabaiConfigPath: engY, skhdConfigPath: engY + ".s", scriptsDir: "/S")
+var es = DefaultTemplate.defaultYabaiSettings(); es.gap = 17
+try? eng.saveYabai(es)
+check(eng.loadYabaiSettings().gap == 17, "engine yabai round-trip")
+try? eng.saveSkhd([ShortcutBinding(actionID: "balance", enabled: true, hotkey: Hotkey(mods: [.alt, .cmd], key: "0x2A"))])
+let lb = eng.loadBindings()
+check(lb.count == ShortcutCatalog.all.count, "loadBindings returns a row per action")
+check(lb.first { $0.actionID == "balance" }?.enabled == true, "saved binding enabled")
+check(lb.first { $0.actionID == "rotate-cw" }?.enabled == false, "unsaved binding is disabled row")
+check(eng.applyYabai().ok, "applyYabai runs (/bin/true)")
+try? FileManager.default.removeItem(atPath: engY)
+try? FileManager.default.removeItem(atPath: engY + ".s")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
