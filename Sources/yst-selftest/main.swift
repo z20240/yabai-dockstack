@@ -201,6 +201,15 @@ let oneImg = cgctx.makeImage()!
 tcache.put(1, oneImg); tcache.put(2, oneImg); _ = tcache.get(1); tcache.put(3, oneImg)
 check(tcache.contains(1) && !tcache.contains(2) && tcache.contains(3), "ThumbnailCache evicts LRU")
 
+print("ManagedRegion")
+let mrOut = ManagedRegion.replace(in: "echo hi\n", with: "A\nB")
+check(ManagedRegion.extract(from: mrOut) == "A\nB", "extract round-trips appended body")
+check(mrOut.hasPrefix("echo hi\n"), "freeform preserved before region")
+let mr2 = ManagedRegion.replace(in: mrOut + "AFTER\n", with: "C")
+check(mr2.hasSuffix("AFTER\n"), "freeform preserved after region")
+check(ManagedRegion.extract(from: mr2) == "C", "region body replaced")
+check(ManagedRegion.extract(from: "no markers") == nil, "nil when no markers")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
