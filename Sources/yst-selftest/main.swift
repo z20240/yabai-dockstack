@@ -244,6 +244,22 @@ let conf = ShortcutConflicts.find([
 ])
 check(conf[hkX].map { Set($0) } == Set(["a", "b"]), "conflict finds enabled pair, ignores disabled")
 
+print("SkhdManagedConfig")
+let sb = [
+    ShortcutBinding(actionID: "focus-left", enabled: true, hotkey: Hotkey(mods: [.alt, .cmd], key: "left")),
+    ShortcutBinding(actionID: "balance", enabled: true, hotkey: Hotkey(mods: [.alt, .cmd], key: "0x2A")),
+    ShortcutBinding(actionID: "rotate-cw", enabled: false, hotkey: Hotkey(mods: [.alt, .cmd], key: "r")),
+]
+let sText = SkhdManagedConfig.generate(sb, catalog: ShortcutCatalog.all, scriptsDir: "/S")
+check(sText.contains("alt + cmd - 0x2A : yabai -m space --balance"), "binding line emitted")
+check(!sText.contains("rotate"), "disabled binding skipped")
+let sbParsed = SkhdManagedConfig.parse(sText, catalog: ShortcutCatalog.all, scriptsDir: "/S")
+check(sbParsed == sb.filter { $0.enabled }, "skhd round-trip (enabled subset)")
+check(SkhdManagedConfig.generate(
+    [ShortcutBinding(actionID: "toggle-show-desktop", enabled: true, hotkey: Hotkey(mods: [.cmd], key: "f3"))],
+    catalog: ShortcutCatalog.all, scriptsDir: "/opt/s").contains("/opt/s/taggleShowHideDesktop.sh"),
+    "script token substituted")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
