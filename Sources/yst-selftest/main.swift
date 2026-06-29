@@ -219,6 +219,18 @@ check(Hotkey.parse("alt + cmd - 0x2A")?.skhdString == "alt + cmd - 0x2A", "keyco
 check(Hotkey.parse("cmd -") == nil, "empty key -> nil")
 check(Hotkey(mods: [.cmd, .alt], key: "left").displayString == "⌥⌘←", "display glyphs")
 
+print("YabaiManagedConfig")
+var ys = YabaiSettings.defaults
+ys.rules = [WindowRule(app: "Finder", mode: .float), WindowRule(app: "iTerm2", mode: .manage)]
+let yText = YabaiManagedConfig.generate(ys)
+check(yText.contains("yabai -m config layout bsp"), "layout emitted")
+check(yText.contains(#"app="Finder" manage=off"#), "float rule -> manage=off")
+check(yText.contains(#"app="iTerm2" manage=on"#), "manage rule -> manage=on")
+check(YabaiManagedConfig.parse(yText) == ys, "yabai settings round-trip")
+var off = YabaiSettings.defaults; off.layout = .off
+check(YabaiManagedConfig.parse(YabaiManagedConfig.generate(off)).layout == .off, "layout off sentinel")
+check(YabaiManagedConfig.parse("") == YabaiSettings.defaults, "empty -> defaults")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
