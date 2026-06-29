@@ -27,4 +27,10 @@ final class DefaultTemplateTests: XCTestCase {
         try? FileManager.default.removeItem(atPath: path)
         try? FileManager.default.removeItem(atPath: w.backupPath)
     }
+
+    // Fix D: shipped defaults do not self-conflict
+    func testDefaultBindingsDoNotSelfConflict() {
+        XCTAssertTrue(ShortcutConflicts.find(DefaultTemplate.defaultBindings()).isEmpty,
+                      "default bindings must not contain hotkey conflicts")
+    }
 }

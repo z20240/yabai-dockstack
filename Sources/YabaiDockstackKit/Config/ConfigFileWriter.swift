@@ -11,13 +11,18 @@ public struct ConfigFileWriter {
     }
 
     public func writeManagedRegion(_ body: String) throws {
+        let existing = currentText()
+        if ManagedRegion.hasMalformedMarkers(in: existing) {
+            throw NSError(domain: "ConfigFileWriter", code: 2, userInfo: [NSLocalizedDescriptionKey:
+                "Refusing to write: \(path) has malformed yabai-dockstack managed markers (duplicate or unbalanced). Fix the markers by hand first."])
+        }
         if fm.fileExists(atPath: path) {
             if fm.fileExists(atPath: backupPath) { try? fm.removeItem(atPath: backupPath) }
             try fm.copyItem(atPath: path, toPath: backupPath)
         }
         let dir = (path as NSString).deletingLastPathComponent
         try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        let updated = ManagedRegion.replace(in: currentText(), with: body)
+        let updated = ManagedRegion.replace(in: existing, with: body)
         try updated.write(toFile: path, atomically: true, encoding: .utf8)
     }
 

@@ -9,7 +9,7 @@ public enum SkhdManagedConfig {
                                 catalog: [ShortcutAction],
                                 scriptsDir: String) -> String {
         // Emit in catalog order for deterministic output.
-        let byID = Dictionary(uniqueKeysWithValues: bindings.map { ($0.actionID, $0) })
+        let byID = Dictionary(bindings.map { ($0.actionID, $0) }, uniquingKeysWith: { first, _ in first })
         var lines: [String] = []
         for action in catalog {
             guard let b = byID[action.id], b.enabled, let hk = b.hotkey else { continue }

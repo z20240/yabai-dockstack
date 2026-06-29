@@ -23,7 +23,6 @@ public enum YabaiManagedConfig {
     public static func parse(_ body: String) -> YabaiSettings {
         var s = YabaiSettings.defaults
         s.rules = []
-        var sawRule = false
         for raw in body.split(separator: "\n", omittingEmptySubsequences: true) {
             let line = raw.trimmingCharacters(in: .whitespaces)
             if line == "# dockstack:layout-off" { s.layout = .off; continue }
@@ -33,9 +32,8 @@ public enum YabaiManagedConfig {
             else if let v = intValue(line, key: "left_padding") { s.leftPadding = v }
             else if let v = intValue(line, key: "right_padding") { s.rightPadding = v }
             else if let v = intValue(line, key: "window_gap") { s.gap = v }
-            else if let r = rule(line) { s.rules.append(r); sawRule = true }
+            else if let r = rule(line) { s.rules.append(r) }
         }
-        _ = sawRule
         return s
     }
 

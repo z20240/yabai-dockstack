@@ -321,6 +321,81 @@ check(eng.applyYabai().ok, "applyYabai runs (/bin/true)")
 try? FileManager.default.removeItem(atPath: engY)
 try? FileManager.default.removeItem(atPath: engY + ".s")
 
+// Fix D: .float layout round-trip
+print("YabaiManagedConfig float round-trip")
+do {
+    var floatS = YabaiSettings.defaults; floatS.layout = .float
+    check(YabaiManagedConfig.parse(YabaiManagedConfig.generate(floatS)) == floatS, ".float layout round-trips")
+}
+
+// Fix D: enabled+nil-hotkey excluded from conflicts
+print("ShortcutConflicts nil-hotkey exclusion")
+do {
+    let hkNil = Hotkey(mods: [.cmd], key: "x")
+    let nilBindings = [
+        ShortcutBinding(actionID: "a", enabled: true, hotkey: hkNil),
+        ShortcutBinding(actionID: "x", enabled: true, hotkey: nil),
+    ]
+    let nilConflicts = ShortcutConflicts.find(nilBindings)
+    check(nilConflicts[hkNil] == nil, "single hotkey binding with nil-hotkey sibling is not a conflict")
+    check(!nilConflicts.values.flatMap { $0 }.contains("x"), "nil-hotkey binding absent from conflicts output")
+}
+
+// Fix D: restoreBackup throws when no backup exists
+print("ConfigFileWriter restoreBackup no-bak throws")
+do {
+    let noBackupWriter = ConfigFileWriter(path: NSTemporaryDirectory() + "yst-no-bak-\(Int.random(in: 1000...9999)).rc")
+    var didThrow = false
+    do { try noBackupWriter.restoreBackup() } catch { didThrow = true }
+    check(didThrow, "restoreBackup throws when no .bak file exists")
+}
+
+// Fix D: shipped defaults do not self-conflict
+print("DefaultTemplate no self-conflict")
+check(ShortcutConflicts.find(DefaultTemplate.defaultBindings()).isEmpty, "default bindings have no hotkey conflicts")
+
+// Fix B: loadBindings survives duplicate-actionID region
+print("ConfigEngine duplicate-actionID region survives")
+do {
+    let dupPath = NSTemporaryDirectory() + "yst-dup-\(Int.random(in: 1000...9999)).rc"
+    let dupBody = "alt + cmd - 0x2A : yabai -m space --balance\nctrl - b : yabai -m space --balance"
+    let dupText = ManagedRegion.replace(in: "", with: dupBody)
+    try? dupText.write(toFile: dupPath, atomically: true, encoding: .utf8)
+    let dupEng = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                              yabaiConfigPath: dupPath + ".y", skhdConfigPath: dupPath, scriptsDir: "/S")
+    let dupLoaded = dupEng.loadBindings()
+    check(dupLoaded.count == ShortcutCatalog.all.count, "loadBindings with duplicate-actionID region returns row per action")
+    check(dupLoaded.first { $0.actionID == "balance" }?.enabled == true, "balance enabled despite duplicate binding")
+    try? FileManager.default.removeItem(atPath: dupPath)
+}
+
+// Fix C: hasMalformedMarkers
+print("ManagedRegion hasMalformedMarkers")
+do {
+    let twoBegins = ManagedRegion.beginLine + "\nFREEFORM-A\n" + ManagedRegion.beginLine + "\nX\n" + ManagedRegion.endLine + "\n"
+    check(ManagedRegion.hasMalformedMarkers(in: twoBegins), "two BEGIN markers -> malformed")
+    let endFirst = ManagedRegion.endLine + "\n" + ManagedRegion.beginLine + "\n"
+    check(ManagedRegion.hasMalformedMarkers(in: endFirst), "END before BEGIN -> malformed")
+    check(!ManagedRegion.hasMalformedMarkers(in: ""), "empty -> not malformed")
+    let cleanRegion = ManagedRegion.replace(in: "", with: "BODY")
+    check(!ManagedRegion.hasMalformedMarkers(in: cleanRegion), "one ordered pair -> not malformed")
+}
+
+// Fix C: writeManagedRegion throws and preserves content on malformed markers
+print("ConfigFileWriter refuses malformed-marker file")
+do {
+    let mPath = NSTemporaryDirectory() + "yst-malformed-\(Int.random(in: 1000...9999)).rc"
+    let malformed = ManagedRegion.beginLine + "\nFREEFORM-A\n" + ManagedRegion.beginLine + "\nX\n" + ManagedRegion.endLine + "\n"
+    try? malformed.write(toFile: mPath, atomically: true, encoding: .utf8)
+    let mWriter = ConfigFileWriter(path: mPath)
+    var mDidThrow = false
+    do { try mWriter.writeManagedRegion("NEW") } catch { mDidThrow = true }
+    check(mDidThrow, "writeManagedRegion throws on malformed markers")
+    let mAfter = (try? String(contentsOfFile: mPath, encoding: .utf8)) ?? ""
+    check(mAfter.contains("FREEFORM-A"), "freeform preserved after refused write")
+    try? FileManager.default.removeItem(atPath: mPath)
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

@@ -11,6 +11,22 @@ public enum ManagedRegion {
     private static func isBegin(_ l: Substring) -> Bool { l.hasPrefix("# >>> yabai-dockstack:managed BEGIN") }
     private static func isEnd(_ l: Substring) -> Bool { l.hasPrefix("# <<< yabai-dockstack:managed END") }
 
+    /// True when the markers are present but not a single clean ordered pair
+    /// (e.g. duplicate BEGIN/END or END before BEGIN). A clean file has either
+    /// zero markers or exactly one ordered BEGIN/END pair.
+    public static func hasMalformedMarkers(in text: String) -> Bool {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        let begins = lines.filter(isBegin).count
+        let ends = lines.filter(isEnd).count
+        if begins == 0 && ends == 0 { return false }
+        if begins == 1 && ends == 1 {
+            let b = lines.firstIndex(where: isBegin)!
+            let e = lines.firstIndex(where: isEnd)!
+            return e <= b
+        }
+        return true
+    }
+
     public static func extract(from text: String) -> String? {
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
         guard let b = lines.firstIndex(where: isBegin),

@@ -21,7 +21,7 @@ public final class ConfigEngine {
     public func loadBindings() -> [ShortcutBinding] {
         let parsed = ManagedRegion.extract(from: skhdWriter.currentText())
             .map { SkhdManagedConfig.parse($0, catalog: ShortcutCatalog.all, scriptsDir: scriptsDir) } ?? []
-        let byID = Dictionary(uniqueKeysWithValues: parsed.map { ($0.actionID, $0) })
+        let byID = Dictionary(parsed.map { ($0.actionID, $0) }, uniquingKeysWith: { first, _ in first })
         return ShortcutCatalog.all.map { action in
             byID[action.id] ?? ShortcutBinding(actionID: action.id, enabled: false, hotkey: nil)
         }

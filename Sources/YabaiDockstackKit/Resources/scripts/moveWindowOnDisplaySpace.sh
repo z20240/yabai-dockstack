@@ -20,4 +20,4 @@ target=$(
   '
 )
 
-sh ~/.config/yabai/scripts/moveWindowToSpace.sh "$wid" "$target"
+sh "$(dirname "$0")/moveWindowToSpace.sh" "$wid" "$target"

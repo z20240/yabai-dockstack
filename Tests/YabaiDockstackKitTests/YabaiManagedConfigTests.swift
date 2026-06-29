@@ -28,4 +28,11 @@ final class YabaiManagedConfigTests: XCTestCase {
         let s = YabaiManagedConfig.parse("")
         XCTAssertEqual(s, YabaiSettings.defaults)
     }
+
+    // Fix D: .float layout round-trip
+    func testFloatLayoutRoundTrip() {
+        var s = YabaiSettings.defaults
+        s.layout = .float
+        XCTAssertEqual(YabaiManagedConfig.parse(YabaiManagedConfig.generate(s)), s)
+    }
 }

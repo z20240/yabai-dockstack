@@ -32,4 +32,18 @@ final class ShortcutCatalogTests: XCTestCase {
         XCTAssertEqual(conflicts[hk].map { Set($0) }, Set(["a", "b"]))
         XCTAssertNil(conflicts[Hotkey(mods: [.cmd], key: "y")])
     }
+
+    // Fix D: enabled binding with nil hotkey must not appear in conflicts
+    func testEnabledNilHotkeyExcludedFromConflicts() {
+        let hk = Hotkey(mods: [.cmd], key: "x")
+        let bindings = [
+            ShortcutBinding(actionID: "a", enabled: true, hotkey: hk),
+            ShortcutBinding(actionID: "x", enabled: true, hotkey: nil),
+        ]
+        let conflicts = ShortcutConflicts.find(bindings)
+        XCTAssertNil(conflicts[hk], "single enabled binding with hotkey should not conflict with nil-hotkey binding")
+        // Ensure "x" (nil hotkey) does not appear anywhere in conflicts output
+        let allIDs = conflicts.values.flatMap { $0 }
+        XCTAssertFalse(allIDs.contains("x"), "nil-hotkey binding must not appear in conflicts")
+    }
 }
