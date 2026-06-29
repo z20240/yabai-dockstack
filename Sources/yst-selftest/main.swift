@@ -268,6 +268,21 @@ FileManager.default.createFile(atPath: existing, contents: Data())
 check(ConfigPaths.resolve(candidates: [tmpDir + "a", existing]) == existing, "picks first existing")
 check(ConfigPaths.resolve(candidates: ["~/.nope-xyz"]) == ("~/.nope-xyz" as NSString).expandingTildeInPath, "falls back to first")
 
+print("ConfigFileWriter")
+let wPath = NSTemporaryDirectory() + "yst-writer.rc"
+try? "echo freeform\n".write(toFile: wPath, atomically: true, encoding: .utf8)
+let writer = ConfigFileWriter(path: wPath)
+try? writer.writeManagedRegion("LINE1")
+let wOut = (try? String(contentsOfFile: wPath, encoding: .utf8)) ?? ""
+check(wOut.contains("echo freeform"), "freeform preserved on write")
+check(ManagedRegion.extract(from: wOut) == "LINE1", "region written")
+try? writer.writeManagedRegion("LINE2")
+check(ManagedRegion.extract(from: (try? String(contentsOfFile: wPath, encoding: .utf8)) ?? "") == "LINE2", "region replaced not appended")
+try? writer.restoreBackup()
+check(((try? String(contentsOfFile: wPath, encoding: .utf8)) ?? "").contains("LINE1"), "restore brings back prior (pre-LINE2) state")
+try? FileManager.default.removeItem(atPath: wPath)
+try? FileManager.default.removeItem(atPath: writer.backupPath)
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
