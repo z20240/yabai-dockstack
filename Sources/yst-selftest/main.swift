@@ -283,6 +283,15 @@ check(((try? String(contentsOfFile: wPath, encoding: .utf8)) ?? "").contains("LI
 try? FileManager.default.removeItem(atPath: wPath)
 try? FileManager.default.removeItem(atPath: writer.backupPath)
 
+print("ScriptInstaller")
+let sDir = NSTemporaryDirectory() + "yst-scripts/"
+do {
+    try ScriptInstaller.install(to: sDir)
+    check(ScriptInstaller.scriptNames.allSatisfy { FileManager.default.fileExists(atPath: sDir + $0) },
+          "all scripts installed")
+} catch { check(false, "ScriptInstaller.install threw: \(error)") }
+try? FileManager.default.removeItem(atPath: sDir)
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

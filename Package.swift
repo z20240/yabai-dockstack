@@ -5,7 +5,7 @@ let package = Package(
     name: "yabai-dockstack",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "YabaiDockstackKit"),
+        .target(name: "YabaiDockstackKit", resources: [.copy("Resources")]),
         .executableTarget(
             name: "yabai-dockstack",
             dependencies: ["YabaiDockstackKit"]
