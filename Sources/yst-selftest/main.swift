@@ -260,6 +260,14 @@ check(SkhdManagedConfig.generate(
     catalog: ShortcutCatalog.all, scriptsDir: "/opt/s").contains("/opt/s/taggleShowHideDesktop.sh"),
     "script token substituted")
 
+print("ConfigPaths")
+let tmpDir = NSTemporaryDirectory() + "yst-paths/"
+try? FileManager.default.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
+let existing = tmpDir + "b"
+FileManager.default.createFile(atPath: existing, contents: Data())
+check(ConfigPaths.resolve(candidates: [tmpDir + "a", existing]) == existing, "picks first existing")
+check(ConfigPaths.resolve(candidates: ["~/.nope-xyz"]) == ("~/.nope-xyz" as NSString).expandingTildeInPath, "falls back to first")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
