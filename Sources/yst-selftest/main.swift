@@ -210,6 +210,15 @@ check(mr2.hasSuffix("AFTER\n"), "freeform preserved after region")
 check(ManagedRegion.extract(from: mr2) == "C", "region body replaced")
 check(ManagedRegion.extract(from: "no markers") == nil, "nil when no markers")
 
+print("Hotkey")
+check(Hotkey.parse("alt + cmd - left") == Hotkey(mods: [.alt, .cmd], key: "left"), "parse basic")
+let hk = Hotkey(mods: [.cmd, .alt, .shift], key: "r")
+check(hk.skhdString == "shift + alt + cmd - r", "canonical order output")
+check(Hotkey.parse(hk.skhdString) == hk, "round-trips")
+check(Hotkey.parse("alt + cmd - 0x2A")?.skhdString == "alt + cmd - 0x2A", "keycode preserved")
+check(Hotkey.parse("cmd -") == nil, "empty key -> nil")
+check(Hotkey(mods: [.cmd, .alt], key: "left").displayString == "⌥⌘←", "display glyphs")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
