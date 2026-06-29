@@ -292,6 +292,18 @@ do {
 } catch { check(false, "ScriptInstaller.install threw: \(error)") }
 try? FileManager.default.removeItem(atPath: sDir)
 
+print("DefaultTemplate")
+check(DefaultTemplate.defaultBindings().count == ShortcutCatalog.all.count, "default bindings cover catalog")
+check(DefaultTemplate.defaultYabaiSettings().rules.contains { $0.app == "Finder" }, "default rules include Finder")
+let tPath = NSTemporaryDirectory() + "yst-tmpl.rc"
+try? FileManager.default.removeItem(atPath: tPath)
+let tw = ConfigFileWriter(path: tPath)
+check(DefaultTemplate.ensureManagedRegion(in: tw, body: "SEED") == true, "seeds when no region")
+check(DefaultTemplate.ensureManagedRegion(in: tw, body: "X") == false, "adopts when region exists")
+check(ManagedRegion.extract(from: tw.currentText()) == "SEED", "seed body preserved on adopt")
+try? FileManager.default.removeItem(atPath: tPath)
+try? FileManager.default.removeItem(atPath: tw.backupPath)
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

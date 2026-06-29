@@ -1,0 +1,24 @@
+yabai -m config layout bsp
+yabai -m config top_padding 12
+yabai -m config bottom_padding 12
+yabai -m config left_padding 24
+yabai -m config right_padding 24
+yabai -m config window_gap 8
+yabai -m rule --add app="Gifski" manage=off sub-layer=normal
+yabai -m rule --add app="LINE" manage=off sub-layer=normal
+yabai -m rule --add app="System Preferences" manage=off sub-layer=normal
+yabai -m rule --add app="System Settings" manage=off sub-layer=normal
+yabai -m rule --add app="System Information" manage=off sub-layer=normal
+yabai -m rule --add app="Activity Monitor" manage=off sub-layer=normal
+yabai -m rule --add app="Hammerspoon" manage=off sub-layer=normal
+yabai -m rule --add app="Finder" manage=off sub-layer=normal
+yabai -m rule --add app="Calculator" manage=off sub-layer=normal
+yabai -m rule --add app="Alfred Preferences" manage=off sub-layer=normal
+yabai -m rule --add app="Disk Utility" manage=off sub-layer=normal
+yabai -m rule --add app="Path Finder" manage=off sub-layer=normal
+yabai -m rule --add app="TeamViewer" manage=off sub-layer=normal
+yabai -m rule --add app="AppCleaner" manage=off sub-layer=normal
+yabai -m rule --add app="iStat Menus" manage=off sub-layer=normal
+yabai -m rule --add app="Telegram" manage=off sub-layer=normal
+yabai -m rule --add app="Raycast" manage=off sub-layer=normal
+yabai -m rule --apply

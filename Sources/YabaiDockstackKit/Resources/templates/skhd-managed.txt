@@ -1,0 +1,42 @@
+ctrl + alt + cmd - r : yabai --restart-service && skhd --reload
+cmd - f3 : sh ~/.config/yabai-dockstack/scripts/taggleShowHideDesktop.sh
+alt + cmd - backspace : yabai -m window --close
+ctrl + alt + cmd - space : yabai -m window --toggle float ; yabai -m window --grid 12:12:1:1:9:9
+ctrl + alt - left : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh display
+ctrl + alt - right : sh ~/.config/yabai-dockstack/scripts/moveWindowToRight.sh display
+ctrl + cmd - left : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh space
+ctrl + cmd - right : sh ~/.config/yabai-dockstack/scripts/moveWindowToRight.sh space
+ctrl + cmd - 1 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 1
+ctrl + cmd - 2 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 2
+ctrl + cmd - 3 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 3
+ctrl + cmd - 4 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 4
+ctrl + cmd - 5 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 5
+ctrl + cmd - 6 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 6
+ctrl + cmd - 7 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 7
+ctrl + cmd - 8 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 8
+ctrl + cmd - 9 : sh ~/.config/yabai-dockstack/scripts/moveWindowToLeft.sh 9
+alt + cmd - left : sh ~/.config/yabai-dockstack/scripts/focusWindow.sh left
+alt + cmd - right : sh ~/.config/yabai-dockstack/scripts/focusWindow.sh right
+alt + cmd - up : sh ~/.config/yabai-dockstack/scripts/focusWindow.sh up
+alt + cmd - down : sh ~/.config/yabai-dockstack/scripts/focusWindow.sh down
+alt + cmd - 0x2A : yabai -m space --balance
+alt + cmd - space : yabai -m window --toggle zoom-fullscreen
+alt + cmd - g : yabai -m space --toggle padding; yabai -m space --toggle gap
+alt + cmd - r : yabai -m space --rotate 270
+shift + alt + cmd - r : yabai -m space --rotate 90
+shift + alt + cmd - left : yabai -m window west --stack $(yabai -m query --windows --window | jq -r '.id')
+shift + alt + cmd - right : yabai -m window east --stack $(yabai -m query --windows --window | jq -r '.id')
+shift + alt + cmd - up : yabai -m window --focus stack.prev || yabai -m window --focus stack.last
+shift + alt + cmd - down : yabai -m window --focus stack.next || yabai -m window --focus stack.first
+ctrl + alt + cmd - left : yabai -m window --swap west
+ctrl + alt + cmd - right : yabai -m window --swap east
+ctrl + alt + cmd - up : yabai -m window --swap north
+ctrl + alt + cmd - down : yabai -m window --swap south
+ctrl + alt + cmd - home : yabai -m window --resize left:-20:0 || yabai -m window --resize right:-20:0
+ctrl + alt + cmd - end : yabai -m window --resize right:20:0 || yabai -m window --resize left:20:0
+ctrl + alt + cmd - pageup : yabai -m window --resize top:0:-20 || yabai -m window --resize bottom:0:-20
+ctrl + alt + cmd - pagedown : yabai -m window --resize top:0:20 || yabai -m window --resize bottom:0:20
+alt + cmd - home : yabai -m window --grid 2:2:0:0:1:1
+alt + cmd - pageup : yabai -m window --grid 2:2:1:0:1:1
+alt + cmd - pagedown : yabai -m window --grid 2:2:0:1:1:1
+alt + cmd - end : yabai -m window --grid 2:2:1:1:1:1
