@@ -231,6 +231,19 @@ var off = YabaiSettings.defaults; off.layout = .off
 check(YabaiManagedConfig.parse(YabaiManagedConfig.generate(off)).layout == .off, "layout off sentinel")
 check(YabaiManagedConfig.parse("") == YabaiSettings.defaults, "empty -> defaults")
 
+print("ShortcutCatalog")
+let ids = ShortcutCatalog.all.map { $0.id }
+check(Set(ids).count == ids.count, "catalog ids unique")
+check(ShortcutCatalog.all.allSatisfy { ShortcutGroup.order.contains($0.group) }, "all groups known")
+check(ShortcutCatalog.action(id: "stack-west") != nil, "stack-west present")
+let hkX = Hotkey(mods: [.cmd], key: "x")
+let conf = ShortcutConflicts.find([
+    ShortcutBinding(actionID: "a", enabled: true, hotkey: hkX),
+    ShortcutBinding(actionID: "b", enabled: true, hotkey: hkX),
+    ShortcutBinding(actionID: "d", enabled: false, hotkey: hkX),
+])
+check(conf[hkX].map { Set($0) } == Set(["a", "b"]), "conflict finds enabled pair, ignores disabled")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
