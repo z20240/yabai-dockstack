@@ -40,10 +40,25 @@ public enum YabaiDockstack {
             return
         }
 
+        // Resolve skhd binary and config paths; build the config engine.
+        let skhdPath = ["/opt/homebrew/bin/skhd", "/usr/local/bin/skhd"]
+            .first { FileManager.default.fileExists(atPath: $0) } ?? "/opt/homebrew/bin/skhd"
+        let yabaiRcPath = ConfigPaths.resolve(candidates: ConfigPaths.yabaiCandidates)
+        let skhdRcPath = ConfigPaths.resolve(candidates: ConfigPaths.skhdCandidates)
+        let configEngine = ConfigEngine(yabaiPath: resolvedYabai, skhdPath: skhdPath,
+                                        yabaiConfigPath: yabaiRcPath, skhdConfigPath: skhdRcPath,
+                                        scriptsDir: ConfigPaths.scriptsDir)
+
         // Write a default config file on first run so it's discoverable/editable.
         let expandedConfig = (configPath as NSString).expandingTildeInPath
         if !FileManager.default.fileExists(atPath: expandedConfig) {
             config.save(to: configPath)
+        }
+
+        // Install bundled helper scripts on first run (only writes to the scripts dir,
+        // never touches the user's rc files).
+        if !FileManager.default.fileExists(atPath: ConfigPaths.scriptsDir) {
+            try? ScriptInstaller.install(to: ConfigPaths.scriptsDir)
         }
 
         // Dock window previews (gated; needs Accessibility + Screen Recording).
@@ -108,6 +123,10 @@ public enum YabaiDockstack {
             },
             onLoginToggle: { enabled in _ = LoginItem.setEnabled(enabled) },
             loginIsEnabled: { LoginItem.isEnabled })
+
+        settings.configEngine = configEngine
+        settings.yabaiRawPath = yabaiRcPath
+        settings.skhdRawPath = skhdRcPath
 
         // Permissions section: request the permission AND open the right pane, one
         // at a time (avoids the two prompts colliding at launch).
