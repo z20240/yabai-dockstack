@@ -65,9 +65,13 @@ public final class YabaiSettingsPaneView: NSView {
             f.alignment = .right
             f.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
-        // Give the segmented control room so BSP/Float/Off aren't clipped to "…"
-        // (otherwise column 1 is sized by the narrow 80pt fields).
-        layoutControl.widthAnchor.constraint(equalToConstant: 210).isActive = true
+        // Stop BSP/Float/Off being clipped to "…": an explicit equal-width constraint
+        // conflicts with NSGridView's own column constraint and gets broken, so instead
+        // make the control refuse to compress below its intrinsic width (the grid's
+        // column-sizing honours compression resistance) plus a minimum floor.
+        layoutControl.setContentCompressionResistancePriority(.required, for: .horizontal)
+        layoutControl.setContentHuggingPriority(.required, for: .horizontal)
+        layoutControl.widthAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
 
         // NSGridView for scalar fields (mirrors SettingsWindowController idiom)
         let grid = NSGridView(views: [
@@ -142,7 +146,7 @@ public final class YabaiSettingsPaneView: NSView {
         contentStack.spacing     = 12
         contentStack.translatesAutoresizingMaskIntoConstraints = false
 
-        let scrollContent = NSView()
+        let scrollContent = FlippedDocumentView()
         scrollContent.translatesAutoresizingMaskIntoConstraints = false
         scrollContent.addSubview(contentStack)
         NSLayoutConstraint.activate([
@@ -380,4 +384,11 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
         guard row >= 0, row < settings.rules.count else { return }
         settings.rules[row].mode = sender.indexOfSelectedItem == 0 ? .float : .manage
     }
+}
+
+/// Flipped document view so a short content stack inside the scroll view aligns to
+/// the TOP of the clip (an unflipped NSClipView pins a short document to the bottom,
+/// which left a blank gap above the form).
+private final class FlippedDocumentView: NSView {
+    override var isFlipped: Bool { true }
 }
