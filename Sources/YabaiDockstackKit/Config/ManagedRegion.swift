@@ -11,6 +11,13 @@ public enum ManagedRegion {
     private static func isBegin(_ l: Substring) -> Bool { l.hasPrefix("# >>> yabai-dockstack:managed BEGIN") }
     private static func isEnd(_ l: Substring) -> Bool { l.hasPrefix("# <<< yabai-dockstack:managed END") }
 
+    public static func isBeginMarker(_ line: String) -> Bool {
+        line.hasPrefix("# >>> yabai-dockstack:managed BEGIN")
+    }
+    public static func isEndMarker(_ line: String) -> Bool {
+        line.hasPrefix("# <<< yabai-dockstack:managed END")
+    }
+
     /// True when the markers are present but not a single clean ordered pair
     /// (e.g. duplicate BEGIN/END or END before BEGIN). A clean file has either
     /// zero markers or exactly one ordered BEGIN/END pair.

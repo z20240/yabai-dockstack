@@ -450,6 +450,17 @@ check(FreeformImporter.parseSkhdLine("# comment") == nil, "parseSkhdLine skips c
 check(FreeformImporter.parseSkhdLine("cmd - n : a && \\") == nil, "parseSkhdLine skips continuation")
 check(FreeformImporter.parseSkhdLine("shift + cmd - g : yabai -m window --grid 2:2:0:0:1:1")?.command == "yabai -m window --grid 2:2:0:0:1:1", "parseSkhdLine keeps colon in command (split on first colon)")
 
+print("FreeformImporter.importSkhd")
+let skFile = "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\ncmd - x : custom jq thing\n"
+let skRes = FreeformImporter.importSkhd(fileText: skFile,
+    current: [ShortcutBinding(actionID: "toggle-show-desktop", enabled: true, hotkey: Hotkey(mods: [.cmd], key: "4"))],
+    catalog: ShortcutCatalog.all, scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+check(skRes.importedCount == 1, "importSkhd matches one binding")
+check(skRes.bindings.first { $0.actionID == "toggle-show-desktop" }?.hotkey == Hotkey(mods: [.cmd], key: "f3"),
+      "importSkhd: imported value wins")
+check(skRes.newText.contains("# [yabai-dockstack imported] cmd - f3:"), "importSkhd comments matched line")
+check(skRes.newText.contains("cmd - x : custom jq thing"), "importSkhd leaves unmatched line")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

@@ -36,3 +36,35 @@ final class FreeformImporterTests: XCTestCase {
         XCTAssertNil(FreeformImporter.parseSkhdLine("alt - h"))  // no command
     }
 }
+
+extension FreeformImporterTests {
+    func testImportSkhdMatchesAndComments() {
+        let file = """
+        cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh
+        cmd - x : yabai -m space --create && jq something
+        # >>> yabai-dockstack:managed BEGIN >>>
+        cmd - 4 : sh /Users/me/.config/yabai-dockstack/scripts/taggleShowHideDesktop.sh
+        # <<< yabai-dockstack:managed END <<<
+        """
+        let current = [ShortcutBinding(actionID: "toggle-show-desktop", enabled: true,
+                                       hotkey: Hotkey(mods: [.cmd], key: "4"))]
+        let r = FreeformImporter.importSkhd(fileText: file, current: current,
+                                            catalog: ShortcutCatalog.all, scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+        XCTAssertEqual(r.importedCount, 1)
+        // imported value wins: toggle-show-desktop now bound to cmd - f3
+        XCTAssertEqual(r.bindings.first { $0.actionID == "toggle-show-desktop" }?.hotkey,
+                       Hotkey(mods: [.cmd], key: "f3"))
+        // freeform line commented; the jq line and the managed region untouched
+        XCTAssertTrue(r.newText.contains("# [yabai-dockstack imported] cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh"))
+        XCTAssertTrue(r.newText.contains("cmd - x : yabai -m space --create && jq something"))
+        XCTAssertTrue(r.newText.contains("cmd - 4 : sh /Users/me/.config/yabai-dockstack/scripts/taggleShowHideDesktop.sh"))
+    }
+
+    func testImportSkhdNothingToImport() {
+        let file = "cmd - z : some-custom-thing\n"
+        let r = FreeformImporter.importSkhd(fileText: file, current: [],
+                                            catalog: ShortcutCatalog.all, scriptsDir: "/S")
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertEqual(r.newText, file)
+    }
+}
