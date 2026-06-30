@@ -68,6 +68,37 @@ final class ConfigEngineTests: XCTestCase {
         try? FileManager.default.removeItem(atPath: s)
     }
 
+    func testImportSkhdMigratesFreeformIntoRegion() throws {
+        let p = NSTemporaryDirectory() + "yst-imp-\(UUID().uuidString).skhdrc"
+        // freeform original binds toggle-show-desktop to cmd - f3 (user's own script path)
+        try "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n"
+            .write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: p + ".y", skhdConfigPath: p,
+                             scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+        let n = e.importSkhd()
+        XCTAssertEqual(n, 1)
+        let text = try String(contentsOfFile: p, encoding: .utf8)
+        XCTAssertTrue(text.contains("# [yabai-dockstack imported] cmd - f3:"))  // original commented
+        XCTAssertNotNil(ManagedRegion.extract(from: text))                       // region created
+        // the managed region now binds toggle-show-desktop to cmd - f3
+        XCTAssertEqual(e.loadBindings().first { $0.actionID == "toggle-show-desktop" }?.hotkey,
+                       Hotkey(mods: [.cmd], key: "f3"))
+        try? FileManager.default.removeItem(atPath: p)
+        try? FileManager.default.removeItem(atPath: p + ".bak")
+    }
+
+    func testImportSkhdNoopWhenNothingMatches() throws {
+        let p = NSTemporaryDirectory() + "yst-imp2-\(UUID().uuidString).skhdrc"
+        try "cmd - z : my-own-thing\n".write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: p + ".y", skhdConfigPath: p, scriptsDir: "/S")
+        XCTAssertEqual(e.importSkhd(), 0)
+        let text = try String(contentsOfFile: p, encoding: .utf8)
+        XCTAssertNil(ManagedRegion.extract(from: text))  // nothing imported -> file unchanged, no region
+        try? FileManager.default.removeItem(atPath: p)
+    }
+
     /// Fix B: two bindings resolving to the same catalog command must not trap loadBindings().
     func testLoadBindingsDuplicateActionIDDoesNotCrash() throws {
         let s = NSTemporaryDirectory() + "yst-eng-dup-\(UUID().uuidString).rc"

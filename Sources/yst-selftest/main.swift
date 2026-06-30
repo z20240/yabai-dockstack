@@ -473,6 +473,22 @@ check(ybOff.importedCount == 0 && ybOff.settings.layout == YabaiSettings.default
 let ybDup = FreeformImporter.importYabai(fileText: "yabai -m rule --add app=\"Finder\" manage=off sub-layer=normal\nyabai -m rule --add app=\"Finder\" manage=on sub-layer=normal", current: YabaiSettings.defaults)
 check(ybDup.settings.rules == [WindowRule(app: "Finder", mode: .manage)], "importYabai rule de-dupe later wins")
 
+print("ConfigEngine import")
+let impP = NSTemporaryDirectory() + "yst-imp.skhdrc"
+try? "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n".write(toFile: impP, atomically: true, encoding: .utf8)
+let impE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                        yabaiConfigPath: impP + ".y", skhdConfigPath: impP,
+                        scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+check(impE.importSkhd() == 1, "engine importSkhd migrates one binding")
+let impText = (try? String(contentsOfFile: impP, encoding: .utf8)) ?? ""
+check(impText.contains("# [yabai-dockstack imported] cmd - f3:"), "engine import comments original")
+check(ManagedRegion.extract(from: impText) != nil, "engine import creates managed region")
+check(impE.loadBindings().first { $0.actionID == "toggle-show-desktop" }?.hotkey == Hotkey(mods: [.cmd], key: "f3"),
+      "engine import: action now bound to imported key")
+try? FileManager.default.removeItem(atPath: impP)
+try? FileManager.default.removeItem(atPath: impP + ".bak")
+try? FileManager.default.removeItem(atPath: impP + ".y")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

@@ -10,20 +10,25 @@ public struct ConfigFileWriter {
         (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
     }
 
-    public func writeManagedRegion(_ body: String) throws {
-        let existing = currentText()
-        if ManagedRegion.hasMalformedMarkers(in: existing) {
-            throw NSError(domain: "ConfigFileWriter", code: 2, userInfo: [NSLocalizedDescriptionKey:
-                "Refusing to write: \(path) has malformed yabai-dockstack managed markers (duplicate or unbalanced). Fix the markers by hand first."])
-        }
+    /// Back up the current file (if any) to `backupPath`, then write `text` verbatim.
+    public func writeRaw(_ text: String) throws {
         if fm.fileExists(atPath: path) {
             if fm.fileExists(atPath: backupPath) { try? fm.removeItem(atPath: backupPath) }
             try fm.copyItem(atPath: path, toPath: backupPath)
         }
         let dir = (path as NSString).deletingLastPathComponent
         try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try text.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
+    public func writeManagedRegion(_ body: String) throws {
+        let existing = currentText()
+        if ManagedRegion.hasMalformedMarkers(in: existing) {
+            throw NSError(domain: "ConfigFileWriter", code: 2, userInfo: [NSLocalizedDescriptionKey:
+                "Refusing to write: \(path) has malformed yabai-dockstack managed markers (duplicate or unbalanced). Fix the markers by hand first."])
+        }
         let updated = ManagedRegion.replace(in: existing, with: body)
-        try updated.write(toFile: path, atomically: true, encoding: .utf8)
+        try writeRaw(updated)
     }
 
     public func restoreBackup() throws {

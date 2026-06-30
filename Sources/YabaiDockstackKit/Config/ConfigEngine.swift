@@ -47,6 +47,27 @@ public final class ConfigEngine {
         hasSkhdRegion() ? loadBindings() : DefaultTemplate.defaultBindings()
     }
 
+    public func importSkhd() -> Int {
+        let r = FreeformImporter.importSkhd(fileText: skhdWriter.currentText(),
+                                            current: loadBindingsOrDefault(),
+                                            catalog: ShortcutCatalog.all, scriptsDir: scriptsDir)
+        guard r.importedCount > 0 else { return 0 }
+        let body = SkhdManagedConfig.generate(r.bindings, catalog: ShortcutCatalog.all, scriptsDir: scriptsDir)
+        let final = ManagedRegion.replace(in: r.newText, with: body)
+        try? skhdWriter.writeRaw(final)
+        return r.importedCount
+    }
+
+    public func importYabai() -> Int {
+        let r = FreeformImporter.importYabai(fileText: yabaiWriter.currentText(),
+                                             current: loadYabaiSettingsOrDefault())
+        guard r.importedCount > 0 else { return 0 }
+        let body = YabaiManagedConfig.generate(r.settings)
+        let final = ManagedRegion.replace(in: r.newText, with: body)
+        try? yabaiWriter.writeRaw(final)
+        return r.importedCount
+    }
+
     public func applyYabai() -> (ok: Bool, output: String) {
         ConfigApplier.run(yabaiPath, ["--restart-service"])
     }
