@@ -217,7 +217,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         if let engine = configEngine {
             keyboardItem.view = ShortcutsPaneView(engine: engine, rawFilePath: skhdRawPath ?? "")
         } else {
-            keyboardItem.view = makePlaceholder("yabai not configured")
+            keyboardItem.view = makePlaceholder("Keyboard shortcuts not configured")
         }
 
         // --- NSTabView as the window's content view ---

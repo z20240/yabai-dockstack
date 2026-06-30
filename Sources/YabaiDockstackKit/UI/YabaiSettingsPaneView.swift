@@ -29,7 +29,6 @@ public final class YabaiSettingsPaneView: NSView {
     // MARK: - Rules table
 
     private var tableView: NSTableView!
-    private var removeButton: NSButton!
 
     // MARK: - Status
 
@@ -121,7 +120,7 @@ public final class YabaiSettingsPaneView: NSView {
         addButton.bezelStyle  = .smallSquare
         addButton.controlSize = .small
 
-        removeButton = NSButton(title: "–", target: self, action: #selector(removeRule))
+        let removeButton = NSButton(title: "–", target: self, action: #selector(removeRule))
         removeButton.bezelStyle  = .smallSquare
         removeButton.controlSize = .small
 
@@ -164,7 +163,7 @@ public final class YabaiSettingsPaneView: NSView {
         applyButton.bezelStyle    = .rounded
         applyButton.keyEquivalent = "\r"
 
-        let editButton = NSButton(title: "Edit raw file…", target: self, action: #selector(editRawTapped))
+        let editButton = NSButton(title: "⚙️ Edit raw file…", target: self, action: #selector(editRawTapped))
         editButton.bezelStyle = .rounded
 
         let resetButton = NSButton(title: "Reset to defaults", target: self, action: #selector(resetTapped))

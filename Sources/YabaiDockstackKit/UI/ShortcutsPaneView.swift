@@ -81,7 +81,7 @@ public final class ShortcutsPaneView: NSView {
         applyButton.bezelStyle = .rounded
         applyButton.keyEquivalent = "\r"
 
-        let editButton = NSButton(title: "Edit raw file…", target: self, action: #selector(editRawTapped))
+        let editButton = NSButton(title: "⚙️ Edit raw file…", target: self, action: #selector(editRawTapped))
         editButton.bezelStyle = .rounded
 
         let resetButton = NSButton(title: "Reset to defaults", target: self, action: #selector(resetTapped))
@@ -186,6 +186,10 @@ public final class ShortcutsPaneView: NSView {
                 // Enabling when a hotkey is set
                 self.bindings[idx].enabled = true
                 self.checkboxes[actionID]?.state = .on
+            } else {
+                // Clearing the hotkey also disables the row
+                self.bindings[idx].enabled = false
+                self.checkboxes[actionID]?.state = .off
             }
             self.refreshConflicts()
         }
@@ -221,9 +225,9 @@ public final class ShortcutsPaneView: NSView {
         do {
             try engine.saveSkhd(bindings)
             let r = engine.applySkhd()
-            showStatus(r.ok ? "Reloaded skhd" : r.output)
+            showStatus(r.ok, r.ok ? "Reloaded skhd" : r.output)
         } catch {
-            showStatus(error.localizedDescription)
+            showStatus(false, error.localizedDescription)
         }
     }
 
@@ -239,9 +243,9 @@ public final class ShortcutsPaneView: NSView {
 
     // MARK: - Status Display
 
-    private func showStatus(_ message: String) {
+    private func showStatus(_ ok: Bool, _ message: String) {
         statusLabel.stringValue = message
-        statusLabel.textColor = message == "Reloaded skhd" ? .systemGreen : .systemRed
+        statusLabel.textColor = ok ? .systemGreen : .systemRed
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
             guard let self, self.statusLabel.stringValue == message else { return }
             self.statusLabel.stringValue = ""

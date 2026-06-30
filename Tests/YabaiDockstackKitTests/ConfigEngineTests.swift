@@ -54,6 +54,20 @@ final class ConfigEngineTests: XCTestCase {
         try? FileManager.default.removeItem(atPath: y)
     }
 
+    func testLoadBindingsOrDefaultUsesRegionWhenPresent() throws {
+        let s = NSTemporaryDirectory() + "yst-eng-skreg-\(UUID().uuidString).rc"
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: s + ".y", skhdConfigPath: s, scriptsDir: "/S")
+        try e.saveSkhd([ShortcutBinding(actionID: "balance", enabled: true,
+                                        hotkey: Hotkey(mods: [.alt, .cmd], key: "0x2A"))])
+        XCTAssertTrue(e.hasSkhdRegion())
+        let loaded = e.loadBindingsOrDefault()
+        // region present -> reflects the saved single binding among full catalog rows
+        XCTAssertEqual(loaded.first { $0.actionID == "balance" }?.enabled, true)
+        XCTAssertEqual(loaded.first { $0.actionID == "rotate-cw" }?.enabled, false)
+        try? FileManager.default.removeItem(atPath: s)
+    }
+
     /// Fix B: two bindings resolving to the same catalog command must not trap loadBindings().
     func testLoadBindingsDuplicateActionIDDoesNotCrash() throws {
         let s = NSTemporaryDirectory() + "yst-eng-dup-\(UUID().uuidString).rc"

@@ -57,8 +57,12 @@ public enum YabaiDockstack {
 
         // Install bundled helper scripts on first run (only writes to the scripts dir,
         // never touches the user's rc files).
-        if !FileManager.default.fileExists(atPath: ConfigPaths.scriptsDir) {
-            try? ScriptInstaller.install(to: ConfigPaths.scriptsDir)
+        let scriptsInstalled = ScriptInstaller.scriptNames.allSatisfy {
+            FileManager.default.fileExists(atPath: ConfigPaths.scriptsDir + "/" + $0)
+        }
+        if !scriptsInstalled {
+            do { try ScriptInstaller.install(to: ConfigPaths.scriptsDir) }
+            catch { NSLog("yabai-dockstack: helper script install failed: \(error)") }
         }
 
         // Dock window previews (gated; needs Accessibility + Screen Recording).

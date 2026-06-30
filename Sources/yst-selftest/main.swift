@@ -423,7 +423,7 @@ print("ShortcutSections")
 let secs = ShortcutSections.build(DefaultTemplate.defaultBindings())
 check(secs.map { $0.group } == ShortcutGroup.order, "sections in group order")
 check(secs.reduce(0) { $0 + $1.rows.count } == ShortcutCatalog.all.count, "rows cover catalog")
-check(ShortcutSections.build([]).flatMap { $0.rows }.allSatisfy { !$0.binding.enabled }, "missing -> disabled rows")
+check(ShortcutSections.build([]).flatMap { $0.rows }.allSatisfy { !$0.binding.enabled && $0.binding.hotkey == nil }, "missing -> disabled+unbound rows")
 let chk = Hotkey(mods: [.alt, .cmd], key: "x")
 check(ShortcutSections.conflictingActionIDs([
     ShortcutBinding(actionID: "balance", enabled: true, hotkey: chk),
