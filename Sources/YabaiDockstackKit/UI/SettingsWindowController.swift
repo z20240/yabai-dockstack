@@ -4,6 +4,15 @@ import AppKit
 /// UI — no config-file editing. Changes apply live and persist via `onChange`.
 public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
+    private var tabView: NSTabView?
+
+    /// Select a tab by index (0=Appearance, 1=yabai, 2=Keyboard). Builds the window first.
+    public func selectTab(at index: Int) {
+        if window == nil { build() }
+        if let tv = tabView, index >= 0, index < tv.numberOfTabViewItems {
+            tv.selectTabViewItem(at: index)
+        }
+    }
     private var config: AppConfig
     private let onChange: (AppConfig) -> Void
     private let onLoginToggle: (Bool) -> Void
@@ -225,11 +234,13 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         tabView.addTabViewItem(appearanceItem)
         tabView.addTabViewItem(yabaiItem)
         tabView.addTabViewItem(keyboardItem)
+        self.tabView = tabView
 
         let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
                            styleMask: [.titled, .closable],
                            backing: .buffered, defer: false)
-        win.title = "yabai-dockstack Settings"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        win.title = "yabai-dockstack Settings" + (version.map { " (v\($0))" } ?? "")
         win.isReleasedWhenClosed = false
         win.delegate = self
         win.contentView = tabView

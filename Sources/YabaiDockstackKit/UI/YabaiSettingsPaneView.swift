@@ -65,32 +65,26 @@ public final class YabaiSettingsPaneView: NSView {
             f.alignment = .right
             f.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
-        // Stop BSP/Float/Off being clipped to "…": an explicit equal-width constraint
-        // conflicts with NSGridView's own column constraint and gets broken, so instead
-        // make the control refuse to compress below its intrinsic width (the grid's
-        // column-sizing honours compression resistance) plus a minimum floor.
-        layoutControl.setContentCompressionResistancePriority(.required, for: .horizontal)
-        layoutControl.setContentHuggingPriority(.required, for: .horizontal)
-        layoutControl.widthAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
+        // Fixed width so BSP/Float/Off render in full (not clipped to "…"). In a plain
+        // row stack this constraint is honoured directly — unlike inside an NSGridView,
+        // whose column (sized by the narrow 80pt number fields) compressed it.
+        layoutControl.widthAnchor.constraint(equalToConstant: 200).isActive = true
 
-        // NSGridView for scalar fields (mirrors SettingsWindowController idiom)
-        let grid = NSGridView(views: [
-            row("Default layout:", layoutControl),
-            row("Top padding:",    topField),
-            row("Bottom padding:", bottomField),
-            row("Left padding:",   leftField),
-            row("Right padding:",  rightField),
-            row("Gap:",            gapField),
+        // Scalar form: a vertical stack of [right-aligned fixed-width label | control]
+        // rows. Plain stacks keep each control at its own width, left-aligned, with no
+        // NSGridView column-sizing quirks (which were squeezing the segmented control).
+        let form = NSStackView(views: [
+            formRow("Default layout:", layoutControl),
+            formRow("Top padding:",    topField),
+            formRow("Bottom padding:", bottomField),
+            formRow("Left padding:",   leftField),
+            formRow("Right padding:",  rightField),
+            formRow("Gap:",            gapField),
         ])
-        grid.translatesAutoresizingMaskIntoConstraints = false
-        grid.column(at: 0).xPlacement = .trailing
-        grid.rowAlignment = .firstBaseline
-        grid.columnSpacing = 12
-        grid.rowSpacing = 10
-        // Keep the grid at its natural width on the left: NSGridView otherwise stretches
-        // to fill, and its trailing label column absorbs the slack, pushing the form
-        // rightward. Required hugging makes it stay at intrinsic width, leading-aligned.
-        grid.setContentHuggingPriority(.required, for: .horizontal)
+        form.orientation = .vertical
+        form.alignment   = .leading
+        form.spacing     = 10
+        form.translatesAutoresizingMaskIntoConstraints = false
 
         // Section header
         let rulesHeader = NSTextField(labelWithString: "Window Rules")
@@ -140,7 +134,7 @@ public final class YabaiSettingsPaneView: NSView {
         ruleButtons.spacing     = 4
 
         // Content stack (scrolled)
-        let contentStack = NSStackView(views: [grid, rulesHeader, tableScroll, ruleButtons])
+        let contentStack = NSStackView(views: [form, rulesHeader, tableScroll, ruleButtons])
         contentStack.orientation = .vertical
         contentStack.alignment   = .leading
         contentStack.spacing     = 12
@@ -209,11 +203,18 @@ public final class YabaiSettingsPaneView: NSView {
         ])
     }
 
-    /// Label+control row for NSGridView (mirrors SettingsWindowController.row(_:_:)).
-    private func row(_ label: String, _ control: NSView) -> [NSView] {
+    /// One form row: a fixed-width right-aligned label next to its control, so all
+    /// controls line up at the same x without relying on NSGridView column sizing.
+    private func formRow(_ label: String, _ control: NSView) -> NSView {
         let l = NSTextField(labelWithString: label)
         l.alignment = .right
-        return [l, control]
+        l.widthAnchor.constraint(equalToConstant: 120).isActive = true
+        l.setContentHuggingPriority(.required, for: .horizontal)
+        let s = NSStackView(views: [l, control])
+        s.orientation = .horizontal
+        s.alignment   = .centerY
+        s.spacing     = 8
+        return s
     }
 
     // MARK: - Sync

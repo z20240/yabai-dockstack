@@ -1,7 +1,10 @@
 import AppKit
 
 public enum YabaiDockstack {
-    public static func versionString() -> String { "yabai-dockstack 0.1.0" }
+    public static func versionString() -> String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        return "yabai-dockstack \(v)"
+    }
 
     /// Absolute path to the running binary — used as the yabai signal action target.
     private static func selfBinaryPath() -> String {
@@ -165,7 +168,11 @@ public enum YabaiDockstack {
         // yabai missing is the priority — nothing works without it. Otherwise, if
         // previews are on but permissions are missing, open Settings to grant them.
         DispatchQueue.main.async {
-            if !client.isAvailable() {
+            if args.contains("--open-settings") {
+                settings.show()   // open Settings on launch (handy for support/testing)
+                settings.selectTab(at: 1)   // jump to the yabai tab
+
+            } else if !client.isAvailable() {
                 yabaiGuide.show()
             } else if config.dockPreview && !PermissionsHelper.allGranted {
                 settings.show()
