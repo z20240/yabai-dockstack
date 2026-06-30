@@ -227,12 +227,17 @@ check(yText.contains("yabai -m config layout bsp"), "layout emitted")
 check(yText.contains(#"app="Finder" manage=off"#), "float rule -> manage=off")
 check(yText.contains(#"app="iTerm2" manage=on"#), "manage rule -> manage=on")
 check(YabaiManagedConfig.parse(yText) == ys, "yabai settings round-trip")
+var floatMode = YabaiSettings.defaults; floatMode.layout = .float
+floatMode.rules = [WindowRule(app: "Finder", mode: .float)]
+let floatText = YabaiManagedConfig.generate(floatMode)
+check(floatText.contains(#"app=".*" manage=off"#), "float emits global manage=off catch-all (floats all windows)")
+check(YabaiManagedConfig.parse(floatText) == floatMode, "float round-trips (.float + real rules, synthetic .* skipped)")
 var off = YabaiSettings.defaults; off.layout = .off
 off.rules = [WindowRule(app: "Finder", mode: .float)]
 let offText = YabaiManagedConfig.generate(off)
 check(offText.contains("yabai -m config layout float"), "off emits float layout")
-check(offText.contains(#"app=".*" manage=off"#), "off emits global manage=off catch-all")
-check(YabaiManagedConfig.parse(offText) == off, "off round-trips (.off + real rules, synthetic .* skipped)")
+check(!offText.contains(#"app=".*""#), "off has no synthetic catch-all (native feel)")
+check(YabaiManagedConfig.parse(offText) == off, "off round-trips")
 check(YabaiManagedConfig.parse("") == YabaiSettings.defaults, "empty -> defaults")
 
 print("ShortcutCatalog")

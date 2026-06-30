@@ -1,11 +1,13 @@
 import Foundation
 
 public enum YabaiManagedConfig {
-    /// Synthetic catch-all rule used only for the `.off` mode: it makes yabai stop
-    /// managing every window's geometry (windows feel native), distinct from `float`
-    /// which only changes the layout. Marked synthetic so `parse` never surfaces it
-    /// as a user rule.
-    static let offCatchAllApp = ".*"
+    /// Synthetic catch-all rule used only for the `.float` mode: a global
+    /// `manage=off` (emitted last, so it wins) sets every window's `is-floating`
+    /// flag true, so the mode-aware floating shortcuts (`focusWindow.sh` etc.) take
+    /// their floating branch. Marked synthetic so `parse` never surfaces it as a
+    /// user rule. `.off`, by contrast, just floats the layout and leaves windows
+    /// untouched (native feel).
+    static let floatCatchAllApp = ".*"
 
     public static func generate(_ s: YabaiSettings) -> String {
         var lines: [String] = []
@@ -13,8 +15,8 @@ public enum YabaiManagedConfig {
         case .bsp, .float:
             lines.append("yabai -m config layout \(s.layout.rawValue)")
         case .off:
-            // No real yabai "off" layout exists; float + a global manage=off rule
-            // (emitted last, so it wins) makes yabai leave all windows untracked.
+            // No real yabai "off" layout exists; just float the space and leave
+            // windows untouched — yabai stops tiling but doesn't flag them floating.
             lines.append("# dockstack:layout-off")
             lines.append("yabai -m config layout float")
         }
@@ -27,10 +29,10 @@ public enum YabaiManagedConfig {
             let manage = r.mode == .float ? "off" : "on"
             lines.append("yabai -m rule --add app=\"\(r.app)\" manage=\(manage) sub-layer=normal")
         }
-        if s.layout == .off {
-            lines.append("yabai -m rule --add app=\"\(offCatchAllApp)\" manage=off sub-layer=normal")
+        if s.layout == .float {
+            lines.append("yabai -m rule --add app=\"\(floatCatchAllApp)\" manage=off sub-layer=normal")
         }
-        if !s.rules.isEmpty || s.layout == .off { lines.append("yabai -m rule --apply") }
+        if !s.rules.isEmpty || s.layout == .float { lines.append("yabai -m rule --apply") }
         return lines.joined(separator: "\n")
     }
 
@@ -48,8 +50,8 @@ public enum YabaiManagedConfig {
             else if let v = intValue(line, key: "right_padding") { s.rightPadding = v }
             else if let v = intValue(line, key: "window_gap") { s.gap = v }
             else if let r = rule(line) {
-                // Skip the synthetic off-mode catch-all; it is not a user rule.
-                if sawOff && r.app == offCatchAllApp { continue }
+                // Skip the synthetic float-mode catch-all; it is not a user rule.
+                if r.app == floatCatchAllApp { continue }
                 s.rules.append(r)
             }
         }
