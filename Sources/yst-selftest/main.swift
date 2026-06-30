@@ -419,6 +419,17 @@ check(KeyCodeMap.skhdKey(forKeyCode: 0x0F, chars: "R") == "r", "letter lowercase
 check(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: "|") == "0x2a", "unknown -> hex fallback")
 check(KeyCodeMap.skhdKey(forKeyCode: 0x63, chars: nil) == "f3", "keycode 0x63 -> f3")
 
+print("ShortcutSections")
+let secs = ShortcutSections.build(DefaultTemplate.defaultBindings())
+check(secs.map { $0.group } == ShortcutGroup.order, "sections in group order")
+check(secs.reduce(0) { $0 + $1.rows.count } == ShortcutCatalog.all.count, "rows cover catalog")
+check(ShortcutSections.build([]).flatMap { $0.rows }.allSatisfy { !$0.binding.enabled }, "missing -> disabled rows")
+let chk = Hotkey(mods: [.alt, .cmd], key: "x")
+check(ShortcutSections.conflictingActionIDs([
+    ShortcutBinding(actionID: "balance", enabled: true, hotkey: chk),
+    ShortcutBinding(actionID: "toggle-fullscreen", enabled: true, hotkey: chk),
+]) == Set(["balance", "toggle-fullscreen"]), "conflicting action ids")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
