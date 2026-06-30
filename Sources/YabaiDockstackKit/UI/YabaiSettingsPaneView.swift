@@ -168,13 +168,16 @@ public final class YabaiSettingsPaneView: NSView {
         applyButton.bezelStyle    = .rounded
         applyButton.keyEquivalent = "\r"
 
+        let importButton = NSButton(title: "Import existing…", target: self, action: #selector(importTapped))
+        importButton.bezelStyle = .rounded
+
         let editButton = NSButton(title: "⚙️ Edit raw file…", target: self, action: #selector(editRawTapped))
         editButton.bezelStyle = .rounded
 
         let resetButton = NSButton(title: "Reset to defaults", target: self, action: #selector(resetTapped))
         resetButton.bezelStyle = .rounded
 
-        let bottomBar = NSStackView(views: [applyButton, editButton, resetButton, statusLabel])
+        let bottomBar = NSStackView(views: [applyButton, importButton, editButton, resetButton, statusLabel])
         bottomBar.orientation = .horizontal
         bottomBar.spacing     = 8
         bottomBar.translatesAutoresizingMaskIntoConstraints = false
@@ -295,6 +298,14 @@ public final class YabaiSettingsPaneView: NSView {
         p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         p.arguments = ["-t", path]
         try? p.run()
+    }
+
+    @objc private func importTapped() {
+        let n = engine.importYabai()
+        settings = engine.loadYabaiSettingsOrDefault()
+        syncFields()
+        tableView.reloadData()
+        showStatus(true, n > 0 ? "Imported \(n) setting(s) from ~/.yabairc" : "Nothing to import")
     }
 
     @objc private func resetTapped() {
