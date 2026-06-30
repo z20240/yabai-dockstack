@@ -31,6 +31,13 @@ cp "$BIN" "$APP/Contents/MacOS/yabai-dockstack"
 cp scripts/Info.plist.template "$APP/Contents/Info.plist"
 [ -f assets/AppIcon.icns ] && cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 [ -f assets/menubar.png ] && cp assets/menubar.png "$APP/Contents/Resources/menubar.png"
+# Copy the SwiftPM resource bundle (helper scripts + templates) into Resources so
+# Bundle.module resolves at runtime via Bundle.main.resourceURL. $BIN's directory
+# is the Release products dir for both the universal and single-arch fallback builds.
+PRODUCTS_DIR="$(dirname "$BIN")"
+for b in "$PRODUCTS_DIR"/*YabaiDockstackKit.bundle; do
+  [ -d "$b" ] && rm -rf "$APP/Contents/Resources/$(basename "$b")" && cp -R "$b" "$APP/Contents/Resources/"
+done
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
 
