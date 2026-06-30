@@ -489,6 +489,16 @@ try? FileManager.default.removeItem(atPath: impP)
 try? FileManager.default.removeItem(atPath: impP + ".bak")
 try? FileManager.default.removeItem(atPath: impP + ".y")
 
+let impY = NSTemporaryDirectory() + "yst-impy.yabairc"
+try? FileManager.default.removeItem(atPath: impY)
+try? "yabai -m config window_gap 7\n".write(toFile: impY, atomically: true, encoding: .utf8)
+let impYE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                         yabaiConfigPath: impY, skhdConfigPath: impY + ".s", scriptsDir: "/S")
+check(impYE.importYabai() == 1, "engine importYabai migrates one setting")
+check(impYE.loadYabaiSettings().gap == 7, "engine importYabai: gap reflects imported value")
+try? FileManager.default.removeItem(atPath: impY)
+try? FileManager.default.removeItem(atPath: impY + ".bak")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

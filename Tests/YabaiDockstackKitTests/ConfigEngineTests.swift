@@ -96,7 +96,24 @@ final class ConfigEngineTests: XCTestCase {
         XCTAssertEqual(e.importSkhd(), 0)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertNil(ManagedRegion.extract(from: text))  // nothing imported -> file unchanged, no region
+        XCTAssertEqual(text, "cmd - z : my-own-thing\n")
         try? FileManager.default.removeItem(atPath: p)
+    }
+
+    func testImportYabaiMigratesFreeformIntoRegion() throws {
+        let p = NSTemporaryDirectory() + "yst-impy-\(UUID().uuidString).yabairc"
+        try "yabai -m config window_gap 7\nyabai -m rule --add app=\"Finder\" manage=off sub-layer=normal\n"
+            .write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: p, skhdConfigPath: p + ".s", scriptsDir: "/S")
+        XCTAssertEqual(e.importYabai(), 2)
+        let text = try String(contentsOfFile: p, encoding: .utf8)
+        XCTAssertTrue(text.contains("# [yabai-dockstack imported] yabai -m config window_gap 7"))
+        XCTAssertNotNil(ManagedRegion.extract(from: text))
+        XCTAssertEqual(e.loadYabaiSettings().gap, 7)
+        XCTAssertTrue(e.loadYabaiSettings().rules.contains { $0.app == "Finder" && $0.mode == .float })
+        try? FileManager.default.removeItem(atPath: p)
+        try? FileManager.default.removeItem(atPath: p + ".bak")
     }
 
     /// Fix B: two bindings resolving to the same catalog command must not trap loadBindings().
