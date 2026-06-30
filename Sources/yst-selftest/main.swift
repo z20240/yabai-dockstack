@@ -439,6 +439,16 @@ check(ShortcutSections.conflictingActionIDs([
     ShortcutBinding(actionID: "toggle-fullscreen", enabled: true, hotkey: chk),
 ]) == Set(["balance", "toggle-fullscreen"]), "conflicting action ids")
 
+print("FreeformImporter helpers")
+check(FreeformImporter.normalizeCommand("sh ~/.config/yabai/scripts/focusWindow.sh left")
+      == "sh @S@focusWindow.sh left", "normalize collapses tilde script dir")
+check(FreeformImporter.normalizeCommand("sh ${SCRIPTS}/focusWindow.sh left")
+      == "sh @S@focusWindow.sh left", "normalize collapses ${SCRIPTS}")
+check(FreeformImporter.parseSkhdLine("cmd - f3: sh x")?.hotkey == Hotkey(mods: [.cmd], key: "f3"),
+      "parseSkhdLine lenient colon")
+check(FreeformImporter.parseSkhdLine("# comment") == nil, "parseSkhdLine skips comments")
+check(FreeformImporter.parseSkhdLine("cmd - n : a && \\") == nil, "parseSkhdLine skips continuation")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
