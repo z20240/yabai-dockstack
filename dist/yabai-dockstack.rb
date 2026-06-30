@@ -9,7 +9,7 @@
 # release (scripts/release.sh prints the sha256).
 cask "yabai-dockstack" do
   version "0.2.7"
-  sha256 "517271a5490a5a0c1d9b6199011e7db297d65ad81129af709a0b70752c251c1b"
+  sha256 "5cf50cb2b22ae9f44aa47cb39a6c7fae31c36f410aa36e0e4608dfeafb6185e8"
 
   url "https://github.com/z20240/yabai-dockstack/releases/download/v#{version}/yabai-dockstack-#{version}.zip"
   name "yabai-dockstack"
