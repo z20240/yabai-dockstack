@@ -68,6 +68,12 @@ public enum YabaiDockstack {
             catch { NSLog("yabai-dockstack: helper script install failed: \(error)") }
         }
 
+        // One-time migration for existing users: pull recognizable hand-written bindings
+        // into the managed region. No region yet => first run; the import writes only if it
+        // actually matched something, so clean users' rc files stay untouched. Never auto-applies.
+        if !configEngine.hasYabaiRegion() { _ = configEngine.importYabai() }
+        if !configEngine.hasSkhdRegion() { _ = configEngine.importSkhd() }
+
         // Dock window previews (gated; needs Accessibility + Screen Recording).
         let thumbCache = ThumbnailCache()
         var dockController: DockPreviewController?
