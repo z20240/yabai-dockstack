@@ -250,10 +250,14 @@ public final class ShortcutsPaneView: NSView {
     }
 
     @objc private func importTapped() {
-        let n = engine.importSkhd()
-        bindings = engine.loadBindingsOrDefault()
-        buildList()
-        showStatus(true, n > 0 ? "Imported \(n) binding(s) from ~/.skhdrc" : "Nothing to import")
+        do {
+            let n = try engine.importSkhd()
+            bindings = engine.loadBindingsOrDefault()
+            buildList()
+            showStatus(true, n > 0 ? "Imported \(n) binding(s) from ~/.skhdrc" : "Nothing to import")
+        } catch {
+            showStatus(false, error.localizedDescription)
+        }
     }
 
     @objc private func resetTapped() {

@@ -47,24 +47,29 @@ public final class ConfigEngine {
         hasSkhdRegion() ? loadBindings() : DefaultTemplate.defaultBindings()
     }
 
-    public func importSkhd() -> Int {
-        let r = FreeformImporter.importSkhd(fileText: skhdWriter.currentText(),
-                                            current: loadBindingsOrDefault(),
+    public func importSkhd() throws -> Int {
+        let existing = skhdWriter.currentText()
+        guard !ManagedRegion.hasMalformedMarkers(in: existing) else {
+            throw NSError(domain: "ConfigEngine", code: 3, userInfo: [NSLocalizedDescriptionKey:
+                "Refusing to import: the skhd config has malformed yabai-dockstack managed markers (duplicate or unbalanced). Fix them by hand first."])
+        }
+        let r = FreeformImporter.importSkhd(fileText: existing, current: loadBindingsOrDefault(),
                                             catalog: ShortcutCatalog.all, scriptsDir: scriptsDir)
         guard r.importedCount > 0 else { return 0 }
         let body = SkhdManagedConfig.generate(r.bindings, catalog: ShortcutCatalog.all, scriptsDir: scriptsDir)
-        let final = ManagedRegion.replace(in: r.newText, with: body)
-        try? skhdWriter.writeRaw(final)
+        try skhdWriter.writeRaw(ManagedRegion.replace(in: r.newText, with: body))
         return r.importedCount
     }
 
-    public func importYabai() -> Int {
-        let r = FreeformImporter.importYabai(fileText: yabaiWriter.currentText(),
-                                             current: loadYabaiSettingsOrDefault())
+    public func importYabai() throws -> Int {
+        let existing = yabaiWriter.currentText()
+        guard !ManagedRegion.hasMalformedMarkers(in: existing) else {
+            throw NSError(domain: "ConfigEngine", code: 3, userInfo: [NSLocalizedDescriptionKey:
+                "Refusing to import: the yabai config has malformed yabai-dockstack managed markers (duplicate or unbalanced). Fix them by hand first."])
+        }
+        let r = FreeformImporter.importYabai(fileText: existing, current: loadYabaiSettingsOrDefault())
         guard r.importedCount > 0 else { return 0 }
-        let body = YabaiManagedConfig.generate(r.settings)
-        let final = ManagedRegion.replace(in: r.newText, with: body)
-        try? yabaiWriter.writeRaw(final)
+        try yabaiWriter.writeRaw(ManagedRegion.replace(in: r.newText, with: YabaiManagedConfig.generate(r.settings)))
         return r.importedCount
     }
 

@@ -76,7 +76,7 @@ final class ConfigEngineTests: XCTestCase {
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p + ".y", skhdConfigPath: p,
                              scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
-        let n = e.importSkhd()
+        let n = try e.importSkhd()
         XCTAssertEqual(n, 1)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertTrue(text.contains("# [yabai-dockstack imported] cmd - f3:"))  // original commented
@@ -93,7 +93,7 @@ final class ConfigEngineTests: XCTestCase {
         try "cmd - z : my-own-thing\n".write(toFile: p, atomically: true, encoding: .utf8)
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p + ".y", skhdConfigPath: p, scriptsDir: "/S")
-        XCTAssertEqual(e.importSkhd(), 0)
+        XCTAssertEqual(try e.importSkhd(), 0)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertNil(ManagedRegion.extract(from: text))  // nothing imported -> file unchanged, no region
         XCTAssertEqual(text, "cmd - z : my-own-thing\n")
@@ -106,7 +106,7 @@ final class ConfigEngineTests: XCTestCase {
             .write(toFile: p, atomically: true, encoding: .utf8)
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p, skhdConfigPath: p + ".s", scriptsDir: "/S")
-        XCTAssertEqual(e.importYabai(), 2)
+        XCTAssertEqual(try e.importYabai(), 2)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertTrue(text.contains("# [yabai-dockstack imported] yabai -m config window_gap 7"))
         XCTAssertNotNil(ManagedRegion.extract(from: text))
@@ -114,6 +114,34 @@ final class ConfigEngineTests: XCTestCase {
         XCTAssertTrue(e.loadYabaiSettings().rules.contains { $0.app == "Finder" && $0.mode == .float })
         try? FileManager.default.removeItem(atPath: p)
         try? FileManager.default.removeItem(atPath: p + ".bak")
+    }
+
+    func testImportSkhdIsIdempotent() throws {
+        let p = NSTemporaryDirectory() + "yst-imp-idem-\(UUID().uuidString).skhdrc"
+        try "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n"
+            .write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: p + ".y", skhdConfigPath: p,
+                             scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+        XCTAssertEqual(try e.importSkhd(), 1)
+        let after1 = try String(contentsOfFile: p, encoding: .utf8)
+        XCTAssertEqual(try e.importSkhd(), 0)                 // nothing left to import
+        let after2 = try String(contentsOfFile: p, encoding: .utf8)
+        XCTAssertEqual(after1, after2)                        // file byte-stable, no double-comment
+        try? FileManager.default.removeItem(atPath: p)
+        try? FileManager.default.removeItem(atPath: p + ".bak")
+    }
+
+    func testImportSkhdRefusesMalformedMarkers() throws {
+        let p = NSTemporaryDirectory() + "yst-imp-mal-\(UUID().uuidString).skhdrc"
+        // two BEGIN markers, one END => malformed; freeform between must be preserved
+        let original = "# >>> yabai-dockstack:managed BEGIN >>>\nFREEFORM-A\n# >>> yabai-dockstack:managed BEGIN >>>\nX\n# <<< yabai-dockstack:managed END <<<\n"
+        try original.write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: p + ".y", skhdConfigPath: p, scriptsDir: "/S")
+        XCTAssertThrowsError(try e.importSkhd())
+        XCTAssertEqual(try String(contentsOfFile: p, encoding: .utf8), original)  // file untouched
+        try? FileManager.default.removeItem(atPath: p)
     }
 
     /// Fix B: two bindings resolving to the same catalog command must not trap loadBindings().

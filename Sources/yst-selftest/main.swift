@@ -479,7 +479,7 @@ try? "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n".write(toF
 let impE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                         yabaiConfigPath: impP + ".y", skhdConfigPath: impP,
                         scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
-check(impE.importSkhd() == 1, "engine importSkhd migrates one binding")
+check((try? impE.importSkhd()) == 1, "engine importSkhd migrates one binding")
 let impText = (try? String(contentsOfFile: impP, encoding: .utf8)) ?? ""
 check(impText.contains("# [yabai-dockstack imported] cmd - f3:"), "engine import comments original")
 check(ManagedRegion.extract(from: impText) != nil, "engine import creates managed region")
@@ -494,10 +494,20 @@ try? FileManager.default.removeItem(atPath: impY)
 try? "yabai -m config window_gap 7\n".write(toFile: impY, atomically: true, encoding: .utf8)
 let impYE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                          yabaiConfigPath: impY, skhdConfigPath: impY + ".s", scriptsDir: "/S")
-check(impYE.importYabai() == 1, "engine importYabai migrates one setting")
+check((try? impYE.importYabai()) == 1, "engine importYabai migrates one setting")
 check(impYE.loadYabaiSettings().gap == 7, "engine importYabai: gap reflects imported value")
 try? FileManager.default.removeItem(atPath: impY)
 try? FileManager.default.removeItem(atPath: impY + ".bak")
+
+let idemP = NSTemporaryDirectory() + "yst-imp-idem.skhdrc"
+try? "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n".write(toFile: idemP, atomically: true, encoding: .utf8)
+let idemE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                         yabaiConfigPath: idemP + ".y", skhdConfigPath: idemP,
+                         scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+_ = try? idemE.importSkhd()
+check((try? idemE.importSkhd()) == 0, "importSkhd idempotent (second run imports nothing)")
+try? FileManager.default.removeItem(atPath: idemP)
+try? FileManager.default.removeItem(atPath: idemP + ".bak")
 
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }

@@ -301,11 +301,15 @@ public final class YabaiSettingsPaneView: NSView {
     }
 
     @objc private func importTapped() {
-        let n = engine.importYabai()
-        settings = engine.loadYabaiSettingsOrDefault()
-        syncFields()
-        tableView.reloadData()
-        showStatus(true, n > 0 ? "Imported \(n) setting(s) from ~/.yabairc" : "Nothing to import")
+        do {
+            let n = try engine.importYabai()
+            settings = engine.loadYabaiSettingsOrDefault()
+            syncFields()
+            tableView.reloadData()
+            showStatus(true, n > 0 ? "Imported \(n) setting(s) from ~/.yabairc" : "Nothing to import")
+        } catch {
+            showStatus(false, error.localizedDescription)
+        }
     }
 
     @objc private func resetTapped() {
