@@ -63,4 +63,70 @@ public enum FreeformImporter {
         }
         return SkhdImportResult(bindings: bindings, newText: out.joined(separator: "\n"), importedCount: count)
     }
+
+    public struct YabaiImportResult: Equatable {
+        public var settings: YabaiSettings
+        public var newText: String
+        public var importedCount: Int
+    }
+
+    public static func importYabai(fileText: String, current: YabaiSettings) -> YabaiImportResult {
+        var s = current
+        var rulesByApp: [String: WindowRule] = [:]
+        var order: [String] = []
+        for r in s.rules { rulesByApp[r.app] = r; order.append(r.app) }
+
+        var out: [String] = []
+        var count = 0
+        var inRegion = false
+        for raw in fileText.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(raw)
+            if ManagedRegion.isBeginMarker(line) { inRegion = true; out.append(line); continue }
+            if ManagedRegion.isEndMarker(line)   { inRegion = false; out.append(line); continue }
+            if inRegion { out.append(line); continue }
+
+            let t = line.trimmingCharacters(in: .whitespaces)
+            var imported = true
+            if let v = configValue(t, "layout"), let lay = YabaiSettings.Layout(rawValue: v), lay != .off {
+                s.layout = lay
+            } else if let v = intConfig(t, "top_padding")    { s.topPadding = v }
+            else if let v = intConfig(t, "bottom_padding")   { s.bottomPadding = v }
+            else if let v = intConfig(t, "left_padding")     { s.leftPadding = v }
+            else if let v = intConfig(t, "right_padding")    { s.rightPadding = v }
+            else if let v = intConfig(t, "window_gap")       { s.gap = v }
+            else if let r = parseRule(t) {
+                if rulesByApp[r.app] == nil { order.append(r.app) }
+                rulesByApp[r.app] = r
+            } else {
+                imported = false
+            }
+            if imported { out.append("# [yabai-dockstack imported] " + line); count += 1 }
+            else        { out.append(line) }
+        }
+        s.rules = order.compactMap { rulesByApp[$0] }
+        return YabaiImportResult(settings: s, newText: out.joined(separator: "\n"), importedCount: count)
+    }
+
+    // "yabai -m config <key> <value>" -> value
+    private static func configValue(_ line: String, _ key: String) -> String? {
+        let prefix = "yabai -m config \(key) "
+        guard line.hasPrefix(prefix) else { return nil }
+        return line.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+    }
+
+    private static func intConfig(_ line: String, _ key: String) -> Int? {
+        configValue(line, key).flatMap { Int($0) }
+    }
+
+    // yabai -m rule --add app="X" … manage=off|on …  (requires explicit manage=, skips ".*")
+    private static func parseRule(_ line: String) -> WindowRule? {
+        guard line.hasPrefix("yabai -m rule --add app=\"") else { return nil }
+        guard let s = line.range(of: "app=\""),
+              let e = line.range(of: "\"", range: s.upperBound..<line.endIndex) else { return nil }
+        let app = String(line[s.upperBound..<e.lowerBound])
+        if app == ".*" { return nil }
+        if line.contains("manage=on")  { return WindowRule(app: app, mode: .manage) }
+        if line.contains("manage=off") { return WindowRule(app: app, mode: .float) }
+        return nil
+    }
 }

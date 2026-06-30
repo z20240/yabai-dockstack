@@ -461,6 +461,14 @@ check(skRes.bindings.first { $0.actionID == "toggle-show-desktop" }?.hotkey == H
 check(skRes.newText.contains("# [yabai-dockstack imported] cmd - f3:"), "importSkhd comments matched line")
 check(skRes.newText.contains("cmd - x : custom jq thing"), "importSkhd leaves unmatched line")
 
+print("FreeformImporter.importYabai")
+let ybFile = "yabai -m config layout bsp\nyabai -m config window_gap 6\nyabai -m rule --add app=\"Finder\" manage=off sub-layer=normal\nyabai -m rule --add app=\".*\" sub-layer=normal\necho done\n"
+let ybRes = FreeformImporter.importYabai(fileText: ybFile, current: YabaiSettings.defaults)
+check(ybRes.settings.layout == .bsp && ybRes.settings.gap == 6, "importYabai reads layout/gap")
+check(ybRes.settings.rules == [WindowRule(app: "Finder", mode: .float)], "importYabai imports Finder, skips .*")
+check(ybRes.importedCount == 3, "importYabai count (layout, gap, Finder)")
+check(ybRes.newText.contains("echo done"), "importYabai leaves shell untouched")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

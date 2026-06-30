@@ -68,3 +68,29 @@ extension FreeformImporterTests {
         XCTAssertEqual(r.newText, file)
     }
 }
+
+extension FreeformImporterTests {
+    func testImportYabaiConfigAndRules() {
+        let file = """
+        sudo yabai --load-sa
+        yabai -m config layout bsp
+        yabai -m config top_padding 8
+        yabai -m config window_gap 6
+        yabai -m rule --add app="Finder" manage=off sub-layer=normal
+        yabai -m rule --add app=".*" sub-layer=normal
+        yabai -m rule --apply
+        echo done
+        """
+        let r = FreeformImporter.importYabai(fileText: file, current: YabaiSettings.defaults)
+        XCTAssertEqual(r.settings.layout, .bsp)
+        XCTAssertEqual(r.settings.topPadding, 8)
+        XCTAssertEqual(r.settings.gap, 6)
+        XCTAssertEqual(r.settings.rules, [WindowRule(app: "Finder", mode: .float)]) // .* skipped
+        XCTAssertEqual(r.importedCount, 4) // layout, top_padding, gap, Finder rule
+        XCTAssertTrue(r.newText.contains("# [yabai-dockstack imported] yabai -m config top_padding 8"))
+        XCTAssertTrue(r.newText.contains("sudo yabai --load-sa"))         // untouched
+        XCTAssertTrue(r.newText.contains("yabai -m rule --apply"))        // untouched
+        XCTAssertTrue(r.newText.contains("echo done"))                   // untouched
+        XCTAssertTrue(r.newText.contains(#"yabai -m rule --add app=".*" sub-layer=normal"#)) // .* untouched
+    }
+}
