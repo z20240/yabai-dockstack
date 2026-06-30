@@ -468,6 +468,10 @@ check(ybRes.settings.layout == .bsp && ybRes.settings.gap == 6, "importYabai rea
 check(ybRes.settings.rules == [WindowRule(app: "Finder", mode: .float)], "importYabai imports Finder, skips .*")
 check(ybRes.importedCount == 3, "importYabai count (layout, gap, Finder)")
 check(ybRes.newText.contains("echo done"), "importYabai leaves shell untouched")
+let ybOff = FreeformImporter.importYabai(fileText: "yabai -m config layout off\nyabai -m config layout stack", current: YabaiSettings.defaults)
+check(ybOff.importedCount == 0 && ybOff.settings.layout == YabaiSettings.defaults.layout, "importYabai skips layout off/stack")
+let ybDup = FreeformImporter.importYabai(fileText: "yabai -m rule --add app=\"Finder\" manage=off sub-layer=normal\nyabai -m rule --add app=\"Finder\" manage=on sub-layer=normal", current: YabaiSettings.defaults)
+check(ybDup.settings.rules == [WindowRule(app: "Finder", mode: .manage)], "importYabai rule de-dupe later wins")
 
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }

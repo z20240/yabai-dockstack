@@ -70,6 +70,57 @@ extension FreeformImporterTests {
 }
 
 extension FreeformImporterTests {
+    func testImportYabaiSkipsLayoutOffAndStack() {
+        let file = """
+        yabai -m config layout off
+        yabai -m config layout stack
+        """
+        let r = FreeformImporter.importYabai(fileText: file, current: YabaiSettings.defaults)
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertEqual(r.settings.layout, YabaiSettings.defaults.layout)
+        XCTAssertEqual(r.newText, file)
+    }
+
+    func testImportYabaiSkipsCatchAllRuleEvenWithManage() {
+        let file = #"yabai -m rule --add app=".*" manage=off sub-layer=normal"#
+        let r = FreeformImporter.importYabai(fileText: file, current: YabaiSettings.defaults)
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertTrue(r.settings.rules.isEmpty)
+        XCTAssertEqual(r.newText, file)
+    }
+
+    func testImportYabaiRuleDedupeLaterWins() {
+        let file = """
+        yabai -m rule --add app="Finder" manage=off sub-layer=normal
+        yabai -m rule --add app="Finder" manage=on sub-layer=normal
+        """
+        let r = FreeformImporter.importYabai(fileText: file, current: YabaiSettings.defaults)
+        XCTAssertEqual(r.settings.rules, [WindowRule(app: "Finder", mode: .manage)])
+        XCTAssertEqual(r.importedCount, 2)
+    }
+
+    func testImportYabaiOverridesExistingCurrentRule() {
+        var current = YabaiSettings.defaults
+        current.rules = [WindowRule(app: "Finder", mode: .float)]
+        let file = #"yabai -m rule --add app="Finder" manage=on sub-layer=normal"#
+        let r = FreeformImporter.importYabai(fileText: file, current: current)
+        XCTAssertEqual(r.settings.rules, [WindowRule(app: "Finder", mode: .manage)])
+    }
+
+    func testImportYabaiLeavesManagedRegionUntouched() {
+        let file = """
+        # >>> yabai-dockstack:managed BEGIN >>>
+        yabai -m config window_gap 99
+        # <<< yabai-dockstack:managed END <<<
+        """
+        let r = FreeformImporter.importYabai(fileText: file, current: YabaiSettings.defaults)
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertEqual(r.settings.gap, YabaiSettings.defaults.gap)
+        XCTAssertEqual(r.newText, file)
+    }
+}
+
+extension FreeformImporterTests {
     func testImportYabaiConfigAndRules() {
         let file = """
         sudo yabai --load-sa

@@ -87,7 +87,7 @@ public enum FreeformImporter {
 
             let t = line.trimmingCharacters(in: .whitespaces)
             var imported = true
-            if let v = configValue(t, "layout"), let lay = YabaiSettings.Layout(rawValue: v), lay != .off {
+            if let v = configValue(t, "layout"), let lay = YabaiSettings.Layout(rawValue: v), lay == .bsp || lay == .float {
                 s.layout = lay
             } else if let v = intConfig(t, "top_padding")    { s.topPadding = v }
             else if let v = intConfig(t, "bottom_padding")   { s.bottomPadding = v }
