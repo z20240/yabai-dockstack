@@ -228,7 +228,11 @@ check(yText.contains(#"app="Finder" manage=off"#), "float rule -> manage=off")
 check(yText.contains(#"app="iTerm2" manage=on"#), "manage rule -> manage=on")
 check(YabaiManagedConfig.parse(yText) == ys, "yabai settings round-trip")
 var off = YabaiSettings.defaults; off.layout = .off
-check(YabaiManagedConfig.parse(YabaiManagedConfig.generate(off)).layout == .off, "layout off sentinel")
+off.rules = [WindowRule(app: "Finder", mode: .float)]
+let offText = YabaiManagedConfig.generate(off)
+check(offText.contains("yabai -m config layout float"), "off emits float layout")
+check(offText.contains(#"app=".*" manage=off"#), "off emits global manage=off catch-all")
+check(YabaiManagedConfig.parse(offText) == off, "off round-trips (.off + real rules, synthetic .* skipped)")
 check(YabaiManagedConfig.parse("") == YabaiSettings.defaults, "empty -> defaults")
 
 print("ShortcutCatalog")

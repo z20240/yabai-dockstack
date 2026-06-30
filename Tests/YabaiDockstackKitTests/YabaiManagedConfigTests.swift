@@ -16,12 +16,21 @@ final class YabaiManagedConfigTests: XCTestCase {
         XCTAssertEqual(YabaiManagedConfig.parse(text), s)
     }
 
-    func testLayoutOffUsesCommentSentinel() {
+    func testLayoutOffTurnsManagementOff() {
         var s = YabaiSettings.defaults; s.layout = .off
+        s.rules = [WindowRule(app: "Finder", mode: .float)]
         let text = YabaiManagedConfig.generate(s)
+        // Off must actually do something: float layout + a global manage=off catch-all
+        // (emitted last so it wins), marked by the sentinel.
         XCTAssertTrue(text.contains("# dockstack:layout-off"))
-        XCTAssertFalse(text.contains("yabai -m config layout "))
-        XCTAssertEqual(YabaiManagedConfig.parse(text).layout, .off)
+        XCTAssertTrue(text.contains("yabai -m config layout float"))
+        XCTAssertTrue(text.contains(#"yabai -m rule --add app=".*" manage=off sub-layer=normal"#))
+        XCTAssertTrue(text.contains("yabai -m rule --apply"))
+        // Round-trip: parse recovers .off and the user's real rule, NOT the synthetic .* rule.
+        let parsed = YabaiManagedConfig.parse(text)
+        XCTAssertEqual(parsed.layout, .off)
+        XCTAssertEqual(parsed.rules, [WindowRule(app: "Finder", mode: .float)])
+        XCTAssertEqual(parsed, s)
     }
 
     func testParseMissingFallsBackToDefaults() {

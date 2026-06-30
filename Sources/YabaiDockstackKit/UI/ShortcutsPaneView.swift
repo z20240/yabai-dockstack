@@ -232,7 +232,18 @@ public final class ShortcutsPaneView: NSView {
     }
 
     @objc private func editRawTapped() {
-        NSWorkspace.shared.open(URL(fileURLWithPath: rawFilePath))
+        // `open -t` opens in the default GUI text editor (TextEdit, or whatever the
+        // user set for the text role) instead of the file's default app — which for
+        // dotfiles like ~/.skhdrc is often a terminal editor.
+        let path = (rawFilePath as NSString).expandingTildeInPath
+        guard !path.isEmpty else { return }
+        if !FileManager.default.fileExists(atPath: path) {
+            FileManager.default.createFile(atPath: path, contents: Data(), attributes: nil)
+        }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        p.arguments = ["-t", path]
+        try? p.run()
     }
 
     @objc private func resetTapped() {
