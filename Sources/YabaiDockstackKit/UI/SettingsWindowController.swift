@@ -32,6 +32,11 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let permissionBanner = NSView()
     private var permTimer: Timer?
 
+    /// Set by the app BEFORE calling show() — enables the yabai and Keyboard tabs.
+    public var configEngine: ConfigEngine?
+    public var yabaiRawPath: String?
+    public var skhdRawPath: String?
+
     /// Set by the app: trigger the request + open the right System Settings pane.
     public var onGrantAccessibility: (() -> Void)?
     public var onGrantScreenRecording: (() -> Void)?
@@ -181,24 +186,66 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         stack.spacing = 14
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 420),
+        // --- Appearance tab: reparent existing stack into a plain container ---
+        let appearancePane = NSView()
+        appearancePane.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: appearancePane.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: appearancePane.trailingAnchor, constant: -20),
+            stack.topAnchor.constraint(equalTo: appearancePane.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: appearancePane.bottomAnchor, constant: -20),
+            permissionBanner.widthAnchor.constraint(equalTo: grid.widthAnchor),
+            sizeSlider.widthAnchor.constraint(equalToConstant: 200),
+        ])
+
+        let appearanceItem = NSTabViewItem()
+        appearanceItem.label = "Appearance"
+        appearanceItem.view = appearancePane
+
+        // --- yabai tab ---
+        let yabaiItem = NSTabViewItem()
+        yabaiItem.label = "yabai"
+        if let engine = configEngine {
+            yabaiItem.view = YabaiSettingsPaneView(engine: engine, rawFilePath: yabaiRawPath ?? "")
+        } else {
+            yabaiItem.view = makePlaceholder("yabai not configured")
+        }
+
+        // --- Keyboard tab ---
+        let keyboardItem = NSTabViewItem()
+        keyboardItem.label = "Keyboard"
+        if let engine = configEngine {
+            keyboardItem.view = ShortcutsPaneView(engine: engine, rawFilePath: skhdRawPath ?? "")
+        } else {
+            keyboardItem.view = makePlaceholder("yabai not configured")
+        }
+
+        // --- NSTabView as the window's content view ---
+        let tabView = NSTabView()
+        tabView.addTabViewItem(appearanceItem)
+        tabView.addTabViewItem(yabaiItem)
+        tabView.addTabViewItem(keyboardItem)
+
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
                            styleMask: [.titled, .closable],
                            backing: .buffered, defer: false)
         win.title = "yabai-dockstack Settings"
         win.isReleasedWhenClosed = false
         win.delegate = self
-        let content = NSView()
-        content.addSubview(stack)
-        win.contentView = content
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
-            permissionBanner.widthAnchor.constraint(equalTo: grid.widthAnchor),
-            sizeSlider.widthAnchor.constraint(equalToConstant: 200),
-        ])
+        win.contentView = tabView
         window = win
+    }
+
+    private func makePlaceholder(_ text: String) -> NSView {
+        let view = NSView()
+        let label = NSTextField(labelWithString: text)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+        ])
+        return view
     }
 
     private func syncControls() {
