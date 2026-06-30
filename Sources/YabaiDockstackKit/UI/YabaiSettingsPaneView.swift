@@ -65,6 +65,9 @@ public final class YabaiSettingsPaneView: NSView {
             f.alignment = .right
             f.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
+        // Give the segmented control room so BSP/Float/Off aren't clipped to "…"
+        // (otherwise column 1 is sized by the narrow 80pt fields).
+        layoutControl.widthAnchor.constraint(equalToConstant: 210).isActive = true
 
         // NSGridView for scalar fields (mirrors SettingsWindowController idiom)
         let grid = NSGridView(views: [
@@ -80,17 +83,10 @@ public final class YabaiSettingsPaneView: NSView {
         grid.rowAlignment = .firstBaseline
         grid.columnSpacing = 12
         grid.rowSpacing = 10
+        // Keep the grid at its natural width on the left: NSGridView otherwise stretches
+        // to fill, and its trailing label column absorbs the slack, pushing the form
+        // rightward. Required hugging makes it stay at intrinsic width, leading-aligned.
         grid.setContentHuggingPriority(.required, for: .horizontal)
-
-        // Keep the form at its natural width on the left; a flexible trailing spacer
-        // absorbs the slack so the grid isn't stretched (a stretched column 0 with
-        // trailing labels is what pushed the form rightward and left a blank gap).
-        let gridSpacer = NSView()
-        gridSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let gridRow = NSStackView(views: [grid, gridSpacer])
-        gridRow.orientation = .horizontal
-        gridRow.alignment = .centerY
-        gridRow.spacing = 0
 
         // Section header
         let rulesHeader = NSTextField(labelWithString: "Window Rules")
@@ -140,7 +136,7 @@ public final class YabaiSettingsPaneView: NSView {
         ruleButtons.spacing     = 4
 
         // Content stack (scrolled)
-        let contentStack = NSStackView(views: [gridRow, rulesHeader, tableScroll, ruleButtons])
+        let contentStack = NSStackView(views: [grid, rulesHeader, tableScroll, ruleButtons])
         contentStack.orientation = .vertical
         contentStack.alignment   = .leading
         contentStack.spacing     = 12
@@ -167,9 +163,6 @@ public final class YabaiSettingsPaneView: NSView {
             equalTo: outerScroll.contentView.widthAnchor).isActive = true
         // Table fills the content stack width
         tableScroll.widthAnchor.constraint(
-            equalTo: contentStack.widthAnchor).isActive = true
-        // The grid row spans full width too, so its trailing spacer can eat the slack.
-        gridRow.widthAnchor.constraint(
             equalTo: contentStack.widthAnchor).isActive = true
 
         // Bottom bar
