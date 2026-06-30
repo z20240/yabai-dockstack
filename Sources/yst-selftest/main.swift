@@ -448,6 +448,7 @@ check(FreeformImporter.parseSkhdLine("cmd - f3: sh x")?.hotkey == Hotkey(mods: [
       "parseSkhdLine lenient colon")
 check(FreeformImporter.parseSkhdLine("# comment") == nil, "parseSkhdLine skips comments")
 check(FreeformImporter.parseSkhdLine("cmd - n : a && \\") == nil, "parseSkhdLine skips continuation")
+check(FreeformImporter.parseSkhdLine("shift + cmd - g : yabai -m window --grid 2:2:0:0:1:1")?.command == "yabai -m window --grid 2:2:0:0:1:1", "parseSkhdLine keeps colon in command (split on first colon)")
 
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }

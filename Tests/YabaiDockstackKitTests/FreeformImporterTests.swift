@@ -22,6 +22,11 @@ final class FreeformImporterTests: XCTestCase {
         XCTAssertEqual(r?.command, "sh ~/.config/yabai/scripts/x.sh")
     }
 
+    func testParseSkhdLinePreservesColonInCommand() {
+        let r = FreeformImporter.parseSkhdLine("shift + cmd - g : yabai -m window --grid 2:2:0:0:1:1")
+        XCTAssertEqual(r?.command, "yabai -m window --grid 2:2:0:0:1:1")
+    }
+
     func testParseSkhdLineRejectsNonBindings() {
         XCTAssertNil(FreeformImporter.parseSkhdLine("# a comment"))
         XCTAssertNil(FreeformImporter.parseSkhdLine(""))
