@@ -50,6 +50,8 @@ public final class RecordHotkeyControl: NSView {
         recording ? stopRecording() : startRecording()
     }
 
+    deinit { stopRecording() }
+
     private func startRecording() {
         recording = true
         refreshTitle()
@@ -58,7 +60,7 @@ public final class RecordHotkeyControl: NSView {
             if ev.type == .keyDown {
                 if ev.keyCode == 0x35 { self.stopRecording(); return nil } // escape cancels
                 let mods = Self.mods(from: ev.modifierFlags)
-                guard !mods.isEmpty else { return nil } // require at least one modifier
+                guard !mods.isEmpty else { return ev } // no modifier -> not a valid hotkey; let it pass through
                 let key = KeyCodeMap.skhdKey(forKeyCode: ev.keyCode, chars: ev.charactersIgnoringModifiers)
                 self.hotkey = Hotkey(mods: mods, key: key)
                 self.stopRecording()
