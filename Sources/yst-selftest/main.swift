@@ -412,6 +412,13 @@ check(ed.loadYabaiSettingsOrDefault().gap == 99, "or-default uses region when pr
 try? FileManager.default.removeItem(atPath: edPath)
 try? FileManager.default.removeItem(atPath: edPath + ".s")
 
+print("KeyCodeMap")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x7B, chars: nil) == "left", "keycode 0x7B -> left")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x31, chars: " ") == "space", "keycode 0x31 -> space")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x0F, chars: "R") == "r", "letter lowercased from chars")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: "|") == "0x2a", "unknown -> hex fallback")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x63, chars: nil) == "f3", "keycode 0x63 -> f3")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
