@@ -28,6 +28,32 @@ final class ConfigEngineTests: XCTestCase {
         try? FileManager.default.removeItem(atPath: s)
     }
 
+    func testOrDefaultUsesCuratedDefaultsWhenNoRegion() {
+        let y = NSTemporaryDirectory() + "yst-eng-def-\(UUID().uuidString).rc"
+        let e = ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true",
+                             yabaiConfigPath: y, skhdConfigPath: y + ".s", scriptsDir: "/S")
+        XCTAssertFalse(e.hasYabaiRegion())
+        XCTAssertFalse(e.hasSkhdRegion())
+        // curated yabai default includes the Finder float rule
+        XCTAssertTrue(e.loadYabaiSettingsOrDefault().rules.contains { $0.app == "Finder" && $0.mode == .float })
+        // curated default bindings: every catalog action enabled
+        let b = e.loadBindingsOrDefault()
+        XCTAssertEqual(b.count, ShortcutCatalog.all.count)
+        XCTAssertTrue(b.allSatisfy { $0.enabled })
+    }
+
+    func testOrDefaultUsesRegionWhenPresent() throws {
+        let y = NSTemporaryDirectory() + "yst-eng-reg-\(UUID().uuidString).rc"
+        let e = ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true",
+                             yabaiConfigPath: y, skhdConfigPath: y + ".s", scriptsDir: "/S")
+        var s = YabaiSettings.defaults; s.gap = 99; s.rules = []
+        try e.saveYabai(s)
+        XCTAssertTrue(e.hasYabaiRegion())
+        XCTAssertEqual(e.loadYabaiSettingsOrDefault().gap, 99)
+        XCTAssertTrue(e.loadYabaiSettingsOrDefault().rules.isEmpty) // region wins, not curated default
+        try? FileManager.default.removeItem(atPath: y)
+    }
+
     /// Fix B: two bindings resolving to the same catalog command must not trap loadBindings().
     func testLoadBindingsDuplicateActionIDDoesNotCrash() throws {
         let s = NSTemporaryDirectory() + "yst-eng-dup-\(UUID().uuidString).rc"

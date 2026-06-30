@@ -36,6 +36,17 @@ public final class ConfigEngine {
             SkhdManagedConfig.generate(bindings, catalog: ShortcutCatalog.all, scriptsDir: scriptsDir))
     }
 
+    public func hasYabaiRegion() -> Bool { ManagedRegion.extract(from: yabaiWriter.currentText()) != nil }
+    public func hasSkhdRegion() -> Bool { ManagedRegion.extract(from: skhdWriter.currentText()) != nil }
+
+    public func loadYabaiSettingsOrDefault() -> YabaiSettings {
+        hasYabaiRegion() ? loadYabaiSettings() : DefaultTemplate.defaultYabaiSettings()
+    }
+
+    public func loadBindingsOrDefault() -> [ShortcutBinding] {
+        hasSkhdRegion() ? loadBindings() : DefaultTemplate.defaultBindings()
+    }
+
     public func applyYabai() -> (ok: Bool, output: String) {
         ConfigApplier.run(yabaiPath, ["--restart-service"])
     }

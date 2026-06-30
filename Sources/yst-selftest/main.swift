@@ -396,6 +396,22 @@ do {
     try? FileManager.default.removeItem(atPath: mPath)
 }
 
+print("ConfigEngine seed-aware")
+let edPath = NSTemporaryDirectory() + "yst-eng-def.rc"
+try? FileManager.default.removeItem(atPath: edPath)
+try? FileManager.default.removeItem(atPath: edPath + ".s")
+let ed = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                      yabaiConfigPath: edPath, skhdConfigPath: edPath + ".s", scriptsDir: "/S")
+check(ed.hasYabaiRegion() == false, "no yabai region on fresh file")
+check(ed.loadYabaiSettingsOrDefault().rules.contains { $0.app == "Finder" }, "or-default uses curated yabai default")
+check(ed.loadBindingsOrDefault().allSatisfy { $0.enabled }, "or-default bindings all enabled")
+var eds = YabaiSettings.defaults; eds.gap = 99
+try? ed.saveYabai(eds)
+check(ed.hasYabaiRegion() == true, "region present after save")
+check(ed.loadYabaiSettingsOrDefault().gap == 99, "or-default uses region when present")
+try? FileManager.default.removeItem(atPath: edPath)
+try? FileManager.default.removeItem(atPath: edPath + ".s")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
