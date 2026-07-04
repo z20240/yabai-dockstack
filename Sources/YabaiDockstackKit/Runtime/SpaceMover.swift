@@ -38,8 +38,10 @@ public final class SpaceMover {
             case .arrowWalk(let direction, let count):
                 // Re-query: the frame moved if a display hop happened.
                 guard let fresh = client.queryFocusedWindow(), fresh.id == window.id else { return }
-                let grabX = fresh.frame.x + min(90, fresh.frame.w / 2)
-                let grabY = fresh.frame.y + 10
+                // Top-center: clear of the traffic lights and (in most apps)
+                // of toolbar controls; the top strip is the drag region.
+                let grabX = fresh.frame.x + fresh.frame.w / 2
+                let grabY = fresh.frame.y + 8
                 _ = simulator.dragWalk(grabX: grabX, grabY: grabY,
                                        direction: direction, count: count)
             }
