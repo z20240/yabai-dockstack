@@ -55,6 +55,8 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 - 🔎 **Hover** an indicator → popover with that window's full title.
 - 🖱️ **Click** an indicator → focus that window (via yabai).
 - 🖥️ Multi-monitor, all visible spaces.
+- ⌃⌘← ⌃⌘→ **Send to space hotkeys** — move windows left/right one space, or to
+  a numbered space, with SIP fully enabled (simulated native gestures).
 - 🪶 No Hammerspoon. Minimal permissions (no Accessibility, no Screen Recording —
   focus is delegated to yabai).
 
@@ -247,6 +249,35 @@ Accessibility permission.
 8. Menu bar → **Toggle icon/flag** switches appearance and persists it.
 9. On a second display, indicators appear correctly placed on that screen.
 10. LaunchAgent makes it start at login.
+
+## Send to space hotkeys
+
+Send the focused window to an adjacent space or jump it to a numbered space:
+
+- **⌃⌘←** — send left one space
+- **⌃⌘→** — send right one space
+- **⌃⌘1–9** — send to space N
+
+These hotkeys work **with System Integrity Protection (SIP) fully enabled**. The app
+simulates the native macOS gesture — grabs the window by its titlebar and presses
+Mission Control's left/right navigation keys — so you see the normal space-switch
+slide animation (one hop per space, multi-hop walks visibly step through).
+
+If you disable SIP to load yabai's scripting addition, the original yabai fast path
+is used automatically for instant, animation-free moves.
+
+**Requires:**
+- The app running.
+- Accessibility permission (the app already requires it for Dock previews; only this
+  feature requests it).
+- Mission Control's **Move left/right a space** shortcuts left enabled (macOS
+  default).
+
+**Limitations:**
+- Windows without a draggable titlebar area at top-center (e.g., fullscreen games)
+  cannot be moved this way.
+- A target display currently showing a macOS-fullscreen space cannot receive windows.
+- Do not touch the mouse or keyboard during the ~1–2 second simulation.
 
 ## Dock window previews
 
