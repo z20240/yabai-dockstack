@@ -57,8 +57,9 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 - 🖥️ Multi-monitor, all visible spaces.
 - ⌃⌘← ⌃⌘→ **Send to space hotkeys** — move windows left/right one space, or to
   a numbered space, with SIP fully enabled (simulated native gestures).
-- 🪶 No Hammerspoon. Minimal permissions (no Accessibility, no Screen Recording —
-  focus is delegated to yabai).
+- 🪶 No Hammerspoon. Core stack indicators need no special permissions (focus is
+  delegated to yabai); Dock previews and the SIP-free space hotkeys use
+  Accessibility, and Dock previews also need Screen Recording.
 
 ## Requirements
 
@@ -277,6 +278,10 @@ is used automatically for instant, animation-free moves.
   cannot be moved this way.
 - A target display currently showing a macOS-fullscreen space cannot receive windows.
 - Do not touch the mouse or keyboard during the ~1–2 second simulation.
+- Apps whose tab bar fills the titlebar center (some browsers/terminals) may not
+  move — the simulated drag can grab a tab instead of the titlebar. Workaround:
+  move such windows by their title area manually, or via yabai with the
+  scripting addition (SA).
 
 ## Dock window previews
 

@@ -24,10 +24,16 @@ public final class SpaceMover {
     }
 
     private func moveFocusedWindow(to target: SpaceTarget) {
-        guard let window = client.queryFocusedWindow() else { return }
+        guard let window = client.queryFocusedWindow() else {
+            NSLog("yabai-dockstack: move-space aborted, no focused window")
+            return
+        }
         guard let plan = SpaceTravelPlanner.plan(
             target: target, windowSpace: window.space, windowDisplay: window.display,
-            spaces: client.querySpacesInfo(), displays: client.queryDisplaysInfo()) else { return }
+            spaces: client.querySpacesInfo(), displays: client.queryDisplaysInfo()) else {
+            NSLog("yabai-dockstack: move-space aborted, planner returned nil")
+            return
+        }
 
         for step in plan.steps {
             switch step {
@@ -37,13 +43,19 @@ public final class SpaceMover {
                 Thread.sleep(forTimeInterval: 0.15)
             case .arrowWalk(let direction, let count):
                 // Re-query: the frame moved if a display hop happened.
-                guard let fresh = client.queryFocusedWindow(), fresh.id == window.id else { return }
+                guard let fresh = client.queryFocusedWindow(), fresh.id == window.id else {
+                    NSLog("yabai-dockstack: move-space aborted, focused window changed before arrow walk")
+                    return
+                }
                 // Top-center: clear of the traffic lights and (in most apps)
                 // of toolbar controls; the top strip is the drag region.
                 let grabX = fresh.frame.x + fresh.frame.w / 2
                 let grabY = fresh.frame.y + 8
-                _ = simulator.dragWalk(grabX: grabX, grabY: grabY,
-                                       direction: direction, count: count)
+                let observed = simulator.dragWalk(grabX: grabX, grabY: grabY,
+                                                   direction: direction, count: count)
+                if !observed {
+                    NSLog("yabai-dockstack: move-space walk not fully observed (grab may have missed the titlebar)")
+                }
             }
         }
 

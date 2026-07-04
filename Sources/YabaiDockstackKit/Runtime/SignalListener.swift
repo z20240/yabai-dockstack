@@ -17,7 +17,10 @@ public final class SignalListener {
     public func start() {
         unlink(socketPath)  // remove stale socket
         fd = socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else { return }
+        guard fd >= 0 else {
+            NSLog("yabai-dockstack: signal listener failed to create socket \(socketPath)")
+            return
+        }
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
         let pathCapacity = MemoryLayout.size(ofValue: addr.sun_path)
@@ -30,7 +33,12 @@ public final class SignalListener {
         let bound = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, len) }
         }
-        guard bound == 0, listen(fd, 8) == 0 else { close(fd); fd = -1; return }
+        guard bound == 0, listen(fd, 8) == 0 else {
+            NSLog("yabai-dockstack: signal listener failed to bind/listen \(socketPath)")
+            close(fd)
+            fd = -1
+            return
+        }
         running = true
         Thread.detachNewThread { [weak self] in self?.acceptLoop() }
     }
