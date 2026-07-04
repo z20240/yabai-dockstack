@@ -54,6 +54,36 @@ public final class YabaiClient {
         return out
     }
 
+    // MARK: - Space travel support (SIP-free SpaceMover)
+
+    public func querySpacesInfo() -> [SpaceInfo] {
+        guard let data = run(["-m", "query", "--spaces"]) else { return [] }
+        return SpaceInfo.decodeList(data)
+    }
+
+    public func queryDisplaysInfo() -> [DisplayInfo] {
+        guard let data = run(["-m", "query", "--displays"]) else { return [] }
+        return DisplayInfo.decodeList(data)
+    }
+
+    /// The currently focused window, or nil if none / yabai unavailable.
+    public func queryFocusedWindow() -> YabaiWindow? {
+        guard let data = run(["-m", "query", "--windows", "--window"]),
+              let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let single = try? JSONSerialization.data(withJSONObject: [obj]) else { return nil }
+        return YabaiWindow.decodeList(single).first
+    }
+
+    /// Absolute AX move — works without the scripting addition, including
+    /// across displays (the window lands on the target display's visible space).
+    public func moveWindow(id: Int, absX: Double, absY: Double) {
+        _ = run(["-m", "window", String(id), "--move", "abs:\(Int(absX)):\(Int(absY))"])
+    }
+
+    public func balance(space: Int) {
+        _ = run(["-m", "space", String(space), "--balance"])
+    }
+
     public func listSignalLabels() -> [String] {
         guard let data = run(["-m", "signal", "--list"]),
               let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
