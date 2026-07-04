@@ -268,8 +268,7 @@ is used automatically for instant, animation-free moves.
 
 **Requires:**
 - The app running.
-- Accessibility permission (the app already requires it for Dock previews; only this
-  feature requests it).
+- Accessibility permission (reuses the Accessibility permission the app already requests for Dock previews).
 - Mission Control's **Move left/right a space** shortcuts left enabled (macOS
   default).
 

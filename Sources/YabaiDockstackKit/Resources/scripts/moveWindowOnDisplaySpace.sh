@@ -7,8 +7,13 @@
 direction=$1
 
 sa_available() {
-  # SIP fully enabled -> yabai's scripting addition cannot be loaded.
-  ! csrutil status 2>/dev/null | grep -q "status: enabled."
+  # Only a fully-enabled SIP ("...status: enabled.") rules the SA out;
+  # partial disables print "(Custom Configuration)" and don't match the
+  # anchored pattern. If csrutil itself fails, assume no SA — the app
+  # path always works, the yabai path silently no-ops without the SA.
+  status=$(/usr/bin/csrutil status 2>/dev/null) || return 1
+  [ -n "$status" ] || return 1
+  ! printf '%s\n' "$status" | grep -q 'status: enabled\.$'
 }
 
 notify_app() {
