@@ -6,8 +6,8 @@ wid=$1
 target=$2
 
 sa_available() {
-  cur=$(yabai -m query --spaces --space | jq -re '.index') || return 1
-  ! yabai -m space --focus "$cur" 2>&1 | grep -q "scripting-addition"
+  # SIP fully enabled -> yabai's scripting addition cannot be loaded.
+  ! csrutil status 2>/dev/null | grep -q "status: enabled."
 }
 
 notify_app() {
