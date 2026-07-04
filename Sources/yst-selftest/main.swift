@@ -509,6 +509,43 @@ check((try? idemE.importSkhd()) == 0, "importSkhd idempotent (second run imports
 try? FileManager.default.removeItem(atPath: idemP)
 try? FileManager.default.removeItem(atPath: idemP + ".bak")
 
+print("SpaceTravelPlanner")
+let stpSpaces: [SpaceInfo] = [
+    SpaceInfo(index: 1, display: 1, isVisible: false), SpaceInfo(index: 2, display: 1, isVisible: true),
+    SpaceInfo(index: 3, display: 1, isVisible: false), SpaceInfo(index: 4, display: 1, isVisible: false),
+    SpaceInfo(index: 5, display: 1, isVisible: false),
+    SpaceInfo(index: 6, display: 2, isVisible: false), SpaceInfo(index: 7, display: 2, isVisible: true),
+    SpaceInfo(index: 8, display: 2, isVisible: false),
+]
+let stpDisplays: [DisplayInfo] = [
+    DisplayInfo(index: 1, frame: YRect(x: 0, y: 0, w: 1728, h: 1117)),
+    DisplayInfo(index: 2, frame: YRect(x: -942, y: -1080, w: 1920, h: 1080)),
+]
+check(SpaceTravelPlanner.plan(target: .next, windowSpace: 2, windowDisplay: 1,
+                              spaces: stpSpaces, displays: stpDisplays)
+      == TravelPlan(steps: [.arrowWalk(direction: .right, count: 1)], sourceSpace: 2, targetSpace: 3),
+      "next on same display = one right step")
+check(SpaceTravelPlanner.plan(target: .next, windowSpace: 5, windowDisplay: 1,
+                              spaces: stpSpaces, displays: stpDisplays)
+      == TravelPlan(steps: [.arrowWalk(direction: .left, count: 4)], sourceSpace: 5, targetSpace: 1),
+      "next at right edge wraps by walking left")
+check(SpaceTravelPlanner.plan(target: .index(8), windowSpace: 2, windowDisplay: 1,
+                              spaces: stpSpaces, displays: stpDisplays)
+      == TravelPlan(steps: [.moveToDisplay(display: 2, x: -942 + 1920 / 4, y: -1080 + 1080 / 4),
+                            .arrowWalk(direction: .right, count: 1)],
+                    sourceSpace: 2, targetSpace: 8),
+      "cross-display: move to display then walk from its visible space")
+check(SpaceTravelPlanner.plan(target: .index(2), windowSpace: 2, windowDisplay: 1,
+                              spaces: stpSpaces, displays: stpDisplays) == nil,
+      "target == current -> nil")
+check(SpaceTarget.parse("prev") == .prev && SpaceTarget.parse("7") == .index(7)
+      && SpaceTarget.parse("0") == nil && SpaceTarget.parse("bogus") == nil,
+      "SpaceTarget.parse")
+check(SpaceInfo.decodeList("""
+[{"index":1,"display":2,"is-visible":true}]
+""".data(using: .utf8)!) == [SpaceInfo(index: 1, display: 2, isVisible: true)],
+      "SpaceInfo.decodeList")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
