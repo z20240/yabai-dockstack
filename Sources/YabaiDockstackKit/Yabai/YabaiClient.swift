@@ -84,6 +84,12 @@ public final class YabaiClient {
         _ = run(["-m", "space", String(space), "--balance"])
     }
 
+    /// Works without the scripting addition; used to unmanage a tiled window
+    /// so it can be repositioned across displays, then re-tile it after.
+    public func toggleFloat(windowId: Int) {
+        _ = run(["-m", "window", String(windowId), "--toggle", "float"])
+    }
+
     public func listSignalLabels() -> [String] {
         guard let data = run(["-m", "signal", "--list"]),
               let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {

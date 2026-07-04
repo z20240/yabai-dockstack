@@ -20,7 +20,7 @@ print("YabaiWindow.decodeList")
 let json = """
 [
   {"id":1,"pid":100,"app":"Code","title":"projA — Visual Studio Code","frame":{"x":0.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":1,"has-focus":true},
-  {"id":2,"pid":101,"app":"Code","title":"projB","frame":{"x":0.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":2,"has-focus":false},
+  {"id":2,"pid":101,"app":"Code","title":"projB","frame":{"x":0.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":2,"has-focus":false,"is-floating":true},
   {"id":3,"pid":102,"app":"Safari","title":"news","frame":{"x":800.0,"y":25.0,"w":800.0,"h":900.0},"display":1,"space":1,"stack-index":0,"has-focus":false},
   {"id":4,"pid":103,"app":"Broken","frame":{"x":0.0},"display":1,"space":1,"stack-index":0}
 ]
@@ -29,6 +29,8 @@ let wins = YabaiWindow.decodeList(json)
 check(wins.count == 3, "skips malformed entry (count == 3)")
 check(wins.first { $0.id == 1 }?.title == "projA — Visual Studio Code", "title decoded")
 check(wins.first { $0.id == 1 }?.hasFocus == true, "has-focus decoded")
+check(wins.first { $0.id == 2 }?.isFloating == true, "is-floating decoded")
+check(wins.first { $0.id == 1 }?.isFloating == false, "is-floating defaults to false when key missing")
 
 print("StackBuilder")
 let f = YRect(x: 0, y: 25, w: 800, h: 900)

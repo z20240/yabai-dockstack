@@ -18,4 +18,17 @@ final class YabaiWindowDecodeTests: XCTestCase {
         XCTAssertEqual(code.title, "projA — main.ts — Visual Studio Code")
         XCTAssertEqual(code.frame.w, 800.0)
     }
+
+    func testIsFloatingDecodesAndDefaultsToFalse() throws {
+        let json = """
+        [
+          {"id":10,"pid":200,"app":"Finder","title":"floaty","frame":{"x":0.0,"y":0.0,"w":100.0,"h":100.0},"display":1,"space":1,"stack-index":0,"has-focus":false,"is-floating":true},
+          {"id":11,"pid":201,"app":"Finder","title":"tiled","frame":{"x":0.0,"y":0.0,"w":100.0,"h":100.0},"display":1,"space":1,"stack-index":0,"has-focus":false}
+        ]
+        """.data(using: .utf8)!
+        let wins = YabaiWindow.decodeList(json)
+        XCTAssertEqual(wins.count, 2)
+        XCTAssertEqual(wins.first { $0.id == 10 }?.isFloating, true)
+        XCTAssertEqual(wins.first { $0.id == 11 }?.isFloating, false)
+    }
 }

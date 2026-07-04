@@ -35,6 +35,23 @@ public final class SpaceMover {
             return
         }
 
+        // A tiled window can't be repositioned across displays ("cannot move a
+        // managed window"), so float it for the journey and re-tile on arrival.
+        let hopsDisplays = plan.steps.contains {
+            if case .moveToDisplay = $0 { return true } else { return false }
+        }
+        let floatForTrip = hopsDisplays && !window.isFloating
+        if floatForTrip {
+            client.toggleFloat(windowId: window.id)
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        defer {
+            if floatForTrip { client.toggleFloat(windowId: window.id) }
+            client.focus(windowId: window.id)
+            client.balance(space: plan.sourceSpace)
+            client.balance(space: plan.targetSpace)
+        }
+
         for step in plan.steps {
             switch step {
             case .moveToDisplay(_, let x, let y):
@@ -58,9 +75,5 @@ public final class SpaceMover {
                 }
             }
         }
-
-        client.focus(windowId: window.id)
-        client.balance(space: plan.sourceSpace)
-        client.balance(space: plan.targetSpace)
     }
 }

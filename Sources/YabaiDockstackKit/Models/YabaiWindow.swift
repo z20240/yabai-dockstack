@@ -11,14 +11,16 @@ public struct YabaiWindow: Equatable {
     public let stackIndex: Int
     public let hasFocus: Bool
     public let isVisible: Bool
+    public let isFloating: Bool
 
     public init(id: Int, pid: Int, app: String, title: String, frame: YRect,
                 display: Int, space: Int, stackIndex: Int, hasFocus: Bool,
-                isVisible: Bool = true) {
+                isVisible: Bool = true, isFloating: Bool = false) {
         self.id = id; self.pid = pid; self.app = app; self.title = title
         self.frame = frame; self.display = display; self.space = space
         self.stackIndex = stackIndex; self.hasFocus = hasFocus
         self.isVisible = isVisible
+        self.isFloating = isFloating
     }
 
     private struct Raw: Decodable {
@@ -33,11 +35,13 @@ public struct YabaiWindow: Equatable {
         let stackIndex: Int
         let hasFocus: Bool
         let isVisible: Bool?
+        let isFloating: Bool?
         enum CodingKeys: String, CodingKey {
             case id, pid, app, title, frame, display, space
             case stackIndex = "stack-index"
             case hasFocus = "has-focus"
             case isVisible = "is-visible"
+            case isFloating = "is-floating"
         }
     }
 
@@ -54,7 +58,7 @@ public struct YabaiWindow: Equatable {
                 frame: YRect(x: raw.frame.x, y: raw.frame.y, w: raw.frame.w, h: raw.frame.h),
                 display: raw.display, space: raw.space,
                 stackIndex: raw.stackIndex, hasFocus: raw.hasFocus,
-                isVisible: raw.isVisible ?? true))
+                isVisible: raw.isVisible ?? true, isFloating: raw.isFloating ?? false))
         }
         return out
     }
