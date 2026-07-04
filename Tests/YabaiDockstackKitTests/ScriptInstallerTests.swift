@@ -13,4 +13,16 @@ final class ScriptInstallerTests: XCTestCase {
         }
         try? FileManager.default.removeItem(atPath: dir)
     }
+
+    func testNeedsUpdateDetectsMissingAndStaleScripts() throws {
+        let dir = NSTemporaryDirectory() + "yst-scripts-update-\(UUID().uuidString)"
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+
+        XCTAssertTrue(ScriptInstaller.needsUpdate(dir: dir))          // nothing installed
+        try ScriptInstaller.install(to: dir)
+        XCTAssertFalse(ScriptInstaller.needsUpdate(dir: dir))         // fresh install
+        try "stale".write(toFile: dir + "/moveWindowToSpace.sh",
+                          atomically: true, encoding: .utf8)
+        XCTAssertTrue(ScriptInstaller.needsUpdate(dir: dir))          // content drift
+    }
 }

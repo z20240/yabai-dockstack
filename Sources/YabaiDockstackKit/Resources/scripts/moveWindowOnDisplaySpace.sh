@@ -1,7 +1,26 @@
 #!/bin/sh
-# Move focused window to prev/next space on the same display.
+# Move focused window to prev/next space on the same display, following focus.
+# With the scripting addition (SIP partially disabled) this uses yabai directly.
+# Without it, the yabai-dockstack app simulates the native drag + ctrl+arrow
+# gesture over its command socket (SIP-free).
 
 direction=$1
+
+sa_available() {
+  cur=$(yabai -m query --spaces --space | jq -re '.index') || return 1
+  ! yabai -m space --focus "$cur" 2>&1 | grep -q "scripting-addition"
+}
+
+notify_app() {
+  sock=$(jq -r '.socketPath // empty' "$HOME/.config/yabai-dockstack/config.json" 2>/dev/null)
+  [ -n "$sock" ] || sock=/tmp/yabai-dockstack.sock
+  printf 'move-space %s\n' "$1" | /usr/bin/nc -U -w 2 "$sock" 2>/dev/null || true
+}
+
+if ! sa_available; then
+  notify_app "$direction"
+  exit 0
+fi
 
 window=$(yabai -m query --windows --window)
 wid=$(echo "$window" | jq -re '.id')

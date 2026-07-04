@@ -24,4 +24,20 @@ public enum ScriptInstaller {
             try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dst)
         }
     }
+
+    /// True when any bundled script is missing on disk or its installed
+    /// content differs from the bundled copy (i.e. an app update shipped
+    /// new script logic and we should overwrite).
+    public static func needsUpdate(dir: String, bundle: Bundle? = nil) -> Bool {
+        let bundle = bundle ?? .module
+        let expanded = (dir as NSString).expandingTildeInPath
+        for name in scriptNames {
+            guard let src = bundle.url(forResource: "scripts/\(name)", withExtension: nil)
+                    ?? bundle.url(forResource: name, withExtension: nil, subdirectory: "scripts"),
+                  let bundled = try? Data(contentsOf: src) else { return true }
+            guard let installed = FileManager.default.contents(atPath: expanded + "/" + name),
+                  installed == bundled else { return true }
+        }
+        return false
+    }
 }

@@ -1,8 +1,25 @@
 #!/bin/sh
 # Move a window to a space, follow focus, and force it into the destination layout.
+# Without the scripting addition, delegate to the yabai-dockstack app (SIP-free).
 
 wid=$1
 target=$2
+
+sa_available() {
+  cur=$(yabai -m query --spaces --space | jq -re '.index') || return 1
+  ! yabai -m space --focus "$cur" 2>&1 | grep -q "scripting-addition"
+}
+
+notify_app() {
+  sock=$(jq -r '.socketPath // empty' "$HOME/.config/yabai-dockstack/config.json" 2>/dev/null)
+  [ -n "$sock" ] || sock=/tmp/yabai-dockstack.sock
+  printf 'move-space %s\n' "$1" | /usr/bin/nc -U -w 2 "$sock" 2>/dev/null || true
+}
+
+if ! sa_available; then
+  notify_app "$target"
+  exit 0
+fi
 
 src_space=$(yabai -m query --windows | jq -re --argjson wid "$wid" '.[] | select(.id == $wid) | .space')
 

@@ -3,12 +3,15 @@ import Foundation
 public final class SignalListener {
     private let socketPath: String
     private let onPoke: () -> Void
+    private let onCommand: ((String) -> Void)?
     private var fd: Int32 = -1
     private var running = false
 
-    public init(socketPath: String, onPoke: @escaping () -> Void) {
+    public init(socketPath: String, onPoke: @escaping () -> Void,
+                onCommand: ((String) -> Void)? = nil) {
         self.socketPath = socketPath
         self.onPoke = onPoke
+        self.onCommand = onCommand
     }
 
     public func start() {
@@ -36,10 +39,19 @@ public final class SignalListener {
         while running {
             let client = accept(fd, nil, nil)
             if client < 0 { continue }
-            var buf = [UInt8](repeating: 0, count: 16)
-            _ = read(client, &buf, buf.count)
+            var buf = [UInt8](repeating: 0, count: 64)
+            let n = read(client, &buf, buf.count)
             close(client)
-            DispatchQueue.main.async { [weak self] in self?.onPoke() }
+            let text = n > 0
+                ? String(decoding: buf[0..<n], as: UTF8.self)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                : ""
+            if text.hasPrefix("move-space"), let onCommand {
+                // Runs on the accept thread; SpaceMover hops to its own queue.
+                onCommand(text)
+            } else {
+                DispatchQueue.main.async { [weak self] in self?.onPoke() }
+            }
         }
     }
 

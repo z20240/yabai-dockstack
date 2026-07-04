@@ -58,12 +58,10 @@ public enum YabaiDockstack {
             config.save(to: configPath)
         }
 
-        // Install bundled helper scripts on first run (only writes to the scripts dir,
-        // never touches the user's rc files).
-        let scriptsInstalled = ScriptInstaller.scriptNames.allSatisfy {
-            FileManager.default.fileExists(atPath: ConfigPaths.scriptsDir + "/" + $0)
-        }
-        if !scriptsInstalled {
+        // Install/refresh bundled helper scripts (only writes to the scripts dir,
+        // never touches the user's rc files). Overwrites when an update ships
+        // new script contents.
+        if ScriptInstaller.needsUpdate(dir: ConfigPaths.scriptsDir) {
             do { try ScriptInstaller.install(to: ConfigPaths.scriptsDir) }
             catch { NSLog("yabai-dockstack: helper script install failed: \(error)") }
         }
@@ -82,9 +80,11 @@ public enum YabaiDockstack {
             renderer.update(stacks)
             dockController?.warmCache()
         }
-        let listener = SignalListener(socketPath: config.socketPath) {
-            coordinator.requestRefresh()
-        }
+        let spaceMover = SpaceMover(client: client)
+        let listener = SignalListener(
+            socketPath: config.socketPath,
+            onPoke: { coordinator.requestRefresh() },
+            onCommand: { cmd in spaceMover.handle(command: cmd) })
 
         let binaryPath = selfBinaryPath()
         let menu = MenuBarController()
