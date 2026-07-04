@@ -8,8 +8,8 @@
 # launches without a Gatekeeper prompt. Update `version` + `sha256` after each
 # release (scripts/release.sh prints the sha256).
 cask "yabai-dockstack" do
-  version "0.2.7"
-  sha256 "5cf50cb2b22ae9f44aa47cb39a6c7fae31c36f410aa36e0e4608dfeafb6185e8"
+  version "0.2.8"
+  sha256 "d8e7c3808d2a4a38b8ca5fe6b712629bea0729e371501aa1d66f3e71c967f4a6"
 
   url "https://github.com/z20240/yabai-dockstack/releases/download/v#{version}/yabai-dockstack-#{version}.zip"
   name "yabai-dockstack"
