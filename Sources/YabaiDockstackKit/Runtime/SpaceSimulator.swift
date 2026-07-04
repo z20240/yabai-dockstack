@@ -45,11 +45,28 @@ public final class SpaceSimulator: SpaceSimulating {
         return allObserved
     }
 
+    /// Posts ctrl+arrow the way the hardware does: a flagsChanged for the
+    /// control press, the arrow key carrying the Fn/NumericPad bits physical
+    /// arrow keys always have (the symbolic hotkey won't match without them),
+    /// then the control release.
     private func postCtrlKey(_ keyCode: CGKeyCode) {
-        for keyDown in [true, false] {
-            guard let e = CGEvent(keyboardEventSource: nil, virtualKey: keyCode,
-                                  keyDown: keyDown) else { continue }
+        let source = CGEventSource(stateID: .hidSystemState)
+        if let e = CGEvent(keyboardEventSource: source, virtualKey: 59, keyDown: true) {
+            e.type = .flagsChanged
             e.flags = .maskControl
+            e.post(tap: .cghidEventTap)
+        }
+        usleep(30_000)
+        for keyDown in [true, false] {
+            guard let e = CGEvent(keyboardEventSource: source, virtualKey: keyCode,
+                                  keyDown: keyDown) else { continue }
+            e.flags = [.maskControl, .maskSecondaryFn, .maskNumericPad]
+            e.post(tap: .cghidEventTap)
+            usleep(30_000)
+        }
+        if let e = CGEvent(keyboardEventSource: source, virtualKey: 59, keyDown: false) {
+            e.type = .flagsChanged
+            e.flags = []
             e.post(tap: .cghidEventTap)
         }
     }
