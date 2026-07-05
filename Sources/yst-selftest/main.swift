@@ -548,6 +548,21 @@ check(SpaceInfo.decodeList("""
 """.data(using: .utf8)!) == [SpaceInfo(index: 1, display: 2, isVisible: true)],
       "SpaceInfo.decodeList")
 
+print("L10n")
+check(L10n.resolve(.auto, preferred: ["zh-Hant-TW"]) == .zhHant, "auto resolves zh-Hant")
+check(L10n.resolve(.auto, preferred: ["ja-JP"]) == .ja, "auto resolves ja")
+check(L10n.resolve(.auto, preferred: ["de-DE"]) == .en, "auto falls back to en")
+check(L10n.resolve(.zhHant, preferred: ["ja"]) == .zhHant, "explicit wins over preferred")
+check(Set(L10nStrings.en.keys) == Set(L10nStrings.zhHant.keys)
+      && Set(L10nStrings.en.keys) == Set(L10nStrings.ja.keys), "table key parity")
+check(!L10nStrings.en.values.contains(""), "no empty en values")
+check(ShortcutCatalog.all.allSatisfy { L10nStrings.en["action.\($0.id)"] != nil }, "catalog title coverage")
+check(ShortcutGroup.order.allSatisfy { L10nStrings.en["group.\($0)"] != nil }, "group coverage")
+L10n.current = .ja
+check(L10n.t("ui.apply") == "適用", "ja lookup")
+L10n.current = .en
+check(L10n.t("bogus.key") == "bogus.key", "fallback to key")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
