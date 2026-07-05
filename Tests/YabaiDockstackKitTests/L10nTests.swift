@@ -50,4 +50,28 @@ final class L10nTests: XCTestCase {
         XCTAssertEqual(L10n.t("ui.apply"), "Apply")
         XCTAssertEqual(L10n.t("no.such.key"), "no.such.key")  // key itself as last resort
     }
+
+    /// Every literal L10n.t("…") key in Sources/ must exist in the en table —
+    /// a typo'd key would otherwise silently render as the raw key string.
+    func testEveryLiteralCallSiteKeyExists() throws {
+        let sourcesDir = URL(fileURLWithPath: #filePath)          // …/Tests/YabaiDockstackKitTests/L10nTests.swift
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources")
+        let regex = try NSRegularExpression(pattern: #"L10n\.t\("([^"\\]+)"\)"#)
+        var checked = 0
+        let files = FileManager.default.enumerator(at: sourcesDir, includingPropertiesForKeys: nil)!
+            .compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        for file in files {
+            guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
+            let range = NSRange(text.startIndex..., in: text)
+            for m in regex.matches(in: text, range: range) {
+                guard let r = Range(m.range(at: 1), in: text) else { continue }
+                let key = String(text[r])
+                XCTAssertNotNil(L10nStrings.en[key],
+                                "L10n.t(\"\(key)\") in \(file.lastPathComponent) has no en entry")
+                checked += 1
+            }
+        }
+        XCTAssertGreaterThan(checked, 50, "call-site scan found suspiciously few keys — regex or path broken?")
+    }
 }

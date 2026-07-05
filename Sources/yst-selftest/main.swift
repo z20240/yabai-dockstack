@@ -568,7 +568,30 @@ check(ShortcutGroup.order.allSatisfy { L10nStrings.en["group.\($0)"] != nil }, "
 L10n.current = .ja
 check(L10n.t("ui.apply") == "適用", "ja lookup")
 L10n.current = .en
-check(L10n.t("bogus.key") == "bogus.key", "fallback to key")
+let bogusKey = "bogus" + ".key"  // construct at runtime so regex-based key scan doesn't see it as a literal
+check(L10n.t(bogusKey) == bogusKey, "fallback to key")
+
+print("L10n call sites")
+let srcDir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Sources")
+if FileManager.default.fileExists(atPath: srcDir.path),
+   let en = Optional(L10nStrings.en),
+   let e = FileManager.default.enumerator(at: srcDir, includingPropertiesForKeys: nil) {
+    var missing: [String] = []
+    var found = 0
+    let re = try! NSRegularExpression(pattern: #"L10n\.t\("([^"\\]+)"\)"#)
+    for case let url as URL in e where url.pathExtension == "swift" {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            guard let r = Range(m.range(at: 1), in: text) else { continue }
+            let key = String(text[r]); found += 1
+            if en[key] == nil { missing.append("\(url.lastPathComponent): \(key)") }
+        }
+    }
+    check(missing.isEmpty, "all literal L10n.t keys exist (missing: \(missing))")
+    check(found > 50, "call-site scan found \(found) keys (>50 expected)")
+} else {
+    print("  ok: (skipped — Sources/ not found from cwd)")
+}
 
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
