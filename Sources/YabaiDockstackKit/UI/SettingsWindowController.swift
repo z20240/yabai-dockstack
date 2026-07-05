@@ -148,6 +148,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         yabaiPathField.target = self; yabaiPathField.action = #selector(changed)
         yabaiPathField.widthAnchor.constraint(equalToConstant: 240).isActive = true
 
+        sizeSlider.widthAnchor.constraint(equalToConstant: 200).isActive = true
+
         axButton.target = self; axButton.action = #selector(grantAX)
         srButton.target = self; srButton.action = #selector(grantSR)
         axButton.controlSize = .small; srButton.controlSize = .small
@@ -246,7 +248,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             stack.topAnchor.constraint(equalTo: appearancePane.topAnchor, constant: 20),
             stack.bottomAnchor.constraint(lessThanOrEqualTo: appearancePane.bottomAnchor, constant: -20),
             permissionBanner.widthAnchor.constraint(equalTo: grid.widthAnchor),
-            sizeSlider.widthAnchor.constraint(equalToConstant: 200),
         ])
 
         let appearanceItem = NSTabViewItem()

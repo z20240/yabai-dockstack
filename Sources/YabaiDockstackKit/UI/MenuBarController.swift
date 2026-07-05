@@ -84,10 +84,10 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
 
         let groups = windowListProvider?() ?? []
         if groups.isEmpty {
-            menu.addItem(disabledHeader("No windows", indent: 0))
+            menu.addItem(disabledHeader(L10n.t("ui.menu.noWindows"), indent: 0))
         } else {
             for (di, display) in groups.enumerated() {
-                menu.addItem(disabledHeader("Display \(display.display)", indent: 0))
+                menu.addItem(disabledHeader(String(format: L10n.t("ui.menu.displayN"), display.display), indent: 0))
                 for space in display.spaces {
                     menu.addItem(disabledHeader(space.name, indent: 1))
                     for win in space.windows {
