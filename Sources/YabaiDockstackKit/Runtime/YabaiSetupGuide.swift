@@ -14,21 +14,11 @@ public final class YabaiSetupGuide {
     public func show() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "yabai not found"
-        alert.informativeText = """
-        yabai-dockstack is a companion for yabai and needs it to work — every \
-        feature reads window/stack state from yabai.
-
-        “Install yabai…” opens Terminal with the Homebrew install command so you \
-        can run it yourself. yabai also needs its own setup (start the service, \
-        and partially disable SIP for full window management) — see the install \
-        guide. yabai-dockstack starts working automatically once yabai is running.
-
-        Already have yabai elsewhere? Use “Set yabai path…”.
-        """
-        alert.addButton(withTitle: "Install yabai…")     // .alertFirstButtonReturn
-        alert.addButton(withTitle: "Open install guide")  // .alertSecondButtonReturn
-        alert.addButton(withTitle: "Set yabai path…")     // .alertThirdButtonReturn
+        alert.messageText = L10n.t("ui.setup.title")
+        alert.informativeText = L10n.t("ui.setup.body")
+        alert.addButton(withTitle: L10n.t("ui.setup.install"))  // .alertFirstButtonReturn
+        alert.addButton(withTitle: L10n.t("ui.setup.guide"))    // .alertSecondButtonReturn
+        alert.addButton(withTitle: L10n.t("ui.setup.setPath"))  // .alertThirdButtonReturn
         // (Escape / closing the window dismisses without an explicit "Later".)
 
         NSApp.activate(ignoringOtherApps: true)

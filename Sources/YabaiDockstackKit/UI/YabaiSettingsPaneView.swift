@@ -74,12 +74,12 @@ public final class YabaiSettingsPaneView: NSView {
         // rows. Plain stacks keep each control at its own width, left-aligned, with no
         // NSGridView column-sizing quirks (which were squeezing the segmented control).
         let form = NSStackView(views: [
-            formRow("Default layout:", layoutControl),
-            formRow("Top padding:",    topField),
-            formRow("Bottom padding:", bottomField),
-            formRow("Left padding:",   leftField),
-            formRow("Right padding:",  rightField),
-            formRow("Gap:",            gapField),
+            formRow(L10n.t("ui.yabai.defaultLayout"), layoutControl),
+            formRow(L10n.t("ui.yabai.topPadding"),    topField),
+            formRow(L10n.t("ui.yabai.bottomPadding"), bottomField),
+            formRow(L10n.t("ui.yabai.leftPadding"),   leftField),
+            formRow(L10n.t("ui.yabai.rightPadding"),  rightField),
+            formRow(L10n.t("ui.yabai.gap"),           gapField),
         ])
         form.orientation = .vertical
         form.alignment   = .leading
@@ -87,18 +87,18 @@ public final class YabaiSettingsPaneView: NSView {
         form.translatesAutoresizingMaskIntoConstraints = false
 
         // Section header
-        let rulesHeader = NSTextField(labelWithString: "Window Rules")
+        let rulesHeader = NSTextField(labelWithString: L10n.t("ui.yabai.windowRules"))
         rulesHeader.font = .boldSystemFont(ofSize: 13)
 
         // Table columns
         let appCol  = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("app"))
-        appCol.title     = "App"
+        appCol.title     = L10n.t("ui.yabai.colApp")
         appCol.minWidth  = 140
         appCol.width     = 200
         appCol.isEditable = true
 
         let modeCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("mode"))
-        modeCol.title    = "Mode"
+        modeCol.title    = L10n.t("ui.yabai.colMode")
         modeCol.minWidth = 90
         modeCol.width    = 110
 
@@ -164,17 +164,17 @@ public final class YabaiSettingsPaneView: NSView {
             equalTo: contentStack.widthAnchor).isActive = true
 
         // Bottom bar
-        let applyButton = NSButton(title: "Apply", target: self, action: #selector(applyTapped))
+        let applyButton = NSButton(title: L10n.t("ui.apply"), target: self, action: #selector(applyTapped))
         applyButton.bezelStyle    = .rounded
         applyButton.keyEquivalent = "\r"
 
-        let importButton = NSButton(title: "Import existing…", target: self, action: #selector(importTapped))
+        let importButton = NSButton(title: L10n.t("ui.importExisting"), target: self, action: #selector(importTapped))
         importButton.bezelStyle = .rounded
 
-        let editButton = NSButton(title: "⚙️ Edit raw file…", target: self, action: #selector(editRawTapped))
+        let editButton = NSButton(title: L10n.t("ui.editRaw"), target: self, action: #selector(editRawTapped))
         editButton.bezelStyle = .rounded
 
-        let resetButton = NSButton(title: "Reset to defaults", target: self, action: #selector(resetTapped))
+        let resetButton = NSButton(title: L10n.t("ui.resetDefaults"), target: self, action: #selector(resetTapped))
         resetButton.bezelStyle = .rounded
 
         let bottomBar = NSStackView(views: [applyButton, importButton, editButton, resetButton, statusLabel])
@@ -279,7 +279,7 @@ public final class YabaiSettingsPaneView: NSView {
         do {
             try engine.saveYabai(settings)
             let r = engine.applyYabai()
-            showStatus(r.ok, r.ok ? "Restarted yabai" : r.output)
+            showStatus(r.ok, r.ok ? L10n.t("ui.status.restartedYabai") : r.output)
         } catch {
             showStatus(false, error.localizedDescription)
         }
@@ -306,7 +306,7 @@ public final class YabaiSettingsPaneView: NSView {
             settings = engine.loadYabaiSettingsOrDefault()
             syncFields()
             tableView.reloadData()
-            showStatus(true, n > 0 ? "Imported \(n) setting(s) from ~/.yabairc" : "Nothing to import")
+            showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedSettings"), n) : L10n.t("ui.status.nothingToImport"))
         } catch {
             showStatus(false, error.localizedDescription)
         }
@@ -374,7 +374,7 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
             } else {
                 cell = NSPopUpButton()
                 cell.identifier = cellID
-                cell.addItems(withTitles: ["Floating", "Manage"])
+                cell.addItems(withTitles: [L10n.t("ui.yabai.modeFloating"), L10n.t("ui.yabai.modeManage")])
                 cell.target = self
                 cell.action = #selector(modeChanged(_:))
                 cell.controlSize = .small

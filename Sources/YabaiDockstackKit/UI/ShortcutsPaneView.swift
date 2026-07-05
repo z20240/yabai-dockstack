@@ -77,17 +77,17 @@ public final class ShortcutsPaneView: NSView {
         buildList()
 
         // --- Bottom bar ---
-        let applyButton = NSButton(title: "Apply", target: self, action: #selector(applyTapped))
+        let applyButton = NSButton(title: L10n.t("ui.apply"), target: self, action: #selector(applyTapped))
         applyButton.bezelStyle = .rounded
         applyButton.keyEquivalent = "\r"
 
-        let importButton = NSButton(title: "Import existing…", target: self, action: #selector(importTapped))
+        let importButton = NSButton(title: L10n.t("ui.importExisting"), target: self, action: #selector(importTapped))
         importButton.bezelStyle = .rounded
 
-        let editButton = NSButton(title: "⚙️ Edit raw file…", target: self, action: #selector(editRawTapped))
+        let editButton = NSButton(title: L10n.t("ui.editRaw"), target: self, action: #selector(editRawTapped))
         editButton.bezelStyle = .rounded
 
-        let resetButton = NSButton(title: "Reset to defaults", target: self, action: #selector(resetTapped))
+        let resetButton = NSButton(title: L10n.t("ui.resetDefaults"), target: self, action: #selector(resetTapped))
         resetButton.bezelStyle = .rounded
 
         let bottomBar = NSStackView(views: [applyButton, importButton, editButton, resetButton, statusLabel])
@@ -140,7 +140,7 @@ public final class ShortcutsPaneView: NSView {
             }
 
             // Section header (bold, secondary color)
-            let header = NSTextField(labelWithString: section.group.uppercased())
+            let header = NSTextField(labelWithString: L10n.t("group.\(section.group)").uppercased())
             header.font = .boldSystemFont(ofSize: 10)
             header.textColor = .secondaryLabelColor
             listStack.addArrangedSubview(header)
@@ -179,7 +179,7 @@ public final class ShortcutsPaneView: NSView {
         icon.widthAnchor.constraint(equalToConstant: 18).isActive = true
 
         // Action title label
-        let titleLabel = NSTextField(labelWithString: row.action.title)
+        let titleLabel = NSTextField(labelWithString: L10n.t("action.\(row.action.id)"))
         titleLabel.font = .systemFont(ofSize: 13)
         titleLabel.setContentHuggingPriority(.defaultHigh, for: .horizontal)
         titleLabels[actionID] = titleLabel
@@ -239,7 +239,7 @@ public final class ShortcutsPaneView: NSView {
         do {
             try engine.saveSkhd(bindings)
             let r = engine.applySkhd()
-            showStatus(r.ok, r.ok ? "Reloaded skhd" : r.output)
+            showStatus(r.ok, r.ok ? L10n.t("ui.status.reloadedSkhd") : r.output)
         } catch {
             showStatus(false, error.localizedDescription)
         }
@@ -265,7 +265,7 @@ public final class ShortcutsPaneView: NSView {
             let n = try engine.importSkhd()
             bindings = engine.loadBindingsOrDefault()
             buildList()
-            showStatus(true, n > 0 ? "Imported \(n) binding(s) from ~/.skhdrc" : "Nothing to import")
+            showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedBindings"), n) : L10n.t("ui.status.nothingToImport"))
         } catch {
             showStatus(false, error.localizedDescription)
         }
