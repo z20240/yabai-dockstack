@@ -42,7 +42,7 @@ public final class RecordHotkeyControl: NSView {
     }
 
     private func refreshTitle() {
-        button.title = recording ? "Recording…" : (hotkey?.displayString ?? "Record Hotkey")
+        button.title = recording ? L10n.t("ui.record.recording") : (hotkey?.displayString ?? L10n.t("ui.record.prompt"))
         clearButton.isHidden = hotkey == nil || recording
     }
 

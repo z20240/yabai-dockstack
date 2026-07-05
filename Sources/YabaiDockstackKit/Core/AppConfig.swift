@@ -31,6 +31,8 @@ public struct AppConfig: Codable, Equatable {
     /// Show a window-preview popover when hovering a Dock app icon
     /// (needs Accessibility + Screen Recording).
     public var dockPreview: Bool
+    /// UI language: "auto" (follow system), "en", "zh-Hant", or "ja".
+    public var language: String
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
@@ -44,7 +46,8 @@ public struct AppConfig: Codable, Equatable {
         showBackground: true,
         backgroundColor: "#1E1E1ECC",
         confineToGap: true,
-        dockPreview: true)
+        dockPreview: true,
+        language: "auto")
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

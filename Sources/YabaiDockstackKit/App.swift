@@ -16,6 +16,8 @@ public enum YabaiDockstack {
         let args = CommandLine.arguments
         let configPath = "~/.config/yabai-dockstack/config.json"
         var config = AppConfig.loadFromFile(configPath)
+        L10n.current = L10n.resolve(AppLanguage(rawValue: config.language) ?? .auto,
+                                    preferred: Locale.preferredLanguages)
 
         if args.contains("--refresh") {
             RefreshClient.sendPoke(socketPath: config.socketPath)
@@ -88,14 +90,14 @@ public enum YabaiDockstack {
 
         let binaryPath = selfBinaryPath()
         let menu = MenuBarController()
-        menu.statusProvider = { client.isAvailable() ? "yabai: connected ✓" : "yabai: not found" }
+        menu.statusProvider = { client.isAvailable() ? L10n.t("ui.menu.yabaiConnected") : L10n.t("ui.menu.yabaiNotFound") }
         menu.windowListProvider = {
             WindowMenuModel.build(client.queryWindows(), spaceLabels: client.querySpaceLabels())
         }
         menu.onSelectWindow = { id in client.focus(windowId: id) }
         menu.permissionWarning = {
             (config.dockPreview && !PermissionsHelper.allGranted)
-                ? "⚠️ Grant permissions for Dock previews…" : nil
+                ? L10n.t("ui.menu.grantPerms") : nil
         }
         menu.yabaiMissing = { !client.isAvailable() }
 

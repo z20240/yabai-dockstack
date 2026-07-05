@@ -60,11 +60,12 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(status)
 
         if yabaiMissing?() == true {
-            let item = NSMenuItem(title: "⚠️ yabai not found — set up…",
+            let title = L10n.t("ui.menu.yabaiMissing")
+            let item = NSMenuItem(title: title,
                                   action: #selector(yabaiSetupAction), keyEquivalent: "")
             item.target = self
             item.attributedTitle = NSAttributedString(
-                string: "⚠️ yabai not found — set up…",
+                string: title,
                 attributes: [.foregroundColor: NSColor.systemRed, .font: NSFont.menuFont(ofSize: 0)])
             menu.addItem(item)
         }
@@ -107,18 +108,18 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let settings = NSMenuItem(title: "Settings…", action: #selector(settingsAction), keyEquivalent: ",")
+        let settings = NSMenuItem(title: L10n.t("ui.menu.settings"), action: #selector(settingsAction), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
 
-        let reregister = NSMenuItem(title: "Re-register yabai signals",
+        let reregister = NSMenuItem(title: L10n.t("ui.menu.reregister"),
                                     action: #selector(reregisterAction), keyEquivalent: "")
         reregister.target = self
         menu.addItem(reregister)
 
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Quit", action: #selector(quitAction), keyEquivalent: "q")
+        let quit = NSMenuItem(title: L10n.t("ui.menu.quit"), action: #selector(quitAction), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
     }

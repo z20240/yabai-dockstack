@@ -36,4 +36,10 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(reloaded.style, .flag)
         try? FileManager.default.removeItem(atPath: tmp)
     }
+
+    func testLanguageDefaultsToAutoAndRoundTrips() {
+        XCTAssertEqual(AppConfig.defaults.language, "auto")
+        let json = #"{"language":"ja"}"#.data(using: .utf8)!
+        XCTAssertEqual(AppConfig.load(from: json).language, "ja")
+    }
 }

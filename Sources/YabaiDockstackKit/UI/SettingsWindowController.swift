@@ -18,26 +18,30 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let onLoginToggle: (Bool) -> Void
     private let loginIsEnabled: () -> Bool
 
+    /// Maps `languagePopup` index <-> `AppLanguage`.
+    private static let languageOrder: [AppLanguage] = [.auto, .en, .zhHant, .ja]
+
     // controls
+    private let languagePopup = NSPopUpButton()
     private let stylePopup = NSPopUpButton()
     private let sizeSlider = NSSlider()
     private let focusedSlider = NSSlider()
     private let unfocusedSlider = NSSlider()
     private let flagWell = NSColorWell()
-    private let backgroundCheck = NSButton(checkboxWithTitle: "Show background pill", target: nil, action: nil)
+    private let backgroundCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let backgroundWell = NSColorWell()
-    private let confineCheck = NSButton(checkboxWithTitle: "Keep inside window gap (don't cover the app)", target: nil, action: nil)
+    private let confineCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let fullWidthPopup = NSPopUpButton()
     private let debounceField = NSTextField()
     private let pollField = NSTextField()
     private let yabaiPathField = NSTextField()
-    private let dockPreviewCheck = NSButton(checkboxWithTitle: "Dock window previews (needs Accessibility + Screen Recording)", target: nil, action: nil)
-    private let loginCheck = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
+    private let dockPreviewCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let loginCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     // Permissions (for Dock previews)
     private let axStatus = NSTextField(labelWithString: "")
-    private let axButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private let axButton = NSButton(title: "", target: nil, action: nil)
     private let srStatus = NSTextField(labelWithString: "")
-    private let srButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private let srButton = NSButton(title: "", target: nil, action: nil)
     private let permissionBanner = NSView()
     private var permTimer: Timer?
 
@@ -92,10 +96,10 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func syncPermissions() {
         let (ax, sr) = permissionStatus?() ?? (false, false)
-        axStatus.stringValue = ax ? "✓ granted" : "✗ not granted"
+        axStatus.stringValue = ax ? L10n.t("ui.appearance.granted") : L10n.t("ui.appearance.notGranted")
         axStatus.textColor = ax ? .systemGreen : .systemRed
         axButton.isEnabled = !ax
-        srStatus.stringValue = sr ? "✓ granted" : "✗ not granted"
+        srStatus.stringValue = sr ? L10n.t("ui.appearance.granted") : L10n.t("ui.appearance.notGranted")
         srStatus.textColor = sr ? .systemGreen : .systemRed
         srButton.isEnabled = !sr
         permissionBanner.isHidden = (ax && sr) || !config.dockPreview
@@ -109,10 +113,13 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         return [l, control]
     }
 
+    /// One-time setup: window shell + control wiring (target/action) that never
+    /// changes across a language switch. Constructs the initial content via
+    /// `buildContent()`.
     private func build() {
         NSColorPanel.shared.showsAlpha = true
 
-        stylePopup.addItems(withTitles: ["Icon", "Flag"])
+        languagePopup.target = self; languagePopup.action = #selector(languageChanged)
         stylePopup.target = self; stylePopup.action = #selector(changed)
 
         sizeSlider.minValue = 12; sizeSlider.maxValue = 48
@@ -130,7 +137,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         dockPreviewCheck.target = self; dockPreviewCheck.action = #selector(changed)
         loginCheck.target = self; loginCheck.action = #selector(loginChanged)
 
-        fullWidthPopup.addItems(withTitles: ["Left", "Right"])
         fullWidthPopup.target = self; fullWidthPopup.action = #selector(changed)
 
         for f in [debounceField, pollField] {
@@ -139,32 +145,68 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             f.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
 
-        yabaiPathField.placeholderString = "auto-detect"
         yabaiPathField.target = self; yabaiPathField.action = #selector(changed)
         yabaiPathField.widthAnchor.constraint(equalToConstant: 240).isActive = true
 
         axButton.target = self; axButton.action = #selector(grantAX)
         srButton.target = self; srButton.action = #selector(grantSR)
         axButton.controlSize = .small; srButton.controlSize = .small
+
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
+                           styleMask: [.titled, .closable],
+                           backing: .buffered, defer: false)
+        win.isReleasedWhenClosed = false
+        win.delegate = self
+        window = win
+
+        buildContent()
+    }
+
+    /// (Re-)constructs the tab view + panes from the current language table and
+    /// installs it as the window's content view. Re-callable on language change —
+    /// preserves the selected tab and control *values* (via `syncControls()`,
+    /// called by the caller after this returns).
+    private func buildContent() {
+        languagePopup.removeAllItems()
+        languagePopup.addItems(withTitles: [
+            L10n.t("ui.language.auto"), "English", "繁體中文", "日本語",
+        ])
+
+        stylePopup.removeAllItems()
+        stylePopup.addItems(withTitles: [L10n.t("ui.appearance.styleIcon"), L10n.t("ui.appearance.styleFlag")])
+
+        fullWidthPopup.removeAllItems()
+        fullWidthPopup.addItems(withTitles: [L10n.t("ui.appearance.left"), L10n.t("ui.appearance.right")])
+
+        backgroundCheck.title = L10n.t("ui.appearance.showBackground")
+        confineCheck.title = L10n.t("ui.appearance.confine")
+        dockPreviewCheck.title = L10n.t("ui.appearance.dockPreview")
+        loginCheck.title = L10n.t("ui.appearance.login")
+
+        yabaiPathField.placeholderString = L10n.t("ui.appearance.autoDetect")
+
+        axButton.title = L10n.t("ui.appearance.grant")
+        srButton.title = L10n.t("ui.appearance.grant")
         let axCell = NSStackView(views: [axStatus, axButton]); axCell.spacing = 8
         let srCell = NSStackView(views: [srStatus, srButton]); srCell.spacing = 8
 
         let grid = NSGridView(views: [
-            row("Accessibility:", axCell),
-            row("Screen Recording:", srCell),
-            row("Style:", stylePopup),
-            row("Indicator size:", sizeSlider),
-            row("Focused opacity:", focusedSlider),
-            row("Unfocused opacity:", unfocusedSlider),
-            row("Flag color:", flagWell),
+            row(L10n.t("ui.appearance.language"), languagePopup),
+            row(L10n.t("ui.appearance.accessibility"), axCell),
+            row(L10n.t("ui.appearance.screenRecording"), srCell),
+            row(L10n.t("ui.appearance.style"), stylePopup),
+            row(L10n.t("ui.appearance.size"), sizeSlider),
+            row(L10n.t("ui.appearance.focusedOpacity"), focusedSlider),
+            row(L10n.t("ui.appearance.unfocusedOpacity"), unfocusedSlider),
+            row(L10n.t("ui.appearance.flagColor"), flagWell),
             [NSGridCell.emptyContentView, backgroundCheck],
-            row("Background color:", backgroundWell),
+            row(L10n.t("ui.appearance.backgroundColor"), backgroundWell),
             [NSGridCell.emptyContentView, confineCheck],
             [NSGridCell.emptyContentView, dockPreviewCheck],
-            row("Full-width side:", fullWidthPopup),
-            row("Debounce (ms):", debounceField),
-            row("Poll interval (ms):", pollField),
-            row("yabai path:", yabaiPathField),
+            row(L10n.t("ui.appearance.fullWidthSide"), fullWidthPopup),
+            row(L10n.t("ui.appearance.debounce"), debounceField),
+            row(L10n.t("ui.appearance.poll"), pollField),
+            row(L10n.t("ui.appearance.yabaiPath"), yabaiPathField),
             [NSGridCell.emptyContentView, loginCheck],
         ])
         grid.translatesAutoresizingMaskIntoConstraints = false
@@ -177,8 +219,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         permissionBanner.wantsLayer = true
         permissionBanner.layer?.backgroundColor = NSColor.systemYellow.withAlphaComponent(0.22).cgColor
         permissionBanner.layer?.cornerRadius = 8
-        let bannerLabel = NSTextField(wrappingLabelWithString:
-            "⚠️  Dock window previews are off until you grant Accessibility + Screen Recording — use the Grant… buttons below.")
+        for sub in permissionBanner.subviews { sub.removeFromSuperview() }
+        let bannerLabel = NSTextField(wrappingLabelWithString: L10n.t("ui.appearance.permWarning"))
         bannerLabel.font = .systemFont(ofSize: 12, weight: .medium)
         bannerLabel.translatesAutoresizingMaskIntoConstraints = false
         permissionBanner.addSubview(bannerLabel)
@@ -208,25 +250,25 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         ])
 
         let appearanceItem = NSTabViewItem()
-        appearanceItem.label = "Appearance"
+        appearanceItem.label = L10n.t("ui.tab.appearance")
         appearanceItem.view = appearancePane
 
         // --- yabai tab ---
         let yabaiItem = NSTabViewItem()
-        yabaiItem.label = "yabai"
+        yabaiItem.label = L10n.t("ui.tab.yabai")
         if let engine = configEngine {
             yabaiItem.view = YabaiSettingsPaneView(engine: engine, rawFilePath: yabaiRawPath ?? "")
         } else {
-            yabaiItem.view = makePlaceholder("yabai not configured")
+            yabaiItem.view = makePlaceholder(L10n.t("ui.yabai.notConfigured"))
         }
 
         // --- Keyboard tab ---
         let keyboardItem = NSTabViewItem()
-        keyboardItem.label = "Keyboard"
+        keyboardItem.label = L10n.t("ui.tab.keyboard")
         if let engine = configEngine {
             keyboardItem.view = ShortcutsPaneView(engine: engine, rawFilePath: skhdRawPath ?? "")
         } else {
-            keyboardItem.view = makePlaceholder("Keyboard shortcuts not configured")
+            keyboardItem.view = makePlaceholder(L10n.t("ui.keyboard.notConfigured"))
         }
 
         // --- NSTabView as the window's content view ---
@@ -236,15 +278,9 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         tabView.addTabViewItem(keyboardItem)
         self.tabView = tabView
 
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
-                           styleMask: [.titled, .closable],
-                           backing: .buffered, defer: false)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-        win.title = "yabai-dockstack Settings" + (version.map { " (v\($0))" } ?? "")
-        win.isReleasedWhenClosed = false
-        win.delegate = self
-        win.contentView = tabView
-        window = win
+        window?.title = L10n.t("ui.windowTitle") + (version.map { " (v\($0))" } ?? "")
+        window?.contentView = tabView
     }
 
     private func makePlaceholder(_ text: String) -> NSView {
@@ -260,6 +296,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private func syncControls() {
+        let langIndex = Self.languageOrder.firstIndex(of: AppLanguage(rawValue: config.language) ?? .auto) ?? 0
+        languagePopup.selectItem(at: langIndex)
         stylePopup.selectItem(at: config.style == .flag ? 1 : 0)
         sizeSlider.doubleValue = config.cellSize
         focusedSlider.doubleValue = config.focusedAlpha
@@ -300,6 +338,22 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     @objc private func loginChanged() {
         onLoginToggle(loginCheck.state == .on)
         loginCheck.state = loginIsEnabled() ? .on : .off
+    }
+
+    @objc private func languageChanged() {
+        let idx = languagePopup.indexOfSelectedItem
+        let lang = (idx >= 0 && idx < Self.languageOrder.count) ? Self.languageOrder[idx] : .auto
+        config.language = lang.rawValue
+        onChange(config)
+        L10n.current = L10n.resolve(lang, preferred: Locale.preferredLanguages)
+
+        let selectedTab = tabView.flatMap { tv -> Int? in
+            guard let item = tv.selectedTabViewItem else { return nil }
+            return tv.indexOfTabViewItem(item)
+        } ?? 0
+        buildContent()
+        tabView?.selectTabViewItem(at: selectedTab)
+        syncControls()
     }
 
     @objc private func grantAX() { onGrantAccessibility?() }
