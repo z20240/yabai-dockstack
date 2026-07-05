@@ -53,8 +53,9 @@ public final class ShortcutsPaneView: NSView {
         listStack.spacing = 4
         listStack.translatesAutoresizingMaskIntoConstraints = false
 
-        // Document view for the scroll view
-        let scrollContent = NSView()
+        // Document view for the scroll view — flipped so the list opens at the
+        // top (GENERAL) instead of scrolled to the bottom.
+        let scrollContent = FlippedScrollContent()
         scrollContent.translatesAutoresizingMaskIntoConstraints = false
         scrollContent.addSubview(listStack)
         NSLayoutConstraint.activate([
@@ -287,4 +288,9 @@ public final class ShortcutsPaneView: NSView {
             self.statusLabel.stringValue = ""
         }
     }
+}
+
+/// Flipped so short/long content anchors to the top of the scroll view.
+private final class FlippedScrollContent: NSView {
+    override var isFlipped: Bool { true }
 }
