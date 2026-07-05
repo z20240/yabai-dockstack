@@ -178,7 +178,12 @@ public enum YabaiDockstack {
         DispatchQueue.main.async {
             if args.contains("--open-settings") {
                 settings.show()   // open Settings on launch (handy for support/testing)
-                settings.selectTab(at: 1)   // jump to the yabai tab
+                // Optional "--tab <n>" picks the tab (default: yabai tab).
+                var tab = 1
+                if let i = args.firstIndex(of: "--tab"), i + 1 < args.count, let n = Int(args[i + 1]) {
+                    tab = n
+                }
+                settings.selectTab(at: tab)
 
             } else if !client.isAvailable() {
                 yabaiGuide.show()
