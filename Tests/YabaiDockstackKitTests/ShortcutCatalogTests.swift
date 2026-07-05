@@ -46,4 +46,10 @@ final class ShortcutCatalogTests: XCTestCase {
         let allIDs = conflicts.values.flatMap { $0 }
         XCTAssertFalse(allIDs.contains("x"), "nil-hotkey binding must not appear in conflicts")
     }
+
+    func testEveryActionHasSymbol() {
+        for a in ShortcutCatalog.all {
+            XCTAssertFalse(a.symbol.isEmpty, "\(a.id) missing symbol")
+        }
+    }
 }

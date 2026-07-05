@@ -157,7 +157,7 @@ public final class ShortcutsPaneView: NSView {
         refreshConflicts()
     }
 
-    /// Build one action row: [checkbox] [title label] [spacer] [RecordHotkeyControl].
+    /// Build one action row: [checkbox] [icon] [title label] [spacer] [RecordHotkeyControl].
     private func buildRowView(for row: ShortcutRow) -> NSView {
         let actionID = row.action.id
 
@@ -166,6 +166,17 @@ public final class ShortcutsPaneView: NSView {
         checkbox.state = row.binding.enabled ? .on : .off
         checkbox.identifier = NSUserInterfaceItemIdentifier(actionID)
         checkboxes[actionID] = checkbox
+
+        // Small monochrome SF Symbol; template rendering follows light/dark.
+        let icon = NSImageView()
+        if let img = NSImage(systemSymbolName: row.action.symbol, accessibilityDescription: nil) {
+            img.isTemplate = true
+            icon.image = img
+            icon.contentTintColor = .secondaryLabelColor
+        }
+        icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        icon.widthAnchor.constraint(equalToConstant: 18).isActive = true
 
         // Action title label
         let titleLabel = NSTextField(labelWithString: row.action.title)
@@ -197,7 +208,7 @@ public final class ShortcutsPaneView: NSView {
             self.refreshConflicts()
         }
 
-        let rowStack = NSStackView(views: [checkbox, titleLabel, spacer, recorder])
+        let rowStack = NSStackView(views: [checkbox, icon, titleLabel, spacer, recorder])
         rowStack.orientation = .horizontal
         rowStack.alignment = .centerY
         rowStack.spacing = 8

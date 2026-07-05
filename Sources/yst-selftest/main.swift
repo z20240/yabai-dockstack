@@ -511,6 +511,13 @@ check((try? idemE.importSkhd()) == 0, "importSkhd idempotent (second run imports
 try? FileManager.default.removeItem(atPath: idemP)
 try? FileManager.default.removeItem(atPath: idemP + ".bak")
 
+print("Shortcut symbols")
+check(ShortcutCatalog.all.allSatisfy { !$0.symbol.isEmpty }, "every action has a symbol")
+let badSymbols = ShortcutCatalog.all.filter {
+    NSImage(systemSymbolName: $0.symbol, accessibilityDescription: nil) == nil
+}.map(\.id)
+check(badSymbols.isEmpty, "all SF Symbol names valid (bad: \(badSymbols))")
+
 print("SpaceTravelPlanner")
 let stpSpaces: [SpaceInfo] = [
     SpaceInfo(index: 1, display: 1, isVisible: false), SpaceInfo(index: 2, display: 1, isVisible: true),
