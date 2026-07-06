@@ -83,13 +83,19 @@ public enum YabaiDockstack {
             dockController?.warmCache()
         }
         let spaceMover = SpaceMover(client: client)
+        let menu = MenuBarController()
         let listener = SignalListener(
             socketPath: config.socketPath,
             onPoke: { coordinator.requestRefresh() },
-            onCommand: { cmd in spaceMover.handle(command: cmd) })
+            onCommand: { cmd in
+                if cmd == "show-menu" {
+                    DispatchQueue.main.async { menu.openMenu() }
+                } else {
+                    spaceMover.handle(command: cmd)
+                }
+            })
 
         let binaryPath = selfBinaryPath()
-        let menu = MenuBarController()
         menu.statusProvider = { client.isAvailable() ? L10n.t("ui.menu.yabaiConnected") : L10n.t("ui.menu.yabaiNotFound") }
         menu.windowListProvider = {
             WindowMenuModel.build(client.queryWindows(), spaceLabels: client.querySpaceLabels())

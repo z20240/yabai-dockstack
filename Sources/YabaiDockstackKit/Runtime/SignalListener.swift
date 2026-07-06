@@ -54,8 +54,9 @@ public final class SignalListener {
                 ? String(decoding: buf[0..<n], as: UTF8.self)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 : ""
-            if text.hasPrefix("move-space"), let onCommand {
-                // Runs on the accept thread; SpaceMover hops to its own queue.
+            let isCommand = ["move-space", "show-menu"].contains { text.hasPrefix($0) }
+            if isCommand, let onCommand {
+                // Runs on the accept thread; handlers hop to their own queue/main.
                 onCommand(text)
             } else {
                 DispatchQueue.main.async { [weak self] in self?.onPoke() }

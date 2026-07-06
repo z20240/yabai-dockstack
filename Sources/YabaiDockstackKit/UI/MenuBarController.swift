@@ -34,6 +34,12 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
     // Rebuild dynamic contents whenever the menu is about to open.
     public func menuNeedsUpdate(_ menu: NSMenu) { rebuild() }
 
+    /// Opens the status-item menu as if the icon were clicked (hotkey path).
+    /// Main thread only.
+    public func openMenu() {
+        statusItem.button?.performClick(nil)
+    }
+
     private func appIcon(pid: Int) -> NSImage {
         let img = NSRunningApplication(processIdentifier: pid_t(pid))?.icon
             ?? NSWorkspace.shared.icon(for: .applicationBundle)
@@ -86,6 +92,8 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         if groups.isEmpty {
             menu.addItem(disabledHeader(L10n.t("ui.menu.noWindows"), indent: 0))
         } else {
+            let windowCount = groups.reduce(0) { $0 + $1.spaces.reduce(0) { $0 + $1.windows.count } }
+            var quickKeys = MenuQuickKeys.keys(count: windowCount).makeIterator()
             for (di, display) in groups.enumerated() {
                 menu.addItem(disabledHeader(String(format: L10n.t("ui.menu.displayN"), display.display), indent: 0))
                 for space in display.spaces {
@@ -99,6 +107,10 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
                         item.representedObject = win.id
                         item.image = appIcon(pid: win.pid)
                         item.state = win.focused ? .on : .off
+                        if let key = quickKeys.next() {
+                            item.keyEquivalent = key
+                            item.keyEquivalentModifierMask = []
+                        }
                         menu.addItem(item)
                     }
                 }
