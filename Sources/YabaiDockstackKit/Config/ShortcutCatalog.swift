@@ -27,6 +27,9 @@ public enum ShortcutCatalog {
               "sh ${SCRIPTS}/taggleShowHideDesktop.sh", hk("cmd - f3"), symbol: "eye.slash"),
         .init("close-window", "Close focused window", "General",
               "yabai -m window --close", hk("alt + cmd - backspace"), symbol: "xmark.circle"),
+        .init("open-window-menu", "Open window menu", "General",
+              "sh ${SCRIPTS}/openWindowMenu.sh", hk("ctrl - 0x2b"),
+              symbol: "list.bullet.rectangle"),
 
         // Shared (floating + tiling)
         .init("toggle-float-center", "Float / unfloat & center", "Shared",

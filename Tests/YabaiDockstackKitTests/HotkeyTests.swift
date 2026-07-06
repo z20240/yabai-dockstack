@@ -32,4 +32,8 @@ final class HotkeyTests: XCTestCase {
     func testDisplayGlyphs() {
         XCTAssertEqual(Hotkey(mods: [.cmd, .alt], key: "left").displayString, "⌥⌘←")
     }
+
+    func testCommaDisplay() {
+        XCTAssertEqual(Hotkey.parse("ctrl - 0x2b")?.displayString, "⌃,")
+    }
 }

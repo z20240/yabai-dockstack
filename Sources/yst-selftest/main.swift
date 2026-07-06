@@ -593,6 +593,14 @@ if FileManager.default.fileExists(atPath: srcDir.path),
     print("  ok: (skipped — Sources/ not found from cwd)")
 }
 
+print("MenuQuickKeys")
+check(MenuQuickKeys.sequence.count == 26 && Set(MenuQuickKeys.sequence).count == 26,
+      "26 unique quick keys")
+check(MenuQuickKeys.keys(count: 3) == ["1", "2", "3"], "keys(count:) prefix")
+check(MenuQuickKeys.keys(count: 99).count == 26 && MenuQuickKeys.keys(count: -1).isEmpty,
+      "keys(count:) clamps")
+check(Hotkey.parse("ctrl - 0x2b")?.displayString == "⌃,", "comma hotkey displays as ⌃,")
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
