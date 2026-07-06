@@ -21,7 +21,12 @@ final class KeyCodeMapTests: XCTestCase {
 
     func testFallbackToHexForUnknown() {
         // 0x2A is backslash/section on some layouts; chars not a-z0-9 → hex fallback
-        XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: "|"), "0x2a")
-        XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: nil), "0x2a")
+        XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: "|"), "0x2A")
+        XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: nil), "0x2A")
+    }
+
+    func testCommaKeyEmitsUppercaseHex() {
+        // 0x2B is comma; chars is "," → hex fallback with uppercase (skhd requirement)
+        XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: 0x2B, chars: ","), "0x2B")
     }
 }

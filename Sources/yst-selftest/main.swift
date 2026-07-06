@@ -427,8 +427,9 @@ print("KeyCodeMap")
 check(KeyCodeMap.skhdKey(forKeyCode: 0x7B, chars: nil) == "left", "keycode 0x7B -> left")
 check(KeyCodeMap.skhdKey(forKeyCode: 0x31, chars: " ") == "space", "keycode 0x31 -> space")
 check(KeyCodeMap.skhdKey(forKeyCode: 0x0F, chars: "R") == "r", "letter lowercased from chars")
-check(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: "|") == "0x2a", "unknown -> hex fallback")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x2A, chars: "|") == "0x2A", "unknown -> hex fallback (uppercase)")
 check(KeyCodeMap.skhdKey(forKeyCode: 0x63, chars: nil) == "f3", "keycode 0x63 -> f3")
+check(KeyCodeMap.skhdKey(forKeyCode: 0x2B, chars: ",") == "0x2B", "hex keycodes emit uppercase (skhd requirement)")
 
 print("ShortcutSections")
 let secs = ShortcutSections.build(DefaultTemplate.defaultBindings())
@@ -600,6 +601,7 @@ check(MenuQuickKeys.keys(count: 3) == ["1", "2", "3"], "keys(count:) prefix")
 check(MenuQuickKeys.keys(count: 99).count == 26 && MenuQuickKeys.keys(count: -1).isEmpty,
       "keys(count:) clamps")
 check(Hotkey.parse("ctrl - 0x2b")?.displayString == "⌃,", "comma hotkey displays as ⌃,")
+check(Hotkey.parse("ctrl - 0x2B")?.displayString == "⌃,", "uppercase comma hotkey displays as ⌃,")
 
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }

@@ -35,5 +35,6 @@ final class HotkeyTests: XCTestCase {
 
     func testCommaDisplay() {
         XCTAssertEqual(Hotkey.parse("ctrl - 0x2b")?.displayString, "⌃,")
+        XCTAssertEqual(Hotkey.parse("ctrl - 0x2B")?.displayString, "⌃,")
     }
 }

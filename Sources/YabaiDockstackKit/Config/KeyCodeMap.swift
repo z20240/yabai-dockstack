@@ -19,6 +19,6 @@ public enum KeyCodeMap {
            scalar.isASCII {
             return c
         }
-        return String(format: "0x%02x", code)
+        return String(format: "0x%02X", code)
     }
 }
