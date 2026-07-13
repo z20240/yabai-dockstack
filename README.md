@@ -9,9 +9,9 @@
 
 English · [繁體中文](README.zh-Hant.md)
 
-<sub>Inspired by [stackline](https://github.com/AdamWagner/stackline) and DockView ·
-keywords: yabai, stackline, dockview, macOS window manager, tiling, stack indicator,
-dock preview, window switcher, menu bar, Mission Control alternative</sub>
+<sub>Inspired by [stackline](https://github.com/AdamWagner/stackline), DockView and AltTab ·
+keywords: yabai, stackline, dockview, alt-tab, macOS window manager, tiling, stack indicator,
+dock preview, window switcher, cmd-tab replacement, menu bar, Mission Control alternative</sub>
 
 </div>
 
@@ -25,10 +25,18 @@ dock preview, window switcher, menu bar, Mission Control alternative</sub>
   bar; click to jump and focus.
 - **Dock window previews** — hover a Dock icon to peek an app's windows across all
   spaces with thumbnails; click to jump (inspired by **DockView**).
+- **AltTab-style window switcher** — hold ⌥, tap Tab: one thumbnail per **window**
+  (not per app) across every space, most-recently-used first; release to switch.
+  Finally tell five editor windows apart — the thing ⌘⇥ can't do (inspired by
+  **AltTab**).
 
 It is a clean Swift rewrite — **not** a fork of stackline (which required Hammerspoon).
 
 ## Demo
+
+**Window switcher** — every window on every space, one keystroke away.
+
+<img src="assets/demo-window-switcher.png" width="760" alt="AltTab-style window switcher — one thumbnail per window across every space" />
 
 **Stack indicators** — see at a glance which apps are stacked and where.
 
@@ -48,6 +56,12 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 
 ## Features
 
+- 🔄 **AltTab-style window switcher**: hold **⌥** + tap **Tab** to cycle every
+  window on every space (thumbnails, most-recently-used order); **⌥`** cycles the
+  current app's windows only. Shift reverses, arrows navigate, **W**/✕ closes a
+  window, Esc cancels — release ⌥ to switch. Optionally capture the system **⌘⇥**.
+- 🎨 Three switcher looks — **thumbnails / app icons / title list** — with
+  AltTab-style auto-sizing, plus a **type-to-search** sticky mode.
 - 🚦 One floating indicator per stack, placed at the window's outer screen edge.
 - 🅰️ **Icon mode** (default): app icons stacked top→bottom in stack-index order;
   focused window highlighted. **Flag mode**: slim minimal markers. Toggle from
@@ -58,8 +72,9 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 - ⌃⌘← ⌃⌘→ **Send to space hotkeys** — move windows left/right one space, or to
   a numbered space, with SIP fully enabled (simulated native gestures).
 - 🪶 No Hammerspoon. Core stack indicators need no special permissions (focus is
-  delegated to yabai); Dock previews and the SIP-free space hotkeys use
-  Accessibility, and Dock previews also need Screen Recording.
+  delegated to yabai); the window switcher's hold-to-cycle, Dock previews and the
+  SIP-free space hotkeys use Accessibility, and Dock previews also need Screen
+  Recording.
 
 ## Requirements
 
@@ -167,7 +182,19 @@ falls back to its default. All keys:
   "pollSeconds": 3.0,
   "fullWidthSide": "left",
   "edgeInset": 6,
-  "flagColor": "#4C8DFF"
+  "flagColor": "#4C8DFF",
+  "showBackground": true,
+  "backgroundColor": "#1E1E1ECC",
+  "confineToGap": true,
+  "dockPreview": true,
+  "language": "auto",
+  "switcherEnabled": true,
+  "switcherAppearance": "thumbnails",
+  "switcherHoldToCycle": true,
+  "switcherCaptureCmdTab": false,
+  "switcherHotkeyAll": "alt - tab",
+  "switcherHotkeyApp": "alt - 0x32",
+  "switcherHotkeySpace": ""
 }
 ```
 
@@ -180,6 +207,10 @@ falls back to its default. All keys:
 - `showBackground`: draw a rounded backing pill behind the indicators so they read
   as a floating chip (helpful over full-width windows). `true`/`false`.
 - `backgroundColor`: backing pill color, `"#RRGGBB"` / `"#RRGGBBAA"`.
+- `switcher*`: the window switcher — `switcherAppearance` is `"thumbnails"`,
+  `"icons"` or `"titles"`; the three hotkeys use skhd notation (`"alt - tab"`;
+  `0x32` is backtick; empty string disables that scope). All editable from
+  **Settings → Switcher**.
 
 Most of these are adjustable from **Settings…** in the menu bar (no file editing
 needed). The config file is still created automatically on first launch at
@@ -283,6 +314,34 @@ is used automatically for instant, animation-free moves.
   move such windows by their title area manually, or via yabai with the
   scripting addition (SA).
 
+## Window switcher (AltTab-style)
+
+The macOS ⌘⇥ switcher can't tell five editor windows apart — it shows one icon per
+**app**. This switcher shows one cell per **window**, across **every space**,
+ordered most-recently-used:
+
+| Keys | Action |
+|---|---|
+| hold **⌥** + tap **Tab** | cycle **all windows on all spaces** (⇧ reverses) |
+| hold **⌥** + tap **`** | cycle the **current app's** windows only |
+| arrows / **W** or ✕ / **Esc** / **Enter** | navigate / close window / cancel / commit |
+| release **⌥** | switch to the selected window (jumps spaces via yabai) |
+
+- **Two modes.** *Hold-to-cycle* (above) feels like the native ⌘⇥. *Sticky mode*
+  stays open and adds **type-to-search** (filters by app name + title) — bind
+  "Open window switcher" in **Settings → Keyboard**, or run
+  `sh ~/.config/yabai-dockstack/scripts/openWindowSwitcher.sh`.
+- **Three appearances** — thumbnails (default), app icons, or a compact title
+  list — with AltTab-style auto-sizing as the window count grows. Configure in
+  **Settings → Switcher**, including per-scope hotkeys.
+- **Replace ⌘⇥** (optional, off by default): capture the system app switcher
+  itself. Auto-releases ⌘⇥ back to macOS whenever yabai isn't running.
+- **Thumbnails** follow the same rule as Dock previews: live for visible windows,
+  last-cached for windows on other spaces (macOS can't capture those), app icon
+  otherwise.
+- **Permissions:** hold-to-cycle uses a global event tap → **Accessibility**.
+  Sticky mode via the menu/skhd needs none beyond yabai itself.
+
 ## Dock window previews
 
 Hover a **Dock app icon** to pop up that app's windows across all spaces; click one
@@ -323,6 +382,7 @@ community project, not a paid product. Consequences and what that means for you:
 |---|---|
 | Stack indicators + cross-space window menu | **none** (just `yabai -m query` / `--focus`) |
 | Dock window previews | **Accessibility** (detect the hovered Dock icon) + **Screen Recording** (window thumbnails) |
+| Window switcher — hold-to-cycle / ⌘⇥ capture | **Accessibility** (global hotkey event tap); thumbnails reuse **Screen Recording** |
 
 If you don't use Dock previews, you can grant nothing at all. Permissions are
 requested only when that feature is enabled, and the app stays functional without

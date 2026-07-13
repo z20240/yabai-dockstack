@@ -34,7 +34,7 @@ bg.paste(logo, ((W - 180) // 2, 70), logo)
 # wordmark + tagline
 center_text("yabai-dockstack", title_f, 280, NAVY)
 center_text("visual enhancements for yabai on macOS", tag_f, 470, GRAY)
-center_text("stack indicators · cross-space window menu · Dock previews", tag_f, 540, GRAY)
+center_text("window switcher · stack indicators · window menu · Dock previews", tag_f, 540, GRAY)
 
 # "works with" + yabai icon
 center_text("works with", works_f, 660, GRAY)
