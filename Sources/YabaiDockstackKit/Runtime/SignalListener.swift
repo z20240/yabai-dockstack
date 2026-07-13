@@ -54,7 +54,7 @@ public final class SignalListener {
                 ? String(decoding: buf[0..<n], as: UTF8.self)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 : ""
-            let isCommand = ["move-space", "show-menu"].contains { text.hasPrefix($0) }
+            let isCommand = ["move-space", "show-menu", "show-switcher"].contains { text.hasPrefix($0) }
             if isCommand, let onCommand {
                 // Runs on the accept thread; handlers hop to their own queue/main.
                 onCommand(text)

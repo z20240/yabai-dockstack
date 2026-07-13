@@ -9,6 +9,9 @@ public final class RefreshCoordinator {
     private var pollTimer: Timer?
     private var started = false
     private var last: [Stack] = []
+    /// Raw (unfiltered) window list from each refresh — feeds the switcher's MRU.
+    /// Called on the coordinator's queue; the receiver hops threads itself.
+    public var onWindows: (([YabaiWindow]) -> Void)?
 
     public init(config: AppConfig, client: YabaiClient, onStacks: @escaping ([Stack]) -> Void) {
         self.config = config
@@ -30,7 +33,9 @@ public final class RefreshCoordinator {
     }
 
     private func run() {
-        let windows = VisibleSpaceFilter.apply(client.queryWindows())
+        let raw = client.queryWindows()
+        onWindows?(raw)
+        let windows = VisibleSpaceFilter.apply(raw)
         let stacks = StackBuilder.build(windows)
         if RefreshDiff.shouldRedraw(old: last, new: stacks) {
             last = stacks

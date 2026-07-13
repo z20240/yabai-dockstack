@@ -33,6 +33,18 @@ public struct AppConfig: Codable, Equatable {
     public var dockPreview: Bool
     /// UI language: "auto" (follow system), "en", "zh-Hant", or "ja".
     public var language: String
+    /// Master toggle for the AltTab-style window switcher.
+    public var switcherEnabled: Bool
+    /// Switcher look: "thumbnails", "icons", or "titles".
+    public var switcherAppearance: String
+    /// Hold-to-cycle hotkeys via a global event tap (needs Accessibility).
+    public var switcherHoldToCycle: Bool
+    /// Capture ⌘⇥ itself (replaces the system app switcher while running).
+    public var switcherCaptureCmdTab: Bool
+    /// Hold-mode hotkeys in skhd notation ("alt - tab"); "" disables a scope.
+    public var switcherHotkeyAll: String
+    public var switcherHotkeyApp: String
+    public var switcherHotkeySpace: String
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
@@ -47,7 +59,14 @@ public struct AppConfig: Codable, Equatable {
         backgroundColor: "#1E1E1ECC",
         confineToGap: true,
         dockPreview: true,
-        language: "auto")
+        language: "auto",
+        switcherEnabled: true,
+        switcherAppearance: "thumbnails",
+        switcherHoldToCycle: true,
+        switcherCaptureCmdTab: false,
+        switcherHotkeyAll: "alt - tab",
+        switcherHotkeyApp: "alt - 0x32",
+        switcherHotkeySpace: "")
 
     public static func load(from data: Data?) -> AppConfig {
         guard let data,

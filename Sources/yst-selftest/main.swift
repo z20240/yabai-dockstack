@@ -603,6 +603,101 @@ check(MenuQuickKeys.keys(count: 99).count == 26 && MenuQuickKeys.keys(count: -1)
 check(Hotkey.parse("ctrl - 0x2b")?.displayString == "⌃,", "comma hotkey displays as ⌃,")
 check(Hotkey.parse("ctrl - 0x2B")?.displayString == "⌃,", "uppercase comma hotkey displays as ⌃,")
 
+print("MRUOrder")
+do {
+    var m = MRUOrder()
+    m.touch(1); m.touch(2); m.touch(3); m.touch(1)
+    check(m.ids == [1, 3, 2], "touch moves to front")
+    m.prune(keeping: [1, 2])
+    check(m.ids == [1, 2], "prune drops dead ids")
+}
+
+print("SwitcherModel")
+do {
+    func sw(_ id: Int, _ app: String, _ space: Int, _ focus: Bool = false,
+            title: String = "", visible: Bool = true) -> YabaiWindow {
+        YabaiWindow(id: id, pid: id * 10, app: app, title: title.isEmpty ? app : title,
+                    frame: YRect(x: 0, y: 0, w: 1, h: 1), display: 1, space: space,
+                    stackIndex: 0, hasFocus: focus, isVisible: visible)
+    }
+    let wins = [sw(1, "Cursor", 1, true), sw(2, "Cursor", 3), sw(3, "Safari", 2)]
+    let all = SwitcherModel.build(windows: wins, mru: [1, 3], scope: .allWindows)
+    check(all.map { $0.id } == [1, 3, 2], "MRU first, unseen windows follow by space")
+    let app = SwitcherModel.build(windows: wins, mru: [1], scope: .currentApp)
+    check(Set(app.map { $0.id }) == [1, 2], "currentApp scope filters by focused app")
+    let spc = SwitcherModel.build(windows: wins, mru: [1], scope: .currentSpace)
+    check(spc.map { $0.id } == [1], "currentSpace scope keeps the focused space")
+    let q = SwitcherModel.build(windows: wins, mru: [], scope: .allWindows, query: "saf")
+    check(q.map { $0.id } == [3], "query filters case-insensitively")
+    check(SwitcherModel.initialIndex(count: 3, firstHasFocus: true, backward: false) == 1,
+          "initial selection lands on the previous window")
+    check(SwitcherModel.initialIndex(count: 3, firstHasFocus: true, backward: true) == 2,
+          "backward activation starts at the end")
+}
+
+print("SwitcherKeyMachine")
+do {
+    let trig = [SwitcherTrigger(keycode: 0x30, mods: [.alt], scope: .allWindows),
+                SwitcherTrigger(keycode: 0x32, mods: [.alt], scope: .currentApp)]
+    var m = SwitcherKeyMachine()
+    check(m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: trig)
+          == .activate(trigger: 0, backward: false), "alt+tab activates")
+    check(m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: trig)
+          == .cycle(forward: true), "repeat press cycles")
+    check(m.handle(.keyDown(code: 0x30, mods: [.alt, .shift]), triggers: trig)
+          == .cycle(forward: false), "shift cycles backward")
+    check(m.handle(.keyDown(code: 0x32, mods: [.alt]), triggers: trig)
+          == .activate(trigger: 1, backward: false), "second trigger switches scope")
+    check(m.handle(.flagsChanged(mods: []), triggers: trig)
+          == .commit(consume: false), "modifier release commits")
+    check(m.handle(.keyDown(code: 0x30, mods: [.alt, .cmd]), triggers: trig) == .pass,
+          "extra modifier is not our shortcut")
+    _ = m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: trig)
+    check(m.handle(.keyDown(code: 0x35, mods: [.alt]), triggers: trig) == .cancel,
+          "escape cancels")
+}
+
+print("SwitcherTriggers + KeyCodeMap reverse")
+do {
+    var c = AppConfig.defaults
+    check(SwitcherTriggers.build(from: c)
+          == [SwitcherTrigger(keycode: 0x30, mods: [.alt], scope: .allWindows),
+              SwitcherTrigger(keycode: 0x32, mods: [.alt], scope: .currentApp)],
+          "default config yields alt+tab / alt+` triggers")
+    c.switcherCaptureCmdTab = true
+    check(SwitcherTriggers.build(from: c).first
+          == SwitcherTrigger(keycode: 0x30, mods: [.cmd], scope: .allWindows),
+          "captureCmdTab overrides the all-windows trigger")
+    c.switcherHotkeySpace = "tab"   // modifier-less → skipped
+    check(!SwitcherTriggers.build(from: c).contains { $0.scope == .currentSpace },
+          "modifier-less hotkey is skipped")
+    check(KeyCodeMap.keyCode(forSkhdKey: "tab") == 0x30, "reverse map: tab")
+    check(KeyCodeMap.keyCode(forSkhdKey: "0x32") == 0x32, "reverse map: hex literal")
+    check(KeyCodeMap.keyCode(forSkhdKey: "w") == 0x0D, "reverse map: letter")
+    check(KeyCodeMap.keyCode(forSkhdKey: "bogus") == nil, "reverse map: unknown -> nil")
+}
+
+print("SwitcherLayout")
+do {
+    let small = SwitcherLayout.grid(count: 3, maxWidth: 1600, maxHeight: 800)
+    check(small.columns == 3 && small.rows == 1 && small.cellWidth == 240,
+          "few windows keep base size on one row")
+    let big = SwitcherLayout.grid(count: 40, maxWidth: 1200, maxHeight: 600)
+    check(big.rows > 1 && big.cellWidth < 240 && big.columns * big.rows >= 40,
+          "many windows wrap and shrink but all fit")
+}
+
+print("AppConfig switcher fields")
+do {
+    let old = AppConfig.load(from: #"{"style":"flag"}"#.data(using: .utf8))
+    check(old.switcherEnabled && old.switcherHotkeyAll == "alt - tab",
+          "pre-switcher config gains switcher defaults")
+    check(ShortcutCatalog.action(id: "open-window-switcher") != nil,
+          "open-window-switcher action in catalog")
+    check(ScriptInstaller.scriptNames.contains("openWindowSwitcher.sh"),
+          "switcher socket script ships")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

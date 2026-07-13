@@ -4,7 +4,7 @@ public enum ScriptInstaller {
     public static let scriptNames = [
         "focusWindow.sh", "moveWindowToLeft.sh", "moveWindowToRight.sh",
         "moveWindowOnDisplaySpace.sh", "moveWindowToSpace.sh",
-        "openWindowMenu.sh",
+        "openWindowMenu.sh", "openWindowSwitcher.sh",
         "taggleShowHideDesktop.sh", "windowFocusOnDestroy.sh",
     ]
 

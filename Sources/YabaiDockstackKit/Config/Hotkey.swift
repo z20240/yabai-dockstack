@@ -42,7 +42,9 @@ public struct Hotkey: Equatable, Hashable {
         case "up": keyGlyph = "↑"
         case "down": keyGlyph = "↓"
         case "space": keyGlyph = "Space"
+        case "tab": keyGlyph = "⇥"
         case "0x2b": keyGlyph = ","
+        case "0x32": keyGlyph = "`"
         default: keyGlyph = key.uppercased()
         }
         return mp + keyGlyph

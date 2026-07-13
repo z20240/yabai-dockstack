@@ -78,10 +78,42 @@ public enum YabaiDockstack {
         let thumbCache = ThumbnailCache()
         var dockController: DockPreviewController?
 
+        // AltTab-style window switcher: hold-to-cycle via a global event tap,
+        // plus a sticky mode reachable through the show-switcher socket command.
+        let switcher = SwitcherController(client: client, cache: thumbCache, config: config)
+        let switcherTap = SwitcherKeyTap()
+        switcherTap.onOutput = { output in
+            switch output {
+            case let .activate(idx, backward):
+                let scope = switcherTap.triggers.indices.contains(idx)
+                    ? switcherTap.triggers[idx].scope : .allWindows
+                if !switcher.open(scope: scope, sticky: false, backward: backward) {
+                    switcherTap.resetMachine()
+                }
+            case let .cycle(forward): switcher.cycle(forward: forward)
+            case let .move(dx, dy): switcher.move(dx: dx, dy: dy)
+            case .commit: switcher.commit()
+            case .cancel: switcher.cancel()
+            case .closeSelected: switcher.closeSelected()
+            case .pass, .swallow: break
+            }
+        }
+        func ensureSwitcherTap() {
+            let wanted = config.switcherEnabled && config.switcherHoldToCycle
+                && PermissionsHelper.hasAccessibility()
+            if wanted {
+                switcherTap.triggers = SwitcherTriggers.build(from: config)
+                _ = switcherTap.start()
+            } else {
+                switcherTap.stop()
+            }
+        }
+
         let coordinator = RefreshCoordinator(config: config, client: client) { stacks in
             renderer.update(stacks)
             dockController?.warmCache()
         }
+        coordinator.onWindows = { switcher.noteWindows($0) }
         let spaceMover = SpaceMover(client: client)
         let menu = MenuBarController()
         let listener = SignalListener(
@@ -90,6 +122,10 @@ public enum YabaiDockstack {
             onCommand: { cmd in
                 if cmd == "show-menu" {
                     DispatchQueue.main.async { menu.openMenu() }
+                } else if cmd == "show-switcher" {
+                    DispatchQueue.main.async {
+                        switcher.open(scope: .allWindows, sticky: true)
+                    }
                 } else {
                     spaceMover.handle(command: cmd)
                 }
@@ -141,6 +177,8 @@ public enum YabaiDockstack {
                 installSignals()
                 coordinator.requestRefresh()
                 ensureDockController()
+                switcher.updateConfig(config)
+                ensureSwitcherTap()
             },
             onLoginToggle: { enabled in _ = LoginItem.setEnabled(enabled) },
             loginIsEnabled: { LoginItem.isEnabled })
@@ -178,6 +216,7 @@ public enum YabaiDockstack {
             object: nil, queue: .main) { _ in coordinator.requestRefresh() }
 
         ensureDockController()
+        ensureSwitcherTap()
         // First-run guidance (deferred so the run loop is active for the modal).
         // yabai missing is the priority — nothing works without it. Otherwise, if
         // previews are on but permissions are missing, open Settings to grant them.
@@ -208,6 +247,7 @@ public enum YabaiDockstack {
         let signalHealth = Timer(timeInterval: 5, repeats: true) { _ in
             // Activate Dock previews once Accessibility is granted (no relaunch).
             ensureDockController()
+            ensureSwitcherTap()
             guard client.isAvailable() else { return }
             if !SignalInstaller.isInstalled(client: client) {
                 installSignals()

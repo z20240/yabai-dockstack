@@ -42,4 +42,24 @@ final class AppConfigTests: XCTestCase {
         let json = #"{"language":"ja"}"#.data(using: .utf8)!
         XCTAssertEqual(AppConfig.load(from: json).language, "ja")
     }
+
+    func testSwitcherDefaults() {
+        let c = AppConfig.defaults
+        XCTAssertTrue(c.switcherEnabled)
+        XCTAssertEqual(c.switcherAppearance, "thumbnails")
+        XCTAssertTrue(c.switcherHoldToCycle)
+        XCTAssertFalse(c.switcherCaptureCmdTab)
+        XCTAssertEqual(c.switcherHotkeyAll, "alt - tab")
+        XCTAssertEqual(c.switcherHotkeyApp, "alt - 0x32")
+        XCTAssertEqual(c.switcherHotkeySpace, "")
+    }
+
+    func testOldConfigWithoutSwitcherFieldsGetsDefaults() {
+        // A pre-switcher config file must load with the new fields defaulted.
+        let json = #"{"style":"flag","dockPreview":false}"#.data(using: .utf8)!
+        let c = AppConfig.load(from: json)
+        XCTAssertEqual(c.style, .flag)
+        XCTAssertTrue(c.switcherEnabled)
+        XCTAssertEqual(c.switcherHotkeyAll, "alt - tab")
+    }
 }

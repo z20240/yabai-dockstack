@@ -29,4 +29,34 @@ final class KeyCodeMapTests: XCTestCase {
         // 0x2B is comma; chars is "," → hex fallback with uppercase (skhd requirement)
         XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: 0x2B, chars: ","), "0x2B")
     }
+
+    func testReverseNamedKeys() {
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "tab"), 0x30)
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "left"), 0x7B)
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "space"), 0x31)
+    }
+
+    func testReverseLettersAndDigits() {
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "a"), 0x00)
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "W"), 0x0D)  // case-insensitive
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "1"), 0x12)
+    }
+
+    func testReverseHexLiteral() {
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "0x32"), 0x32)
+        XCTAssertEqual(KeyCodeMap.keyCode(forSkhdKey: "0x2B"), 0x2B)
+        XCTAssertNil(KeyCodeMap.keyCode(forSkhdKey: "0xZZ"))
+        XCTAssertNil(KeyCodeMap.keyCode(forSkhdKey: "bogus"))
+    }
+
+    func testReverseRoundTripsForwardMap() {
+        // Every named key must round-trip: name -> code -> name.
+        for name in ["left", "right", "down", "up", "space", "return", "tab", "escape",
+                     "backspace", "delete", "home", "end", "pageup", "pagedown", "f1", "f12"] {
+            guard let code = KeyCodeMap.keyCode(forSkhdKey: name) else {
+                XCTFail("no keycode for \(name)"); continue
+            }
+            XCTAssertEqual(KeyCodeMap.skhdKey(forKeyCode: code, chars: nil), name)
+        }
+    }
 }

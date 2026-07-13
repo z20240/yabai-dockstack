@@ -6,7 +6,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var tabView: NSTabView?
 
-    /// Select a tab by index (0=Appearance, 1=yabai, 2=Keyboard). Builds the window first.
+    /// Select a tab by index (0=Appearance, 1=yabai, 2=Keyboard, 3=Switcher). Builds the window first.
     public func selectTab(at index: Int) {
         if window == nil { build() }
         if let tv = tabView, index >= 0, index < tv.numberOfTabViewItems {
@@ -37,6 +37,15 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let yabaiPathField = NSTextField()
     private let dockPreviewCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let loginCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    // Switcher tab
+    private static let switcherAppearanceOrder = ["thumbnails", "icons", "titles"]
+    private let switcherEnableCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let switcherAppearancePopup = NSPopUpButton()
+    private let switcherHoldCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let switcherCmdTabCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let switcherAllRecorder = RecordHotkeyControl(frame: .zero)
+    private let switcherAppRecorder = RecordHotkeyControl(frame: .zero)
+    private let switcherSpaceRecorder = RecordHotkeyControl(frame: .zero)
     // Permissions (for Dock previews)
     private let axStatus = NSTextField(labelWithString: "")
     private let axButton = NSButton(title: "", target: nil, action: nil)
@@ -138,6 +147,21 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         loginCheck.target = self; loginCheck.action = #selector(loginChanged)
 
         fullWidthPopup.target = self; fullWidthPopup.action = #selector(changed)
+
+        switcherEnableCheck.target = self; switcherEnableCheck.action = #selector(changed)
+        switcherAppearancePopup.target = self; switcherAppearancePopup.action = #selector(changed)
+        switcherHoldCheck.target = self; switcherHoldCheck.action = #selector(changed)
+        switcherCmdTabCheck.target = self; switcherCmdTabCheck.action = #selector(changed)
+        func wireRecorder(_ r: RecordHotkeyControl, _ kp: WritableKeyPath<AppConfig, String>) {
+            r.onChange = { [weak self] hk in
+                guard let self else { return }
+                self.config[keyPath: kp] = hk?.skhdString ?? ""
+                self.onChange(self.config)
+            }
+        }
+        wireRecorder(switcherAllRecorder, \.switcherHotkeyAll)
+        wireRecorder(switcherAppRecorder, \.switcherHotkeyApp)
+        wireRecorder(switcherSpaceRecorder, \.switcherHotkeySpace)
 
         for f in [debounceField, pollField] {
             f.alignment = .right
@@ -272,11 +296,62 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             keyboardItem.view = makePlaceholder(L10n.t("ui.keyboard.notConfigured"))
         }
 
+        // --- Switcher tab ---
+        switcherAppearancePopup.removeAllItems()
+        switcherAppearancePopup.addItems(withTitles: [
+            L10n.t("ui.switcher.appearanceThumbnails"),
+            L10n.t("ui.switcher.appearanceIcons"),
+            L10n.t("ui.switcher.appearanceTitles"),
+        ])
+        switcherEnableCheck.title = L10n.t("ui.switcher.enable")
+        switcherHoldCheck.title = L10n.t("ui.switcher.holdToCycle")
+        switcherCmdTabCheck.title = L10n.t("ui.switcher.captureCmdTab")
+
+        let switcherGrid = NSGridView(views: [
+            [NSGridCell.emptyContentView, switcherEnableCheck],
+            row(L10n.t("ui.switcher.appearance"), switcherAppearancePopup),
+            [NSGridCell.emptyContentView, switcherHoldCheck],
+            row(L10n.t("ui.switcher.hotkeyAll"), switcherAllRecorder),
+            row(L10n.t("ui.switcher.hotkeyApp"), switcherAppRecorder),
+            row(L10n.t("ui.switcher.hotkeySpace"), switcherSpaceRecorder),
+            [NSGridCell.emptyContentView, switcherCmdTabCheck],
+        ])
+        switcherGrid.translatesAutoresizingMaskIntoConstraints = false
+        switcherGrid.column(at: 0).xPlacement = NSGridCell.Placement.trailing
+        switcherGrid.rowAlignment = NSGridRow.Alignment.firstBaseline
+        switcherGrid.columnSpacing = 12
+        switcherGrid.rowSpacing = 12
+
+        let switcherHint = NSTextField(wrappingLabelWithString: L10n.t("ui.switcher.hint"))
+        switcherHint.font = .systemFont(ofSize: 11)
+        switcherHint.textColor = .secondaryLabelColor
+
+        let switcherStack = NSStackView(views: [switcherGrid, switcherHint])
+        switcherStack.orientation = .vertical
+        switcherStack.alignment = .leading
+        switcherStack.spacing = 14
+        switcherStack.translatesAutoresizingMaskIntoConstraints = false
+
+        let switcherPane = NSView()
+        switcherPane.addSubview(switcherStack)
+        NSLayoutConstraint.activate([
+            switcherStack.leadingAnchor.constraint(equalTo: switcherPane.leadingAnchor, constant: 20),
+            switcherStack.trailingAnchor.constraint(equalTo: switcherPane.trailingAnchor, constant: -20),
+            switcherStack.topAnchor.constraint(equalTo: switcherPane.topAnchor, constant: 20),
+            switcherStack.bottomAnchor.constraint(lessThanOrEqualTo: switcherPane.bottomAnchor, constant: -20),
+            switcherHint.widthAnchor.constraint(equalTo: switcherGrid.widthAnchor),
+        ])
+
+        let switcherItem = NSTabViewItem()
+        switcherItem.label = L10n.t("ui.tab.switcher")
+        switcherItem.view = switcherPane
+
         // --- NSTabView as the window's content view ---
         let tabView = NSTabView()
         tabView.addTabViewItem(appearanceItem)
         tabView.addTabViewItem(yabaiItem)
         tabView.addTabViewItem(keyboardItem)
+        tabView.addTabViewItem(switcherItem)
         self.tabView = tabView
 
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
@@ -313,6 +388,14 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         pollField.integerValue = Int((config.pollSeconds * 1000).rounded())
         yabaiPathField.stringValue = config.yabaiPath
         loginCheck.state = loginIsEnabled() ? .on : .off
+        switcherEnableCheck.state = config.switcherEnabled ? .on : .off
+        let appearanceIdx = Self.switcherAppearanceOrder.firstIndex(of: config.switcherAppearance) ?? 0
+        switcherAppearancePopup.selectItem(at: appearanceIdx)
+        switcherHoldCheck.state = config.switcherHoldToCycle ? .on : .off
+        switcherCmdTabCheck.state = config.switcherCaptureCmdTab ? .on : .off
+        switcherAllRecorder.hotkey = Hotkey.parse(config.switcherHotkeyAll)
+        switcherAppRecorder.hotkey = Hotkey.parse(config.switcherHotkeyApp)
+        switcherSpaceRecorder.hotkey = Hotkey.parse(config.switcherHotkeySpace)
         syncPermissions()
     }
 
@@ -333,6 +416,12 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         config.debounceSeconds = max(0.0, Double(debounceField.integerValue) / 1000.0)
         config.pollSeconds = max(0.2, Double(pollField.integerValue) / 1000.0)
         config.yabaiPath = yabaiPathField.stringValue.trimmingCharacters(in: .whitespaces)
+        config.switcherEnabled = switcherEnableCheck.state == .on
+        let sIdx = switcherAppearancePopup.indexOfSelectedItem
+        config.switcherAppearance = Self.switcherAppearanceOrder[
+            (0..<Self.switcherAppearanceOrder.count).contains(sIdx) ? sIdx : 0]
+        config.switcherHoldToCycle = switcherHoldCheck.state == .on
+        config.switcherCaptureCmdTab = switcherCmdTabCheck.state == .on
         onChange(config)
     }
 

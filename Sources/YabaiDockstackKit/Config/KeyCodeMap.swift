@@ -21,4 +21,24 @@ public enum KeyCodeMap {
         }
         return String(format: "0x%02X", code)
     }
+
+    /// Letters/digits on the ANSI layout — reverse of what `chars` capture gives.
+    private static let ansi: [String: UInt16] = [
+        "a": 0x00, "s": 0x01, "d": 0x02, "f": 0x03, "h": 0x04, "g": 0x05,
+        "z": 0x06, "x": 0x07, "c": 0x08, "v": 0x09, "b": 0x0B, "q": 0x0C,
+        "w": 0x0D, "e": 0x0E, "r": 0x0F, "y": 0x10, "t": 0x11,
+        "1": 0x12, "2": 0x13, "3": 0x14, "4": 0x15, "6": 0x16, "5": 0x17,
+        "9": 0x19, "7": 0x1A, "8": 0x1C, "0": 0x1D,
+        "o": 0x1F, "u": 0x20, "i": 0x22, "p": 0x23, "l": 0x25, "j": 0x26,
+        "k": 0x28, "n": 0x2D, "m": 0x2E,
+    ]
+
+    /// Reverse mapping for the switcher's event tap: skhd key literal -> keycode.
+    public static func keyCode(forSkhdKey key: String) -> UInt16? {
+        let k = key.lowercased()
+        if let named = named.first(where: { $0.value == k })?.key { return named }
+        if let code = ansi[k] { return code }
+        if k.hasPrefix("0x"), let v = UInt16(k.dropFirst(2), radix: 16) { return v }
+        return nil
+    }
 }

@@ -28,6 +28,11 @@ public final class YabaiClient {
         _ = run(["-m", "window", "--focus", String(windowId)])
     }
 
+    /// Close a window (AX-based; works without the scripting addition).
+    public func close(windowId: Int) {
+        _ = run(["-m", "window", String(windowId), "--close"])
+    }
+
     // MARK: - Signal management
 
     public func addSignal(event: String, label: String, action: String) {
