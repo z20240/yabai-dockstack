@@ -8,14 +8,24 @@ public enum ScriptInstaller {
         "taggleShowHideDesktop.sh", "windowFocusOnDestroy.sh",
     ]
 
+    /// Locate a bundled script across SwiftPM's bundle layouts: flat CLT builds
+    /// keep resources at `<bundle>/Resources/scripts/…` (found via the plain
+    /// "scripts" subdirectory), while xcodebuild universal builds nest them at
+    /// `<bundle>/Contents/Resources/Resources/scripts/…` — the extra
+    /// "Resources/scripts" subdirectory is required or lookups return nil.
+    private static func bundledScript(_ name: String, in bundle: Bundle) -> URL? {
+        bundle.url(forResource: "scripts/\(name)", withExtension: nil)
+            ?? bundle.url(forResource: name, withExtension: nil, subdirectory: "scripts")
+            ?? bundle.url(forResource: name, withExtension: nil, subdirectory: "Resources/scripts")
+    }
+
     public static func install(to dir: String, bundle: Bundle? = nil) throws {
         let bundle = bundle ?? .module
         let fm = FileManager.default
         let expanded = (dir as NSString).expandingTildeInPath
         try fm.createDirectory(atPath: expanded, withIntermediateDirectories: true)
         for name in scriptNames {
-            guard let src = bundle.url(forResource: "scripts/\(name)", withExtension: nil)
-                    ?? bundle.url(forResource: name, withExtension: nil, subdirectory: "scripts") else {
+            guard let src = bundledScript(name, in: bundle) else {
                 throw NSError(domain: "ScriptInstaller", code: 1,
                               userInfo: [NSLocalizedDescriptionKey: "Bundled script not found: \(name)"])
             }
@@ -33,8 +43,7 @@ public enum ScriptInstaller {
         let bundle = bundle ?? .module
         let expanded = (dir as NSString).expandingTildeInPath
         for name in scriptNames {
-            guard let src = bundle.url(forResource: "scripts/\(name)", withExtension: nil)
-                    ?? bundle.url(forResource: name, withExtension: nil, subdirectory: "scripts"),
+            guard let src = bundledScript(name, in: bundle),
                   let bundled = try? Data(contentsOf: src) else { return true }
             guard let installed = FileManager.default.contents(atPath: expanded + "/" + name),
                   installed == bundled else { return true }
