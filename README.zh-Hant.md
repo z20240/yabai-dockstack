@@ -32,7 +32,7 @@ dock 預覽、視窗切換器、cmd-tab 替代、選單列、Mission Control 替
 
 **視窗切換器** —— 所有 space 的所有視窗,一個按鍵直達。
 
-<img src="assets/demo-window-switcher.png" width="760" alt="AltTab 風格視窗切換器 —— 跨所有 space、每個視窗一格" />
+<img src="assets/demo-window-switcher.gif" width="760" alt="AltTab 風格視窗切換器 —— 跨所有 space、每個視窗一格" />
 
 **Stack 指示器** —— 一眼看出哪些 app 疊在一起、在哪裡。
 

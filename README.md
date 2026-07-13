@@ -36,7 +36,7 @@ It is a clean Swift rewrite — **not** a fork of stackline (which required Hamm
 
 **Window switcher** — every window on every space, one keystroke away.
 
-<img src="assets/demo-window-switcher.png" width="760" alt="AltTab-style window switcher — one thumbnail per window across every space" />
+<img src="assets/demo-window-switcher.gif" width="760" alt="AltTab-style window switcher — one thumbnail per window across every space" />
 
 **Stack indicators** — see at a glance which apps are stacked and where.
 
