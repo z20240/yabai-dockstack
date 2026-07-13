@@ -45,6 +45,22 @@ public enum YabaiDockstack {
             return
         }
 
+        // Single-instance guard: duplicate login-item registrations (e.g. a dev
+        // copy and the installed copy) or session restore can launch a second
+        // copy at boot — the newcomer bows out, since the menu bar item, unix
+        // socket, and event tap all assume exactly one instance. (--refresh and
+        // --replay above are exempt: they don't start the full app.)
+        let myPid = ProcessInfo.processInfo.processIdentifier
+        let exeName = (Bundle.main.executableURL
+            ?? URL(fileURLWithPath: CommandLine.arguments[0])).lastPathComponent
+        if let other = NSWorkspace.shared.runningApplications.first(where: {
+            $0.processIdentifier != myPid && $0.executableURL?.lastPathComponent == exeName
+        }) {
+            NSLog("yabai-dockstack: another instance is already running (pid %d) — exiting",
+                  other.processIdentifier)
+            return
+        }
+
         // Resolve skhd binary and config paths; build the config engine.
         let skhdPath = ["/opt/homebrew/bin/skhd", "/usr/local/bin/skhd"]
             .first { FileManager.default.fileExists(atPath: $0) } ?? "/opt/homebrew/bin/skhd"
