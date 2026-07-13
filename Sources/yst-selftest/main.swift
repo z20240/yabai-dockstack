@@ -629,10 +629,14 @@ do {
     check(spc.map { $0.id } == [1], "currentSpace scope keeps the focused space")
     let q = SwitcherModel.build(windows: wins, mru: [], scope: .allWindows, query: "saf")
     check(q.map { $0.id } == [3], "query filters case-insensitively")
-    check(SwitcherModel.initialIndex(count: 3, firstHasFocus: true, backward: false) == 1,
+    check(SwitcherModel.initialIndex(count: 3, firstIsCurrent: true, backward: false) == 1,
           "initial selection lands on the previous window")
-    check(SwitcherModel.initialIndex(count: 3, firstHasFocus: true, backward: true) == 2,
+    check(SwitcherModel.initialIndex(count: 3, firstIsCurrent: true, backward: true) == 2,
           "backward activation starts at the end")
+    let stale = SwitcherModel.build(
+        windows: [sw(1, "Cursor", 1, true), sw(2, "Safari", 1), sw(3, "Safari", 2)],
+        mru: [2, 1], scope: .currentApp)
+    check(Set(stale.map { $0.id }) == [2, 3], "anchor prefers MRU head over stale hasFocus")
 }
 
 print("SwitcherKeyMachine")
@@ -655,6 +659,12 @@ do {
     _ = m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: trig)
     check(m.handle(.keyDown(code: 0x35, mods: [.alt]), triggers: trig) == .cancel,
           "escape cancels")
+    let shifted = [SwitcherTrigger(keycode: 0x30, mods: [.alt], scope: .allWindows),
+                   SwitcherTrigger(keycode: 0x30, mods: [.alt, .shift], scope: .currentSpace)]
+    var m2 = SwitcherKeyMachine()
+    check(m2.handle(.keyDown(code: 0x30, mods: [.alt, .shift]), triggers: shifted)
+          == .activate(trigger: 1, backward: false),
+          "exact modifier match beats shift-tolerant ordering")
 }
 
 print("SwitcherTriggers + KeyCodeMap reverse")

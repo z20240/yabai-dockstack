@@ -25,12 +25,13 @@ public struct SwitcherItem: Equatable {
 public enum SwitcherModel {
     /// Cross-space window list for the switcher: filter by scope + search query,
     /// then order by MRU. Windows never seen by the MRU follow in
-    /// (space, stackIndex, id) order. The scope anchor is the focused window,
-    /// falling back to the most recently used one (e.g. when the desktop has focus).
+    /// (space, stackIndex, id) order. The scope anchor prefers the MRU head —
+    /// after a switcher commit it is fresher than the cached hasFocus flags,
+    /// which lag behind until the next yabai signal lands.
     public static func build(windows: [YabaiWindow], mru: [Int],
                              scope: SwitcherScope, query: String = "") -> [SwitcherItem] {
-        let anchor = windows.first { $0.hasFocus }
-            ?? mru.lazy.compactMap { id in windows.first { $0.id == id } }.first
+        let anchor = mru.lazy.compactMap { id in windows.first { $0.id == id } }.first
+            ?? windows.first { $0.hasFocus }
         var pool = windows
         switch scope {
         case .allWindows:
@@ -62,11 +63,12 @@ public enum SwitcherModel {
     }
 
     /// Where the selection starts: on the previous window (classic alt-tab)
-    /// when the front item is the currently focused one; backward activation
-    /// (shift held) starts from the far end.
-    public static func initialIndex(count: Int, firstHasFocus: Bool, backward: Bool) -> Int {
+    /// when the front item is the current one; backward activation (shift
+    /// held) starts from the far end. "Current" must be judged by the MRU
+    /// head as well as hasFocus — see the anchor note above.
+    public static func initialIndex(count: Int, firstIsCurrent: Bool, backward: Bool) -> Int {
         guard count > 1 else { return 0 }
         if backward { return count - 1 }
-        return firstHasFocus ? 1 : 0
+        return firstIsCurrent ? 1 : 0
     }
 }

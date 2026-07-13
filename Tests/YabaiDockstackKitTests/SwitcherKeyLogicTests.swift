@@ -119,6 +119,16 @@ final class SwitcherKeyLogicTests: XCTestCase {
         XCTAssertEqual(t, [SwitcherTrigger(keycode: 0x31, mods: [.ctrl], scope: .currentSpace)])
     }
 
+    func testExactModifierMatchBeatsShiftTolerantOrdering() {
+        // A shift-variant trigger on the same keycode must stay reachable even
+        // though it sits after the shift-tolerant all-windows trigger.
+        let shifted = SwitcherTrigger(keycode: 0x30, mods: [.alt, .shift], scope: .currentSpace)
+        var m = SwitcherKeyMachine()
+        let out = m.handle(.keyDown(code: 0x30, mods: [.alt, .shift]),
+                           triggers: [altTab, shifted])
+        XCTAssertEqual(out, .activate(trigger: 1, backward: false))
+    }
+
     func testCaptureCmdTabOverridesAllScope() {
         var c = AppConfig.defaults
         c.switcherCaptureCmdTab = true

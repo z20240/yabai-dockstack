@@ -63,12 +63,21 @@ final class SwitcherModelTests: XCTestCase {
     }
 
     func testInitialIndex() {
-        XCTAssertEqual(SwitcherModel.initialIndex(count: 0, firstHasFocus: false, backward: false), 0)
-        XCTAssertEqual(SwitcherModel.initialIndex(count: 1, firstHasFocus: true, backward: false), 0)
-        // Classic alt-tab: land on the previous window when the front is focused.
-        XCTAssertEqual(SwitcherModel.initialIndex(count: 3, firstHasFocus: true, backward: false), 1)
-        XCTAssertEqual(SwitcherModel.initialIndex(count: 3, firstHasFocus: false, backward: false), 0)
-        XCTAssertEqual(SwitcherModel.initialIndex(count: 3, firstHasFocus: true, backward: true), 2)
+        XCTAssertEqual(SwitcherModel.initialIndex(count: 0, firstIsCurrent: false, backward: false), 0)
+        XCTAssertEqual(SwitcherModel.initialIndex(count: 1, firstIsCurrent: true, backward: false), 0)
+        // Classic alt-tab: land on the previous window when the front is current.
+        XCTAssertEqual(SwitcherModel.initialIndex(count: 3, firstIsCurrent: true, backward: false), 1)
+        XCTAssertEqual(SwitcherModel.initialIndex(count: 3, firstIsCurrent: false, backward: false), 0)
+        XCTAssertEqual(SwitcherModel.initialIndex(count: 3, firstIsCurrent: true, backward: true), 2)
+    }
+
+    func testAnchorPrefersMRUOverStaleFocus() {
+        // After a switcher commit, hasFocus lags until the next yabai signal;
+        // the MRU head is the truth. currentApp must follow it.
+        let wins = [win(1, "Cursor", focus: true),   // stale focus flag
+                    win(2, "Safari"), win(3, "Safari", space: 2)]
+        let items = SwitcherModel.build(windows: wins, mru: [2, 1], scope: .currentApp)
+        XCTAssertEqual(Set(items.map { $0.id }), [2, 3])
     }
 
     func testItemCarriesMetadata() {

@@ -82,14 +82,13 @@ public final class SwitcherPanel {
                                                labelHeight: base.label, gap: gap)
                 columns = grid.columns
                 let cellW = CGFloat(grid.cellWidth), cellH = CGFloat(grid.cellHeight)
-                let rowsShown = grid.rows
                 let w = CGFloat(min(items.count, grid.columns)) * (cellW + gap) - gap
-                let h = CGFloat(rowsShown) * (cellH + gap) - gap
-                let holder = FlippedView(frame: CGRect(x: 0, y: 0, width: w, height: h + headerH))
+                let bodyH = CGFloat(grid.rows) * (cellH + gap) - gap
+                let body = FlippedView(frame: CGRect(x: 0, y: 0, width: w, height: bodyH))
                 for (i, di) in items.enumerated() {
                     let col = i % grid.columns, row = i / grid.columns
                     let f = CGRect(x: CGFloat(col) * (cellW + gap),
-                                   y: headerH + CGFloat(row) * (cellH + gap),
+                                   y: CGFloat(row) * (cellH + gap),
                                    width: cellW, height: cellH)
                     let cell = SwitcherCellView(frame: f, index: i, item: di,
                                                 mode: appearance,
@@ -98,7 +97,23 @@ public final class SwitcherPanel {
                                                 onClose: { [weak self] in self?.onCloseItem?($0) })
                     cell.isSelected = i == selection
                     cells.append(cell)
-                    holder.addSubview(cell)
+                    body.addSubview(cell)
+                }
+                // Rows can still overflow when cells already bottomed out at
+                // the minimum size — scroll instead of rendering offscreen.
+                let visibleH = min(bodyH, maxH - pad * 2 - headerH)
+                let holder = FlippedView(frame: CGRect(x: 0, y: 0, width: w,
+                                                       height: visibleH + headerH))
+                if bodyH > visibleH {
+                    let scroll = NSScrollView(frame: CGRect(x: 0, y: headerH,
+                                                            width: w, height: visibleH))
+                    scroll.hasVerticalScroller = true
+                    scroll.drawsBackground = false
+                    scroll.documentView = body
+                    holder.addSubview(scroll)
+                } else {
+                    body.frame.origin.y = headerH
+                    holder.addSubview(body)
                 }
                 content = holder
                 contentSize = holder.frame.size

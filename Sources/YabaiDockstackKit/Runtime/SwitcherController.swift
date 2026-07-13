@@ -19,12 +19,32 @@ public final class SwitcherController {
     private var sticky = false
     private var query = ""
     private var generation = 0   // invalidates in-flight async refreshes on hide/reopen
+    /// Focus we just set ourselves; refresh reads that still predate it must
+    /// not touch the MRU or fast alt-tab toggling lands on the wrong window.
+    private var lastCommitID: Int?
+    private var lastCommitAt: Date?
+    /// Where the pointer sat when the panel (re)rendered — hover is ignored
+    /// until it actually moves, so a stationary mouse can't hijack the
+    /// keyboard selection when tracking areas rebuild.
+    private var pointerGate: CGPoint?
+
+    /// Fired whenever the panel closes for any reason; the app uses it to
+    /// reset the key tap's machine (e.g. after a mouse-click commit mid-hold).
+    public var onDismiss: (() -> Void)?
 
     public init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig) {
         self.client = client
         self.cache = cache
         self.config = config
-        panel.onHover = { [weak self] idx in self?.select(idx) }
+        panel.onHover = { [weak self] idx in
+            guard let self else { return }
+            if let gate = self.pointerGate {
+                let p = NSEvent.mouseLocation
+                guard abs(p.x - gate.x) > 4 || abs(p.y - gate.y) > 4 else { return }
+                self.pointerGate = nil
+            }
+            self.select(idx)
+        }
         panel.onClick = { [weak self] idx in self?.select(idx); self?.commit() }
         panel.onCloseItem = { [weak self] idx in self?.close(index: idx) }
         panel.onKeyEvent = { [weak self] ev in self?.handleStickyKey(ev) ?? false }
@@ -39,28 +59,39 @@ public final class SwitcherController {
     public var isOpen: Bool { panel.isVisible }
 
     /// Refresh feed (any thread): remember the raw list, keep the MRU in sync.
+    /// A read taken before our own focus() landed still reports the previous
+    /// window as focused — skip those touches for a beat after a commit.
     public func noteWindows(_ wins: [YabaiWindow]) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.lastWindows = wins
-            if let focused = wins.first(where: { $0.hasFocus }) { self.mru.touch(focused.id) }
+            if let focused = wins.first(where: { $0.hasFocus }) {
+                let staleWindow = self.lastCommitAt.map { Date().timeIntervalSince($0) < 1.0 } ?? false
+                if !staleWindow || focused.id == self.lastCommitID {
+                    self.mru.touch(focused.id)
+                }
+            }
             self.mru.prune(keeping: Set(wins.map { $0.id }))
         }
     }
 
     /// Open the switcher. Returns false when disabled or nothing to show, so
     /// the key tap can reset its machine instead of swallowing keys blindly.
+    /// Hold mode must never block: it runs inside the event-tap callback,
+    /// where a synchronous yabai query would stall all keyboard input, so it
+    /// uses the cached list only (kept warm by every refresh tick).
     @discardableResult
     public func open(scope: SwitcherScope, sticky: Bool, backward: Bool = false) -> Bool {
         guard config.switcherEnabled else { return false }
         self.scope = scope
         self.sticky = sticky
         self.query = ""
-        if lastWindows.isEmpty { lastWindows = client.queryWindows() }
+        if lastWindows.isEmpty && sticky { lastWindows = client.queryWindows() }
         rebuildItems()
         if items.isEmpty && !sticky { hide(); return false }
+        let firstIsCurrent = items.first.map { $0.id == mru.ids.first || $0.hasFocus } ?? false
         selection = SwitcherModel.initialIndex(count: items.count,
-                                               firstHasFocus: items.first?.hasFocus ?? false,
+                                               firstIsCurrent: firstIsCurrent,
                                                backward: backward)
         render()
         refreshAsync()
@@ -90,6 +121,8 @@ public final class SwitcherController {
         guard items.indices.contains(selection) else { cancel(); return }
         let id = items[selection].id
         mru.touch(id)
+        lastCommitID = id
+        lastCommitAt = Date()
         hide()
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.client.focus(windowId: id)
@@ -118,6 +151,7 @@ public final class SwitcherController {
     }
 
     private func render() {
+        pointerGate = NSEvent.mouseLocation
         panel.show(items: displayItems(),
                    appearance: SwitcherAppearance(rawValue: config.switcherAppearance) ?? .thumbnails,
                    selection: selection, query: query, keyboardFocus: sticky)
@@ -127,6 +161,7 @@ public final class SwitcherController {
         generation += 1
         sticky = false
         panel.hide()
+        onDismiss?()
     }
 
     private func select(_ idx: Int) {

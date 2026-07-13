@@ -80,29 +80,16 @@ public enum YabaiDockstack {
 
         // AltTab-style window switcher: hold-to-cycle via a global event tap,
         // plus a sticky mode reachable through the show-switcher socket command.
+        // The tap is gated on yabai being present so a captured ⌘⇥ can never
+        // black-hole the system switcher while yabai is down (5s heal re-checks).
         let switcher = SwitcherController(client: client, cache: thumbCache, config: config)
         let switcherTap = SwitcherKeyTap()
-        switcherTap.onOutput = { output in
-            switch output {
-            case let .activate(idx, backward):
-                let scope = switcherTap.triggers.indices.contains(idx)
-                    ? switcherTap.triggers[idx].scope : .allWindows
-                if !switcher.open(scope: scope, sticky: false, backward: backward) {
-                    switcherTap.resetMachine()
-                }
-            case let .cycle(forward): switcher.cycle(forward: forward)
-            case let .move(dx, dy): switcher.move(dx: dx, dy: dy)
-            case .commit: switcher.commit()
-            case .cancel: switcher.cancel()
-            case .closeSelected: switcher.closeSelected()
-            case .pass, .swallow: break
-            }
-        }
+        switcher.onDismiss = { switcherTap.resetMachine() }
         func ensureSwitcherTap() {
             let wanted = config.switcherEnabled && config.switcherHoldToCycle
-                && PermissionsHelper.hasAccessibility()
+                && PermissionsHelper.hasAccessibility() && client.isAvailable()
             if wanted {
-                switcherTap.triggers = SwitcherTriggers.build(from: config)
+                switcherTap.updateTriggers(SwitcherTriggers.build(from: config))
                 _ = switcherTap.start()
             } else {
                 switcherTap.stop()
@@ -114,6 +101,25 @@ public enum YabaiDockstack {
             dockController?.warmCache()
         }
         coordinator.onWindows = { switcher.noteWindows($0) }
+        switcherTap.onOutput = { output in
+            switch output {
+            case let .activate(idx, backward):
+                let scope = switcherTap.triggers.indices.contains(idx)
+                    ? switcherTap.triggers[idx].scope : .allWindows
+                if !switcher.open(scope: scope, sticky: false, backward: backward) {
+                    // Nothing to show (e.g. window list not warmed yet): stop
+                    // swallowing keys and warm the cache for the next attempt.
+                    switcherTap.resetMachine()
+                    coordinator.requestRefresh()
+                }
+            case let .cycle(forward): switcher.cycle(forward: forward)
+            case let .move(dx, dy): switcher.move(dx: dx, dy: dy)
+            case .commit: switcher.commit()
+            case .cancel: switcher.cancel()
+            case .closeSelected: switcher.closeSelected()
+            case .pass, .swallow: break
+            }
+        }
         let spaceMover = SpaceMover(client: client)
         let menu = MenuBarController()
         let listener = SignalListener(

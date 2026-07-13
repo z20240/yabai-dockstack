@@ -71,19 +71,27 @@ public struct SwitcherKeyMachine: Equatable {
         return mods.subtracting(t.mods).isSubset(of: [.shift])
     }
 
+    /// Exact modifier matches win over shift-tolerant ones, so a shift-variant
+    /// trigger on the same keycode stays reachable.
+    private static func bestMatch(_ triggers: [SwitcherTrigger],
+                                  code: UInt16, mods: Set<Hotkey.Mod>) -> Int? {
+        if let exact = triggers.indices.first(where: {
+            triggers[$0].keycode == code && triggers[$0].mods == mods
+        }) { return exact }
+        return triggers.indices.first { Self.matches(triggers[$0], code: code, mods: mods) }
+    }
+
     public mutating func handle(_ input: SwitcherKeyInput,
                                 triggers: [SwitcherTrigger]) -> SwitcherKeyOutput {
         switch input {
         case let .keyDown(code, mods):
             if let active = activeTrigger, active < triggers.count {
-                if Self.matches(triggers[active], code: code, mods: mods) {
-                    let backward = mods.subtracting(triggers[active].mods).contains(.shift)
-                    return .cycle(forward: !backward)
-                }
-                // A different trigger key with its modifiers held switches scope.
-                if let idx = triggers.indices.first(where: {
-                    Self.matches(triggers[$0], code: code, mods: mods)
-                }) {
+                if let idx = Self.bestMatch(triggers, code: code, mods: mods) {
+                    if idx == active {
+                        let backward = mods.subtracting(triggers[active].mods).contains(.shift)
+                        return .cycle(forward: !backward)
+                    }
+                    // A different trigger key with its modifiers held switches scope.
                     activeTrigger = idx
                     return .activate(trigger: idx, backward: false)
                 }
@@ -98,9 +106,7 @@ public struct SwitcherKeyMachine: Equatable {
                 default: return .swallow
                 }
             }
-            if let idx = triggers.indices.first(where: {
-                Self.matches(triggers[$0], code: code, mods: mods)
-            }) {
+            if let idx = Self.bestMatch(triggers, code: code, mods: mods) {
                 activeTrigger = idx
                 let backward = mods.subtracting(triggers[idx].mods).contains(.shift)
                 return .activate(trigger: idx, backward: backward)

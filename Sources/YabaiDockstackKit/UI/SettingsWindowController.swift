@@ -393,6 +393,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         switcherAppearancePopup.selectItem(at: appearanceIdx)
         switcherHoldCheck.state = config.switcherHoldToCycle ? .on : .off
         switcherCmdTabCheck.state = config.switcherCaptureCmdTab ? .on : .off
+        // ⌘⇥ capture rides on the hold-to-cycle tap; make the dependency visible.
+        switcherCmdTabCheck.isEnabled = config.switcherEnabled && config.switcherHoldToCycle
         switcherAllRecorder.hotkey = Hotkey.parse(config.switcherHotkeyAll)
         switcherAppRecorder.hotkey = Hotkey.parse(config.switcherHotkeyApp)
         switcherSpaceRecorder.hotkey = Hotkey.parse(config.switcherHotkeySpace)
@@ -422,6 +424,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             (0..<Self.switcherAppearanceOrder.count).contains(sIdx) ? sIdx : 0]
         config.switcherHoldToCycle = switcherHoldCheck.state == .on
         config.switcherCaptureCmdTab = switcherCmdTabCheck.state == .on
+        switcherCmdTabCheck.isEnabled = config.switcherEnabled && config.switcherHoldToCycle
         onChange(config)
     }
 
