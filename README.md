@@ -32,6 +32,16 @@ dock preview, window switcher, cmd-tab replacement, menu bar, Mission Control al
 
 It is a clean Swift rewrite — **not** a fork of stackline (which required Hammerspoon).
 
+## What's new — v0.2.15
+
+- Closing a window from the Dock preview or the switcher now updates the panel
+  **instantly**; ✕ on an app's last window quits the app itself.
+- Switcher: **⌘W** closes the selected window, **⌘Q** quits its whole app.
+- v0.2.12 introduced the **AltTab-style window switcher** (below).
+
+Full history: [CHANGELOG.md](CHANGELOG.md) ·
+[Releases](https://github.com/z20240/yabai-dockstack/releases)
+
 ## Demo
 
 **Window switcher** — every window on every space, one keystroke away.

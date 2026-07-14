@@ -28,6 +28,15 @@ dock 預覽、視窗切換器、cmd-tab 替代、選單列、Mission Control 替
 
 這是用 Swift 重寫的乾淨版本,**不是** stackline 的 fork(stackline 需要 Hammerspoon)。
 
+## 最新變更 — v0.2.15
+
+- 從 Dock 預覽或切換器關閉視窗,面板**即時**更新;✕ 關掉 app 最後一個視窗時直接結束該 App。
+- 切換器:**⌘W** 關閉選中視窗、**⌘Q** 結束整個 App。
+- v0.2.12 新增 **AltTab 風格視窗切換器**(見下)。
+
+完整紀錄:[CHANGELOG.md](CHANGELOG.md) ·
+[Releases](https://github.com/z20240/yabai-dockstack/releases)
+
 ## Demo
 
 **視窗切換器** —— 所有 space 的所有視窗,一個按鍵直達。
