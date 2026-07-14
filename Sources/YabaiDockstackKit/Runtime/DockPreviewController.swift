@@ -14,6 +14,9 @@ public final class DockPreviewController {
     /// The hover that produced the current panel — lets the ✕ button rebuild
     /// the preview after a window is closed.
     private var lastHover: DockHover?
+    /// Windows we've asked to close but yabai still lists — hidden from the
+    /// popover immediately (optimistic) until the queries catch up.
+    private var pendingCloseIDs: Set<Int> = []
 
     public init(client: YabaiClient, cache: ThumbnailCache) {
         self.client = client
@@ -39,16 +42,30 @@ public final class DockPreviewController {
         panel.hide()
     }
 
-    /// ✕ on a preview cell: close via yabai, then rebuild the preview once
-    /// yabai has dropped the window (or hide it when none are left).
+    /// ✕ on a preview cell. The cell disappears immediately (optimistic — some
+    /// apps close slowly and yabai keeps listing the window for a moment).
+    /// Closing the app's LAST window quits the app instead: a plain window
+    /// close leaves agenty apps (Music, …) running with no window, which is
+    /// never what a ✕ in a Dock popover means.
     private func closeWindow(_ id: Int) {
+        guard let hover = lastHover else { return }
+        let current = windows(for: hover)
+        let isLastWindow = !current.contains { $0.id != id }
+        let pid = current.first { $0.id == id }?.pid
+        pendingCloseIDs.insert(id)
+        handle(hover)   // rebuild without the closed cell; hides when empty
+
+        if isLastWindow, let pid {
+            NSRunningApplication(processIdentifier: pid_t(pid))?.terminate()
+            return
+        }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             self.client.close(windowId: id)
-            Thread.sleep(forTimeInterval: 0.35)
+            Thread.sleep(forTimeInterval: 0.4)
             DispatchQueue.main.async {
                 guard self.panel.isVisible, let hover = self.lastHover else { return }
-                self.handle(hover)
+                self.handle(hover)   // reconcile (e.g. the close was refused)
             }
         }
     }
@@ -94,15 +111,18 @@ public final class DockPreviewController {
 
     /// Windows belonging to the hovered Dock app. Prefer bundle-id matching (robust
     /// across display-name vs yabai-app-name mismatches like "Visual Studio Code"
-    /// vs "Code"); fall back to app-name matching.
+    /// vs "Code"); fall back to app-name matching. Windows with a close in
+    /// flight are excluded (and forgotten once yabai drops them).
     private func windows(for hover: DockHover) -> [YabaiWindow] {
         let all = client.queryWindows()
+        pendingCloseIDs.formIntersection(Set(all.map { $0.id }))
+        let live = all.filter { !pendingCloseIDs.contains($0.id) }
         if let bid = hover.bundleID {
-            let matched = all.filter { bundleID(pid: $0.pid) == bid }
+            let matched = live.filter { bundleID(pid: $0.pid) == bid }
                 .sorted { ($0.space, $0.stackIndex, $0.id) < ($1.space, $1.stackIndex, $1.id) }
             if !matched.isEmpty { return matched }
         }
-        return AppWindowGrouper.windows(of: hover.appTitle, in: all)
+        return AppWindowGrouper.windows(of: hover.appTitle, in: live)
     }
 
     private func handle(_ hover: DockHover?) {

@@ -657,6 +657,10 @@ do {
     check(m.handle(.keyDown(code: 0x30, mods: [.alt, .cmd]), triggers: trig) == .pass,
           "extra modifier is not our shortcut")
     _ = m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: trig)
+    check(m.handle(.keyDown(code: 0x0C, mods: [.alt, .cmd]), triggers: trig) == .quitSelected,
+          "cmd+q quits the selected app")
+    check(m.handle(.keyDown(code: 0x0D, mods: [.alt, .cmd]), triggers: trig) == .closeSelected,
+          "cmd+w closes the selected window")
     check(m.handle(.keyDown(code: 0x35, mods: [.alt]), triggers: trig) == .cancel,
           "escape cancels")
     let shifted = [SwitcherTrigger(keycode: 0x30, mods: [.alt], scope: .allWindows),

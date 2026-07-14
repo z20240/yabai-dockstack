@@ -133,6 +133,7 @@ public enum YabaiDockstack {
             case .commit: switcher.commit()
             case .cancel: switcher.cancel()
             case .closeSelected: switcher.closeSelected()
+            case .quitSelected: switcher.quitSelected()
             case .pass, .swallow: break
             }
         }

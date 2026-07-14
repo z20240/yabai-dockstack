@@ -325,6 +325,7 @@ ordered most-recently-used:
 | hold **⌥** + tap **Tab** | cycle **all windows on all spaces** (⇧ reverses) |
 | hold **⌥** + tap **`** | cycle the **current app's** windows only |
 | arrows / **W** or ✕ / **Esc** / **Enter** | navigate / close window / cancel / commit |
+| **⌘W** / **⌘Q** | close the selected window / quit its whole app |
 | release **⌥** | switch to the selected window (jumps spaces via yabai) |
 
 - **Two modes.** *Hold-to-cycle* (above) feels like the native ⌘⇥. *Sticky mode*
@@ -361,7 +362,8 @@ to jump to its space and focus it (like a Windows-taskbar peek / DockView).
   stays dormant — the core stack indicators need no permissions at all.
 - **Close from the preview:** hovering a thumbnail reveals an **✕** — click it to
   close that window (via yabai) without leaving the preview; the popover updates
-  in place.
+  in place. Closing the app's **last** window quits the app itself, so apps that
+  merely hide their window on close (Music, …) actually go away.
 - **Toggle:** Settings → **Dock window previews** (on by default).
 
 ## Is it safe? (signing & permissions)

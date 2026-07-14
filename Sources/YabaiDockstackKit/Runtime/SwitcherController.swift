@@ -19,6 +19,9 @@ public final class SwitcherController {
     private var sticky = false
     private var query = ""
     private var generation = 0   // invalidates in-flight async refreshes on hide/reopen
+    /// Windows we've asked to close/quit but yabai still lists — hidden from
+    /// the panel immediately (optimistic) until the queries catch up.
+    private var pendingCloseIDs: Set<Int> = []
     /// Focus we just set ourselves; refresh reads that still predate it must
     /// not touch the MRU or fast alt-tab toggling lands on the wrong window.
     private var lastCommitID: Int?
@@ -136,8 +139,11 @@ public final class SwitcherController {
     // MARK: - Internals
 
     private func rebuildItems() {
+        // Forget pending ids once yabai actually dropped the window.
+        pendingCloseIDs.formIntersection(Set(lastWindows.map { $0.id }))
         items = SwitcherModel.build(windows: lastWindows, mru: mru.ids,
                                     scope: scope, query: query)
+            .filter { !pendingCloseIDs.contains($0.id) }
     }
 
     private func displayItems() -> [SwitcherDisplayItem] {
@@ -170,17 +176,40 @@ public final class SwitcherController {
         panel.updateSelection(selection)
     }
 
+    /// Drop the pending-close cells right away; hide when nothing is left.
+    private func applyPendingRemoval() {
+        rebuildItems()
+        if items.isEmpty { hide(); return }
+        selection = min(selection, items.count - 1)
+        render()
+    }
+
     private func close(index: Int) {
         guard items.indices.contains(index) else { return }
         let id = items[index].id
+        pendingCloseIDs.insert(id)
+        applyPendingRemoval()
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             self.client.close(windowId: id)
-            Thread.sleep(forTimeInterval: 0.3)   // yabai needs a beat to drop it
+            Thread.sleep(forTimeInterval: 0.4)   // yabai needs a beat to drop it
             DispatchQueue.main.async {
                 guard self.panel.isVisible else { return }
-                self.refreshAsync()
+                self.refreshAsync()              // reconcile (e.g. close was refused)
             }
+        }
+    }
+
+    /// ⌘Q — gracefully quit the selected window's whole application.
+    public func quitSelected() {
+        guard items.indices.contains(selection) else { return }
+        let pid = items[selection].pid
+        pendingCloseIDs.formUnion(items.filter { $0.pid == pid }.map { $0.id })
+        applyPendingRemoval()
+        NSRunningApplication(processIdentifier: pid_t(pid))?.terminate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            guard let self, self.panel.isVisible else { return }
+            self.refreshAsync()
         }
     }
 
@@ -222,6 +251,13 @@ public final class SwitcherController {
 
     /// Sticky-mode keys (panel is key window). Returns true when consumed.
     private func handleStickyKey(_ ev: NSEvent) -> Bool {
+        if ev.modifierFlags.contains(.command) {
+            switch ev.keyCode {
+            case 0x0D: closeSelected(); return true    // ⌘W
+            case 0x0C: quitSelected(); return true     // ⌘Q
+            default: return false
+            }
+        }
         switch ev.keyCode {
         case 0x35: cancel(); return true                         // escape
         case 0x24, 0x4C: commit(); return true                   // return / enter

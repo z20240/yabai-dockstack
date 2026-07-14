@@ -79,6 +79,18 @@ final class SwitcherKeyLogicTests: XCTestCase {
                        .closeSelected)
     }
 
+    func testCmdWClosesAndCmdQQuits() {
+        var m = SwitcherKeyMachine()
+        _ = m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: triggers)
+        XCTAssertEqual(m.handle(.keyDown(code: 0x0D, mods: [.alt, .cmd]), triggers: triggers),
+                       .closeSelected)
+        XCTAssertEqual(m.handle(.keyDown(code: 0x0C, mods: [.alt, .cmd]), triggers: triggers),
+                       .quitSelected)
+        // Plain Q is not a quit — too easy to hit accidentally.
+        XCTAssertEqual(m.handle(.keyDown(code: 0x0C, mods: [.alt]), triggers: triggers), .swallow)
+        XCTAssertNotNil(m.activeTrigger)   // closing/quitting keeps the switcher open
+    }
+
     func testOtherKeysSwallowedWhileActive() {
         var m = SwitcherKeyMachine()
         _ = m.handle(.keyDown(code: 0x30, mods: [.alt]), triggers: triggers)

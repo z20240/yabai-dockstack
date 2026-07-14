@@ -50,7 +50,8 @@ public enum SwitcherKeyOutput: Equatable {
     case move(dx: Int, dy: Int)
     case commit(consume: Bool)             // consume=false when driven by modifier release
     case cancel
-    case closeSelected
+    case closeSelected                     // W / ⌘W — close the selected window
+    case quitSelected                      // ⌘Q — quit the selected window's app
 }
 
 /// Pure state machine behind the switcher's CGEventTap: keycodes + modifiers in,
@@ -102,7 +103,8 @@ public struct SwitcherKeyMachine: Equatable {
                 case 0x7C: return .move(dx: 1, dy: 0)
                 case 0x7E: return .move(dx: 0, dy: -1)
                 case 0x7D: return .move(dx: 0, dy: 1)
-                case 0x0D: return .closeSelected                                     // w
+                case 0x0D: return .closeSelected                                     // w / ⌘w
+                case 0x0C where mods.contains(.cmd): return .quitSelected            // ⌘q
                 default: return .swallow
                 }
             }
