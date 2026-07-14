@@ -359,6 +359,9 @@ to jump to its space and focus it (like a Windows-taskbar peek / DockView).
   one at a time, so the two prompts don't collide. Once Accessibility is granted
   the feature activates automatically (no relaunch). If a permission is missing it
   stays dormant — the core stack indicators need no permissions at all.
+- **Close from the preview:** hovering a thumbnail reveals an **✕** — click it to
+  close that window (via yabai) without leaving the preview; the popover updates
+  in place.
 - **Toggle:** Settings → **Dock window previews** (on by default).
 
 ## Is it safe? (signing & permissions)

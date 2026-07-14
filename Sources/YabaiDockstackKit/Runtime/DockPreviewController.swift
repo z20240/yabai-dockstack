@@ -11,6 +11,9 @@ public final class DockPreviewController {
     private var watcher: DockWatcher?
     private var keepTimer: Timer?
     private var iconFrame: CGRect?
+    /// The hover that produced the current panel — lets the ✕ button rebuild
+    /// the preview after a window is closed.
+    private var lastHover: DockHover?
 
     public init(client: YabaiClient, cache: ThumbnailCache) {
         self.client = client
@@ -32,7 +35,22 @@ public final class DockPreviewController {
     private func hidePanel() {
         keepTimer?.invalidate(); keepTimer = nil
         iconFrame = nil
+        lastHover = nil
         panel.hide()
+    }
+
+    /// ✕ on a preview cell: close via yabai, then rebuild the preview once
+    /// yabai has dropped the window (or hide it when none are left).
+    private func closeWindow(_ id: Int) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            self.client.close(windowId: id)
+            Thread.sleep(forTimeInterval: 0.35)
+            DispatchQueue.main.async {
+                guard self.panel.isVisible, let hover = self.lastHover else { return }
+                self.handle(hover)
+            }
+        }
     }
 
     // While a preview is visible, keep it open as long as the cursor stays within
@@ -96,10 +114,13 @@ public final class DockPreviewController {
         guard !wins.isEmpty else { hidePanel(); return }
 
         iconFrame = hover.iconFrame
+        lastHover = hover
         // Show immediately with cached/icon, then refresh live thumbnails async.
-        panel.show(items: items(for: wins), aboveIcon: hover.iconFrame) { [weak self] id in
-            self?.client.focus(windowId: id); self?.hidePanel()
-        }
+        panel.show(items: items(for: wins), aboveIcon: hover.iconFrame,
+                   onClick: { [weak self] id in
+                       self?.client.focus(windowId: id); self?.hidePanel()
+                   },
+                   onClose: { [weak self] id in self?.closeWindow(id) })
         startKeepTimer()
 
         Task { [weak self] in
@@ -109,9 +130,11 @@ public final class DockPreviewController {
             for (id, img) in fresh { self.cache.put(id, img) }
             await MainActor.run {
                 guard self.panel.isVisible, self.iconFrame == hover.iconFrame else { return }
-                self.panel.show(items: self.items(for: wins), aboveIcon: hover.iconFrame) { [weak self] id in
-                    self?.client.focus(windowId: id); self?.hidePanel()
-                }
+                self.panel.show(items: self.items(for: wins), aboveIcon: hover.iconFrame,
+                                onClick: { [weak self] id in
+                                    self?.client.focus(windowId: id); self?.hidePanel()
+                                },
+                                onClose: { [weak self] id in self?.closeWindow(id) })
             }
         }
     }
