@@ -10,9 +10,9 @@ public final class SwitcherController {
     private let cache: ThumbnailCache
     private let capturer = ThumbnailCapturer()
     private let visibilityProbe = WindowVisibilityProbe()
-    private let panel = SwitcherPanel()
+    private let panel: SwitcherPanel
     /// The search (sticky) switcher's view: PR #4's Spaces View look.
-    private let spacesPanel = SpacesPanel()
+    private let spacesPanel: SpacesPanel
     private var config: AppConfig
 
     private var mru = MRUOrder()
@@ -59,7 +59,15 @@ public final class SwitcherController {
     /// reset the key tap's machine (e.g. after a mouse-click commit mid-hold).
     public var onDismiss: (() -> Void)?
 
-    public init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig, focuser: WindowFocuser? = nil) {
+    public convenience init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig, focuser: WindowFocuser? = nil) {
+        self.init(client: client, cache: cache, config: config, focuser: focuser,
+                  panel: SwitcherPanel(), spacesPanel: SpacesPanel())
+    }
+
+    init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig, focuser: WindowFocuser? = nil,
+         panel: SwitcherPanel, spacesPanel: SpacesPanel) {
+        self.panel = panel
+        self.spacesPanel = spacesPanel
         self.focuser = focuser ?? WindowFocuser(client: client)
         self.client = client
         self.cache = cache
@@ -242,14 +250,18 @@ public final class SwitcherController {
         items = SwitcherModel.build(windows: lastWindows, mru: mru.ids,
                                     scope: scope, query: query)
             .filter { !pendingCloseIDs.contains($0.id) }
-        if sticky, !spaces.isEmpty {
+        if sticky {
+            // An empty space cache on first open is still search mode. Show
+            // the Spaces panel's search box until refreshAsync fills its cards,
+            // rather than opening the hold panel and leaving it behind later.
             // Every window gets a tile; the query only decides which are lit.
             let all = SwitcherModel.build(windows: lastWindows, mru: mru.ids, scope: scope, query: "")
                 .filter { !pendingCloseIDs.contains($0.id) }
             let c = SpacesSwitcherModel.build(items: all, windows: lastWindows, spaces: spaces,
                                               labels: spaceLabels, matching: Set(items.map(\.id)))
             cards = c
-            items = SpacesSwitcherModel.selectable(c)
+            // Preserve the cached MRU selection while space metadata loads.
+            if !spaces.isEmpty { items = SpacesSwitcherModel.selectable(c) }
         } else {
             cards = nil
         }
