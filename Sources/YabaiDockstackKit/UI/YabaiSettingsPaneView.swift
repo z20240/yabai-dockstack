@@ -9,6 +9,10 @@ public final class YabaiSettingsPaneView: NSView {
     private let engine: ConfigEngine
     private let rawFilePath: String
     private var settings: YabaiSettings
+    private let onManagementChange: (Bool) -> Void
+    private let managementCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let managementHint = NSTextField(wrappingLabelWithString: "")
+    private var managedViews: [NSView] = []
 
     // MARK: - Scalar controls
 
@@ -46,13 +50,16 @@ public final class YabaiSettingsPaneView: NSView {
 
     // MARK: - Init
 
-    public init(engine: ConfigEngine, rawFilePath: String) {
+    public init(engine: ConfigEngine, rawFilePath: String,
+                onManagementChange: @escaping (Bool) -> Void = { _ in }) {
         self.engine = engine
+        self.onManagementChange = onManagementChange
         self.rawFilePath = rawFilePath
         self.settings = engine.loadYabaiSettingsOrDefault()
         super.init(frame: .zero)
         buildUI()
         syncFields()
+        updateManagementEnabled(engine.manageYabaiConfig)
     }
 
     public required init?(coder: NSCoder) { fatalError("init(coder:) not implemented") }
@@ -60,6 +67,18 @@ public final class YabaiSettingsPaneView: NSView {
     // MARK: - Build
 
     private func buildUI() {
+        managementCheck.title = L10n.t("ui.yabai.manageConfig")
+        managementCheck.target = self
+        managementCheck.action = #selector(managementChanged)
+        managementHint.stringValue = L10n.t("ui.yabai.managementHint")
+        managementHint.font = .systemFont(ofSize: 11)
+        managementHint.textColor = .secondaryLabelColor
+        let managementHeader = NSStackView(views: [managementCheck, managementHint])
+        managementHeader.orientation = .vertical
+        managementHeader.alignment = .leading
+        managementHeader.spacing = 6
+        managementHeader.translatesAutoresizingMaskIntoConstraints = false
+        managementHint.widthAnchor.constraint(equalTo: managementHeader.widthAnchor).isActive = true
         // Integer text fields: right-aligned, fixed width
         for f in [topField, bottomField, leftField, rightField, gapField] {
             f.alignment = .right
@@ -187,11 +206,15 @@ public final class YabaiSettingsPaneView: NSView {
         separator.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(outerScroll)
+        addSubview(managementHeader)
         addSubview(separator)
         addSubview(bottomBar)
 
         NSLayoutConstraint.activate([
-            outerScroll.topAnchor.constraint(equalTo: topAnchor),
+            managementHeader.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            managementHeader.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            managementHeader.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            outerScroll.topAnchor.constraint(equalTo: managementHeader.bottomAnchor, constant: 8),
             outerScroll.leadingAnchor.constraint(equalTo: leadingAnchor),
             outerScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
 
@@ -204,6 +227,27 @@ public final class YabaiSettingsPaneView: NSView {
             bottomBar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             bottomBar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
         ])
+        managedViews = [contentStack, bottomBar]
+    }
+
+    public func updateManagementEnabled(_ enabled: Bool) {
+        // Finish editing before disabling, including an active table field editor.
+        if !enabled { window?.makeFirstResponder(nil) }
+        engine.manageYabaiConfig = enabled
+        managementCheck.state = enabled ? .on : .off
+        managementHint.isHidden = enabled
+        func update(_ view: NSView) {
+            (view as? NSControl)?.isEnabled = enabled
+            view.subviews.forEach(update)
+        }
+        managedViews.forEach(update)
+        tableView.reloadData()
+    }
+
+    @objc private func managementChanged() {
+        let enabled = managementCheck.state == .on
+        updateManagementEnabled(enabled)
+        onManagementChange(enabled)
     }
 
     /// One form row: a fixed-width right-aligned label next to its control, so all
@@ -256,6 +300,7 @@ public final class YabaiSettingsPaneView: NSView {
     // MARK: - Rules table actions
 
     @objc private func addRule() {
+        guard engine.manageYabaiConfig else { return }
         settings.rules.append(WindowRule(app: "NewApp", mode: .float))
         tableView.reloadData()
         let newRow = settings.rules.count - 1
@@ -264,6 +309,7 @@ public final class YabaiSettingsPaneView: NSView {
     }
 
     @objc private func removeRule() {
+        guard engine.manageYabaiConfig else { return }
         let row = tableView.selectedRow
         guard row >= 0, row < settings.rules.count else { return }
         settings.rules.remove(at: row)
@@ -273,6 +319,7 @@ public final class YabaiSettingsPaneView: NSView {
     // MARK: - Bottom bar actions
 
     @objc private func applyTapped() {
+        guard engine.manageYabaiConfig else { return }
         // End any in-progress field editing before reading values
         window?.makeFirstResponder(nil)
         flushFields()
@@ -286,6 +333,7 @@ public final class YabaiSettingsPaneView: NSView {
     }
 
     @objc private func editRawTapped() {
+        guard engine.manageYabaiConfig else { return }
         // `open -t` opens in the default GUI text editor (TextEdit, or whatever the
         // user set for the text role) instead of the file's default app — which for
         // dotfiles like ~/.yabairc is often a terminal editor.
@@ -301,6 +349,7 @@ public final class YabaiSettingsPaneView: NSView {
     }
 
     @objc private func importTapped() {
+        guard engine.manageYabaiConfig else { return }
         do {
             let n = try engine.importYabai()
             settings = engine.loadYabaiSettingsOrDefault()
@@ -313,6 +362,7 @@ public final class YabaiSettingsPaneView: NSView {
     }
 
     @objc private func resetTapped() {
+        guard engine.manageYabaiConfig else { return }
         settings = DefaultTemplate.defaultYabaiSettings()
         syncFields()
         // Do NOT auto-apply
@@ -364,6 +414,7 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
                 cell.action                  = #selector(appNameChanged(_:))
             }
             cell.stringValue = rule.app
+            cell.isEnabled = engine.manageYabaiConfig
             return cell
 
         } else if colID == "mode" {
@@ -381,6 +432,7 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
                 cell.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
             }
             cell.selectItem(at: Self.modes.firstIndex { $0.mode == rule.mode } ?? 0)
+            cell.isEnabled = engine.manageYabaiConfig
             return cell
         }
 
@@ -390,6 +442,7 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
     // MARK: Table cell actions
 
     @objc private func appNameChanged(_ sender: NSTextField) {
+        guard engine.manageYabaiConfig else { return }
         let row = tableView.row(for: sender)
         guard row >= 0, row < settings.rules.count else { return }
         settings.rules[row].app = sender.stringValue
@@ -401,6 +454,7 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
     ]
 
     @objc private func modeChanged(_ sender: NSPopUpButton) {
+        guard engine.manageYabaiConfig else { return }
         let row = tableView.row(for: sender)
         guard row >= 0, row < settings.rules.count else { return }
         guard Self.modes.indices.contains(sender.indexOfSelectedItem) else { return }

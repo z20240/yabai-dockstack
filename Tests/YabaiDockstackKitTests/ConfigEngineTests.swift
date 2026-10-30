@@ -2,6 +2,73 @@ import XCTest
 @testable import YabaiDockstackKit
 
 final class ConfigEngineTests: XCTestCase {
+    func testSkhdManagementOffPreventsCreationImportAndReload() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let s = dir.appendingPathComponent("skhdrc").path
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: s + ".y", skhdConfigPath: s, scriptsDir: "/S")
+        XCTAssertFalse(e.manageSkhdConfig)
+        XCTAssertThrowsError(try e.saveSkhd([]))
+        XCTAssertThrowsError(try e.importSkhd())
+        XCTAssertFalse(e.applySkhd().ok)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
+
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let original = "cmd - b : yabai -m space --balance\n"
+        try original.write(toFile: s, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try e.saveSkhd([]))
+        XCTAssertThrowsError(try e.importSkhd())
+        XCTAssertEqual(try String(contentsOfFile: s, encoding: .utf8), original)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: s + ".bak"))
+        e.manageYabaiConfig = true
+        try e.saveYabai(.defaults)
+        XCTAssertFalse(e.manageSkhdConfig)
+
+        e.manageSkhdConfig = true
+        XCTAssertEqual(try e.importSkhd(), 1)
+        XCTAssertTrue(e.applySkhd().ok)
+        let managed = try String(contentsOfFile: s, encoding: .utf8)
+        e.manageSkhdConfig = false
+        XCTAssertThrowsError(try e.saveSkhd([]))
+        XCTAssertThrowsError(try e.importSkhd())
+        XCTAssertEqual(try String(contentsOfFile: s, encoding: .utf8), managed)
+        XCTAssertTrue(e.loadBindings().contains { $0.enabled })
+    }
+    func testYabaiManagementOffPreventsCreationImportAndRestart() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let y = dir.appendingPathComponent("yabairc").path
+        let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                             yabaiConfigPath: y, skhdConfigPath: y + ".s", scriptsDir: "/S")
+        XCTAssertFalse(e.manageYabaiConfig)
+        XCTAssertThrowsError(try e.saveYabai(.defaults))
+        XCTAssertThrowsError(try e.importYabai())
+        XCTAssertFalse(e.applyYabai().ok, "Must not run even a successful restart command")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
+
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let original = "yabai -m config window_gap 7\n"
+        try original.write(toFile: y, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try e.saveYabai(.defaults))
+        XCTAssertThrowsError(try e.importYabai())
+        XCTAssertEqual(try String(contentsOfFile: y, encoding: .utf8), original)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: y + ".bak"))
+        // The options are independent; keyboard configuration can be opted in separately.
+        e.manageSkhdConfig = true
+        try e.saveSkhd([])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: y + ".s"))
+
+        e.manageYabaiConfig = true
+        XCTAssertEqual(try e.importYabai(), 1)
+        XCTAssertTrue(e.applyYabai().ok)
+        let managed = try String(contentsOfFile: y, encoding: .utf8)
+        e.manageYabaiConfig = false
+        XCTAssertThrowsError(try e.saveYabai(.defaults))
+        XCTAssertThrowsError(try e.importYabai())
+        XCTAssertEqual(try String(contentsOfFile: y, encoding: .utf8), managed)
+        XCTAssertEqual(e.loadYabaiSettings().gap, 7, "Disabling management must preserve existing content")
+    }
     private func engine(_ yPath: String, _ sPath: String) -> ConfigEngine {
         ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true",
                      yabaiConfigPath: yPath, skhdConfigPath: sPath, scriptsDir: "/S")
@@ -11,6 +78,7 @@ final class ConfigEngineTests: XCTestCase {
         let y = NSTemporaryDirectory() + "yst-eng-y-\(UUID().uuidString).rc"
         let e = engine(y, y + ".s")
         var s = DefaultTemplate.defaultYabaiSettings(); s.gap = 17
+        e.manageYabaiConfig = true
         try e.saveYabai(s)
         XCTAssertEqual(e.loadYabaiSettings().gap, 17)
         try? FileManager.default.removeItem(atPath: y)
@@ -19,6 +87,7 @@ final class ConfigEngineTests: XCTestCase {
     func testLoadBindingsReturnsRowPerCatalogAction() throws {
         let s = NSTemporaryDirectory() + "yst-eng-s-\(UUID().uuidString).rc"
         let e = engine(s + ".y", s)
+        e.manageSkhdConfig = true
         try e.saveSkhd([ShortcutBinding(actionID: "balance", enabled: true,
                                         hotkey: Hotkey(mods: [.alt, .cmd], key: "0x2A"))])
         let loaded = e.loadBindings()
@@ -47,6 +116,7 @@ final class ConfigEngineTests: XCTestCase {
         let e = ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true",
                              yabaiConfigPath: y, skhdConfigPath: y + ".s", scriptsDir: "/S")
         var s = YabaiSettings.defaults; s.gap = 99; s.rules = []
+        e.manageYabaiConfig = true
         try e.saveYabai(s)
         XCTAssertTrue(e.hasYabaiRegion())
         XCTAssertEqual(e.loadYabaiSettingsOrDefault().gap, 99)
@@ -58,6 +128,7 @@ final class ConfigEngineTests: XCTestCase {
         let s = NSTemporaryDirectory() + "yst-eng-skreg-\(UUID().uuidString).rc"
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: s + ".y", skhdConfigPath: s, scriptsDir: "/S")
+        e.manageSkhdConfig = true
         try e.saveSkhd([ShortcutBinding(actionID: "balance", enabled: true,
                                         hotkey: Hotkey(mods: [.alt, .cmd], key: "0x2A"))])
         XCTAssertTrue(e.hasSkhdRegion())
@@ -76,6 +147,7 @@ final class ConfigEngineTests: XCTestCase {
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p + ".y", skhdConfigPath: p,
                              scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+        e.manageSkhdConfig = true
         let n = try e.importSkhd()
         XCTAssertEqual(n, 1)
         let text = try String(contentsOfFile: p, encoding: .utf8)
@@ -93,6 +165,7 @@ final class ConfigEngineTests: XCTestCase {
         try "cmd - z : my-own-thing\n".write(toFile: p, atomically: true, encoding: .utf8)
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p + ".y", skhdConfigPath: p, scriptsDir: "/S")
+        e.manageSkhdConfig = true
         XCTAssertEqual(try e.importSkhd(), 0)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertNil(ManagedRegion.extract(from: text))  // nothing imported -> file unchanged, no region
@@ -106,6 +179,7 @@ final class ConfigEngineTests: XCTestCase {
             .write(toFile: p, atomically: true, encoding: .utf8)
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p, skhdConfigPath: p + ".s", scriptsDir: "/S")
+        e.manageYabaiConfig = true
         XCTAssertEqual(try e.importYabai(), 2)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertTrue(text.contains("# [yabai-dockstack imported] yabai -m config window_gap 7"))
@@ -123,8 +197,10 @@ final class ConfigEngineTests: XCTestCase {
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p + ".y", skhdConfigPath: p,
                              scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+        e.manageSkhdConfig = true
         XCTAssertEqual(try e.importSkhd(), 1)
         let after1 = try String(contentsOfFile: p, encoding: .utf8)
+        e.manageSkhdConfig = true
         XCTAssertEqual(try e.importSkhd(), 0)                 // nothing left to import
         let after2 = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertEqual(after1, after2)                        // file byte-stable, no double-comment
@@ -139,6 +215,7 @@ final class ConfigEngineTests: XCTestCase {
         try original.write(toFile: p, atomically: true, encoding: .utf8)
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: p + ".y", skhdConfigPath: p, scriptsDir: "/S")
+        e.manageSkhdConfig = true
         XCTAssertThrowsError(try e.importSkhd())
         XCTAssertEqual(try String(contentsOfFile: p, encoding: .utf8), original)  // file untouched
         try? FileManager.default.removeItem(atPath: p)

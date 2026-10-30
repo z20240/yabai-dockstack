@@ -71,7 +71,9 @@ public enum YabaiDockstack {
         let skhdRcPath = ConfigPaths.resolve(candidates: ConfigPaths.skhdCandidates)
         let configEngine = ConfigEngine(yabaiPath: resolvedYabai, skhdPath: skhdPath,
                                         yabaiConfigPath: yabaiRcPath, skhdConfigPath: skhdRcPath,
-                                        scriptsDir: ConfigPaths.scriptsDir)
+                                        scriptsDir: ConfigPaths.scriptsDir,
+                                        manageYabaiConfig: config.manageYabaiConfig,
+                                        manageSkhdConfig: config.manageSkhdConfig)
 
         // Write a default config file on first run so it's discoverable/editable.
         let expandedConfig = (configPath as NSString).expandingTildeInPath
@@ -90,8 +92,12 @@ public enum YabaiDockstack {
         // One-time migration for existing users: pull recognizable hand-written bindings
         // into the managed region. No region yet => first run; the import writes only if it
         // actually matched something, so clean users' rc files stay untouched. Never auto-applies.
-        if !configEngine.hasYabaiRegion() { _ = try? configEngine.importYabai() }
-        if !configEngine.hasSkhdRegion()  { _ = try? configEngine.importSkhd()  }
+        if configEngine.manageYabaiConfig && !configEngine.hasYabaiRegion() {
+            _ = try? configEngine.importYabai()
+        }
+        if configEngine.manageSkhdConfig && !configEngine.hasSkhdRegion() {
+            _ = try? configEngine.importSkhd()
+        }
 
         // Dock window previews (gated; needs Accessibility + Screen Recording).
         let thumbCache = ThumbnailCache()
@@ -263,6 +269,8 @@ public enum YabaiDockstack {
             config: config,
             onChange: { newConfig in
                 config = newConfig
+                configEngine.manageYabaiConfig = config.manageYabaiConfig
+                configEngine.manageSkhdConfig = config.manageSkhdConfig
                 // Re-resolve the yabai path (blank field → auto-detect) and apply
                 // it live to the shared client, then re-register signals.
                 let resolved = YabaiLocator.resolve(configuredPath: config.yabaiPath) ?? config.yabaiPath

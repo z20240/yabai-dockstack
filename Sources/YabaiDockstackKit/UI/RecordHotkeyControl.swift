@@ -5,6 +5,13 @@ import AppKit
 public final class RecordHotkeyControl: NSView {
     public var hotkey: Hotkey? { didSet { refreshTitle() } }
     public var onChange: ((Hotkey?) -> Void)?
+    public var isEnabled = true {
+        didSet {
+            if !isEnabled { stopRecording() }
+            button.isEnabled = isEnabled
+            clearButton.isEnabled = isEnabled
+        }
+    }
 
     private let button = NSButton()
     private let clearButton = NSButton()
@@ -49,6 +56,7 @@ public final class RecordHotkeyControl: NSView {
     }
 
     @objc private func toggleRecording() {
+        guard isEnabled else { return }
         recording ? stopRecording() : startRecording()
     }
 
@@ -80,6 +88,7 @@ public final class RecordHotkeyControl: NSView {
     }
 
     @objc private func clear() {
+        guard isEnabled else { return }
         hotkey = nil
         onChange?(nil)
     }

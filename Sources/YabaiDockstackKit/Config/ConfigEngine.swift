@@ -1,11 +1,16 @@
 import Foundation
 
 public final class ConfigEngine {
+    public var manageYabaiConfig: Bool
+    public var manageSkhdConfig: Bool
     private let yabaiPath, skhdPath, scriptsDir: String
     private let yabaiWriter, skhdWriter: ConfigFileWriter
 
     public init(yabaiPath: String, skhdPath: String,
-                yabaiConfigPath: String, skhdConfigPath: String, scriptsDir: String) {
+                yabaiConfigPath: String, skhdConfigPath: String, scriptsDir: String,
+                manageYabaiConfig: Bool = false, manageSkhdConfig: Bool = false) {
+        self.manageYabaiConfig = manageYabaiConfig
+        self.manageSkhdConfig = manageSkhdConfig
         self.yabaiPath = yabaiPath; self.skhdPath = skhdPath; self.scriptsDir = scriptsDir
         self.yabaiWriter = ConfigFileWriter(path: yabaiConfigPath)
         self.skhdWriter = ConfigFileWriter(path: skhdConfigPath)
@@ -28,10 +33,12 @@ public final class ConfigEngine {
     }
 
     public func saveYabai(_ settings: YabaiSettings) throws {
+        try requireYabaiManagement()
         try yabaiWriter.writeManagedRegion(YabaiManagedConfig.generate(settings))
     }
 
     public func saveSkhd(_ bindings: [ShortcutBinding]) throws {
+        try requireSkhdManagement()
         try skhdWriter.writeManagedRegion(
             SkhdManagedConfig.generate(bindings, catalog: ShortcutCatalog.all, scriptsDir: scriptsDir))
     }
@@ -48,6 +55,7 @@ public final class ConfigEngine {
     }
 
     public func importSkhd() throws -> Int {
+        try requireSkhdManagement()
         let existing = skhdWriter.currentText()
         guard !ManagedRegion.hasMalformedMarkers(in: existing) else {
             throw NSError(domain: "ConfigEngine", code: 3, userInfo: [NSLocalizedDescriptionKey:
@@ -62,6 +70,7 @@ public final class ConfigEngine {
     }
 
     public func importYabai() throws -> Int {
+        try requireYabaiManagement()
         let existing = yabaiWriter.currentText()
         guard !ManagedRegion.hasMalformedMarkers(in: existing) else {
             throw NSError(domain: "ConfigEngine", code: 3, userInfo: [NSLocalizedDescriptionKey:
@@ -74,9 +83,23 @@ public final class ConfigEngine {
     }
 
     public func applyYabai() -> (ok: Bool, output: String) {
-        ConfigApplier.run(yabaiPath, ["--restart-service"])
+        guard manageYabaiConfig else { return (false, L10n.t("ui.yabai.managementHint")) }
+        return ConfigApplier.run(yabaiPath, ["--restart-service"])
+    }
+    private func requireYabaiManagement() throws {
+        guard manageYabaiConfig else {
+            throw NSError(domain: "ConfigEngine", code: 4, userInfo: [
+                NSLocalizedDescriptionKey: L10n.t("ui.yabai.managementHint")])
+        }
     }
     public func applySkhd() -> (ok: Bool, output: String) {
-        ConfigApplier.run(skhdPath, ["--reload"])
+        guard manageSkhdConfig else { return (false, L10n.t("ui.keyboard.managementHint")) }
+        return ConfigApplier.run(skhdPath, ["--reload"])
+    }
+    private func requireSkhdManagement() throws {
+        guard manageSkhdConfig else {
+            throw NSError(domain: "ConfigEngine", code: 5, userInfo: [
+                NSLocalizedDescriptionKey: L10n.t("ui.keyboard.managementHint")])
+        }
     }
 }

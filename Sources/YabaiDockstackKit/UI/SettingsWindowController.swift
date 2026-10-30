@@ -6,6 +6,8 @@ import UniformTypeIdentifiers
 public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var tabView: NSTabView?
+    private weak var yabaiPane: YabaiSettingsPaneView?
+    private weak var shortcutsPane: ShortcutsPaneView?
 
     /// Select a tab by index (0=Appearance, 1=yabai, 2=Keyboard, 3=Switcher). Builds the window first.
     public func selectTab(at index: Int) {
@@ -63,6 +65,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// The search switcher's skhd binding (catalog action open-window-switcher),
     /// the same one the Keyboard tab edits.
     private let switcherSearchRecorder = RecordHotkeyControl(frame: .zero)
+    private let switcherSearchHint = NSTextField(wrappingLabelWithString: "")
     private let switcherAllRecorder = RecordHotkeyControl(frame: .zero)
     private let switcherAppRecorder = RecordHotkeyControl(frame: .zero)
     private let switcherSpaceRecorder = RecordHotkeyControl(frame: .zero)
@@ -106,6 +109,10 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     public func updateConfig(_ config: AppConfig) {
         self.config = config
+        configEngine?.manageYabaiConfig = config.manageYabaiConfig
+        configEngine?.manageSkhdConfig = config.manageSkhdConfig
+        yabaiPane?.updateManagementEnabled(config.manageYabaiConfig)
+        shortcutsPane?.updateManagementEnabled(config.manageSkhdConfig)
         if window != nil { syncControls() }
     }
 
@@ -249,7 +256,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         wireRecorder(switcherAppRecorder, \.switcherHotkeyApp)
         wireRecorder(switcherSpaceRecorder, \.switcherHotkeySpace)
         switcherSearchRecorder.onChange = { [weak self] hk in
-            guard let engine = self?.configEngine else { return }
+            guard let engine = self?.configEngine, engine.manageSkhdConfig else { return }
             let bindings = ShortcutBindings.setting(engine.loadBindingsOrDefault(),
                                                     action: "open-window-switcher", hotkey: hk)
             do {
@@ -326,6 +333,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             String(format: L10n.t("ui.appearance.menuHoverHelp"), $0.displayString)
         } ?? ""
         switcherSearchRecorder.hotkey = boundKey("open-window-switcher")
+        syncSkhdManagementControls()
         loginCheck.title = L10n.t("ui.appearance.login")
 
         yabaiPathField.placeholderString = L10n.t("ui.appearance.autoDetect")
@@ -409,7 +417,14 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         let yabaiItem = NSTabViewItem()
         yabaiItem.label = L10n.t("ui.tab.yabai")
         if let engine = configEngine {
-            yabaiItem.view = YabaiSettingsPaneView(engine: engine, rawFilePath: yabaiRawPath ?? "")
+            engine.manageYabaiConfig = config.manageYabaiConfig
+            let pane = YabaiSettingsPaneView(engine: engine, rawFilePath: yabaiRawPath ?? "") { [weak self] enabled in
+                guard let self else { return }
+                self.config.manageYabaiConfig = enabled
+                self.onChange(self.config)
+            }
+            yabaiPane = pane
+            yabaiItem.view = pane
         } else {
             yabaiItem.view = makePlaceholder(L10n.t("ui.yabai.notConfigured"))
         }
@@ -418,7 +433,15 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         let keyboardItem = NSTabViewItem()
         keyboardItem.label = L10n.t("ui.tab.keyboard")
         if let engine = configEngine {
-            keyboardItem.view = ShortcutsPaneView(engine: engine, rawFilePath: skhdRawPath ?? "")
+            engine.manageSkhdConfig = config.manageSkhdConfig
+            let pane = ShortcutsPaneView(engine: engine, rawFilePath: skhdRawPath ?? "") { [weak self] enabled in
+                guard let self else { return }
+                self.config.manageSkhdConfig = enabled
+                self.syncSkhdManagementControls()
+                self.onChange(self.config)
+            }
+            shortcutsPane = pane
+            keyboardItem.view = pane
         } else {
             keyboardItem.view = makePlaceholder(L10n.t("ui.keyboard.notConfigured"))
         }
@@ -464,6 +487,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             row(L10n.t("ui.switcher.hotkeyApp"), switcherAppRecorder),
             row(L10n.t("ui.switcher.hotkeySpace"), switcherSpaceRecorder),
             row(L10n.t("ui.switcher.hotkeySearch"), switcherSearchRecorder),
+            [NSGridCell.emptyContentView, switcherSearchHint],
             [NSGridCell.emptyContentView, switcherCmdTabCheck],
             [NSGridCell.emptyContentView, spacesFocusDestinationCheck],
             [NSGridCell.emptyContentView, spacesWallpaperCheck],
@@ -573,6 +597,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private func syncControls() {
+        syncSkhdManagementControls()
         let langIndex = Self.languageOrder.firstIndex(of: AppLanguage(rawValue: config.language) ?? .auto) ?? 0
         languagePopup.selectItem(at: langIndex)
         stylePopup.selectItem(at: config.style == .flag ? 1 : 0)
@@ -623,6 +648,15 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     // MARK: - Actions
+
+    private func syncSkhdManagementControls() {
+        switcherSearchRecorder.isEnabled = config.manageSkhdConfig
+        switcherSearchHint.stringValue = L10n.t("ui.keyboard.managementHint")
+        switcherSearchHint.font = .systemFont(ofSize: 11)
+        switcherSearchHint.preferredMaxLayoutWidth = 300
+        switcherSearchHint.textColor = .secondaryLabelColor
+        switcherSearchHint.isHidden = config.manageSkhdConfig
+    }
 
     @objc private func changed() {
         config.style = stylePopup.indexOfSelectedItem == 1 ? .flag : .icon

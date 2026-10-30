@@ -202,6 +202,17 @@ open yabai-dockstack.app
 
 ### First launch
 
+Dockstack leaves your `yabairc` untouched by default. To manage layouts, padding,
+gaps, or window rules from Settings → yabai, enable **Allow dockstack to edit yabairc**.
+The controls below it stay disabled until you opt in. Turning it off stops future
+edits and automatic imports; it preserves any existing managed section.
+
+The Keyboard tab has a separate **Allow dockstack to edit skhdrc** option, also
+off by default. Enable it to import or edit skhd shortcuts, including the search
+switcher shortcut on the Switcher tab. Turning it off preserves existing shortcuts
+and blocks future file edits. Hold-to-cycle shortcuts stored in dockstack's own
+settings and runtime automatic padding work independently of both options.
+
 On launch the app:
 
 - **auto-detects** the yabai binary (Homebrew Apple Silicon / Intel / nix, then `which`);

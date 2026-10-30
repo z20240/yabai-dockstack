@@ -10,6 +10,10 @@ public final class ShortcutsPaneView: NSView {
     private let engine: ConfigEngine
     private let rawFilePath: String
     private var bindings: [ShortcutBinding]
+    private let onManagementChange: (Bool) -> Void
+    private let managementCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let managementHint = NSTextField(wrappingLabelWithString: "")
+    private var managedViews: [NSView] = []
 
     // Per-actionID refs for cheap refreshConflicts() updates
     private var titleLabels: [String: NSTextField] = [:]
@@ -33,12 +37,15 @@ public final class ShortcutsPaneView: NSView {
 
     // MARK: - Init
 
-    public init(engine: ConfigEngine, rawFilePath: String) {
+    public init(engine: ConfigEngine, rawFilePath: String,
+                onManagementChange: @escaping (Bool) -> Void = { _ in }) {
+        self.onManagementChange = onManagementChange
         self.engine = engine
         self.rawFilePath = rawFilePath
         self.bindings = engine.loadBindingsOrDefault()
         super.init(frame: .zero)
         buildUI()
+        updateManagementEnabled(engine.manageSkhdConfig)
     }
 
     public required init?(coder: NSCoder) { fatalError("init(coder:) not implemented") }
@@ -46,6 +53,18 @@ public final class ShortcutsPaneView: NSView {
     // MARK: - UI Setup
 
     private func buildUI() {
+        managementCheck.title = L10n.t("ui.keyboard.manageConfig")
+        managementCheck.target = self
+        managementCheck.action = #selector(managementChanged)
+        managementHint.stringValue = L10n.t("ui.keyboard.managementHint")
+        managementHint.font = .systemFont(ofSize: 11)
+        managementHint.textColor = .secondaryLabelColor
+        let managementHeader = NSStackView(views: [managementCheck, managementHint])
+        managementHeader.orientation = .vertical
+        managementHeader.alignment = .leading
+        managementHeader.spacing = 6
+        managementHeader.translatesAutoresizingMaskIntoConstraints = false
+        managementHint.widthAnchor.constraint(equalTo: managementHeader.widthAnchor).isActive = true
         // Vertical stack that holds section headers + row views
         listStack = NSStackView()
         listStack.orientation = .vertical
@@ -100,13 +119,17 @@ public final class ShortcutsPaneView: NSView {
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
 
+        addSubview(managementHeader)
         addSubview(scrollView)
         addSubview(separator)
         addSubview(bottomBar)
 
         NSLayoutConstraint.activate([
             // Scroll view fills top portion
-            scrollView.topAnchor.constraint(equalTo: topAnchor),
+            managementHeader.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            managementHeader.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            managementHeader.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            scrollView.topAnchor.constraint(equalTo: managementHeader.bottomAnchor, constant: 8),
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
             // Separator between scroll area and button bar
@@ -119,6 +142,27 @@ public final class ShortcutsPaneView: NSView {
             bottomBar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             bottomBar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
         ])
+        managedViews = [listStack, bottomBar]
+    }
+
+    public func updateManagementEnabled(_ enabled: Bool) {
+        // Stop active editing and shortcut recording when management is disabled.
+        if !enabled { window?.makeFirstResponder(nil) }
+        engine.manageSkhdConfig = enabled
+        managementCheck.state = enabled ? .on : .off
+        managementHint.isHidden = enabled
+        func update(_ view: NSView) {
+            (view as? RecordHotkeyControl)?.isEnabled = enabled
+            (view as? NSControl)?.isEnabled = enabled
+            view.subviews.forEach(update)
+        }
+        managedViews.forEach(update)
+    }
+
+    @objc private func managementChanged() {
+        let enabled = managementCheck.state == .on
+        updateManagementEnabled(enabled)
+        onManagementChange(enabled)
     }
 
     // MARK: - List Building
@@ -164,6 +208,7 @@ public final class ShortcutsPaneView: NSView {
 
         // Enable / disable checkbox
         let checkbox = NSButton(checkboxWithTitle: "", target: self, action: #selector(checkboxChanged(_:)))
+        checkbox.isEnabled = engine.manageSkhdConfig
         checkbox.state = row.binding.enabled ? .on : .off
         checkbox.identifier = NSUserInterfaceItemIdentifier(actionID)
         checkboxes[actionID] = checkbox
@@ -192,9 +237,10 @@ public final class ShortcutsPaneView: NSView {
 
         // Hotkey recorder
         let recorder = RecordHotkeyControl(frame: .zero)
+        recorder.isEnabled = engine.manageSkhdConfig
         recorder.hotkey = row.binding.hotkey
         recorder.onChange = { [weak self] newHotkey in
-            guard let self else { return }
+            guard let self, self.engine.manageSkhdConfig else { return }
             guard let idx = self.bindings.firstIndex(where: { $0.actionID == actionID }) else { return }
             self.bindings[idx].hotkey = newHotkey
             if newHotkey != nil {
@@ -230,6 +276,7 @@ public final class ShortcutsPaneView: NSView {
     // MARK: - Bottom Bar Actions
 
     @objc private func checkboxChanged(_ sender: NSButton) {
+        guard engine.manageSkhdConfig else { return }
         guard let actionID = sender.identifier?.rawValue,
               let idx = bindings.firstIndex(where: { $0.actionID == actionID }) else { return }
         bindings[idx].enabled = sender.state == .on
@@ -237,6 +284,7 @@ public final class ShortcutsPaneView: NSView {
     }
 
     @objc private func applyTapped() {
+        guard engine.manageSkhdConfig else { return }
         do {
             try engine.saveSkhd(bindings)
             let r = engine.applySkhd()
@@ -247,6 +295,7 @@ public final class ShortcutsPaneView: NSView {
     }
 
     @objc private func editRawTapped() {
+        guard engine.manageSkhdConfig else { return }
         // `open -t` opens in the default GUI text editor (TextEdit, or whatever the
         // user set for the text role) instead of the file's default app — which for
         // dotfiles like ~/.skhdrc is often a terminal editor.
@@ -262,6 +311,7 @@ public final class ShortcutsPaneView: NSView {
     }
 
     @objc private func importTapped() {
+        guard engine.manageSkhdConfig else { return }
         do {
             let n = try engine.importSkhd()
             bindings = engine.loadBindingsOrDefault()
@@ -273,6 +323,7 @@ public final class ShortcutsPaneView: NSView {
     }
 
     @objc private func resetTapped() {
+        guard engine.manageSkhdConfig else { return }
         bindings = DefaultTemplate.defaultBindings()
         buildList()
         // Do NOT auto-apply — user must press Apply

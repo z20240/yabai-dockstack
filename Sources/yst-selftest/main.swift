@@ -351,8 +351,10 @@ try? FileManager.default.removeItem(atPath: engY)
 let eng = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                        yabaiConfigPath: engY, skhdConfigPath: engY + ".s", scriptsDir: "/S")
 var es = DefaultTemplate.defaultYabaiSettings(); es.gap = 17
+eng.manageYabaiConfig = true
 try? eng.saveYabai(es)
 check(eng.loadYabaiSettings().gap == 17, "engine yabai round-trip")
+eng.manageSkhdConfig = true
 try? eng.saveSkhd([ShortcutBinding(actionID: "balance", enabled: true, hotkey: Hotkey(mods: [.alt, .cmd], key: "0x2A"))])
 let lb = eng.loadBindings()
 check(lb.count == ShortcutCatalog.all.count, "loadBindings returns a row per action")
@@ -447,6 +449,7 @@ check(ed.hasYabaiRegion() == false, "no yabai region on fresh file")
 check(ed.loadYabaiSettingsOrDefault().rules.contains { $0.app == "Finder" }, "or-default uses curated yabai default")
 check(ed.loadBindingsOrDefault().allSatisfy { $0.enabled }, "or-default bindings all enabled")
 var eds = YabaiSettings.defaults; eds.gap = 99
+ed.manageYabaiConfig = true
 try? ed.saveYabai(eds)
 check(ed.hasYabaiRegion() == true, "region present after save")
 check(ed.loadYabaiSettingsOrDefault().gap == 99, "or-default uses region when present")
@@ -512,6 +515,7 @@ try? "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n".write(toF
 let impE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                         yabaiConfigPath: impP + ".y", skhdConfigPath: impP,
                         scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+impE.manageSkhdConfig = true
 check((try? impE.importSkhd()) == 1, "engine importSkhd migrates one binding")
 let impText = (try? String(contentsOfFile: impP, encoding: .utf8)) ?? ""
 check(impText.contains("# [yabai-dockstack imported] cmd - f3:"), "engine import comments original")
@@ -527,6 +531,7 @@ try? FileManager.default.removeItem(atPath: impY)
 try? "yabai -m config window_gap 7\n".write(toFile: impY, atomically: true, encoding: .utf8)
 let impYE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                          yabaiConfigPath: impY, skhdConfigPath: impY + ".s", scriptsDir: "/S")
+impYE.manageYabaiConfig = true
 check((try? impYE.importYabai()) == 1, "engine importYabai migrates one setting")
 check(impYE.loadYabaiSettings().gap == 7, "engine importYabai: gap reflects imported value")
 try? FileManager.default.removeItem(atPath: impY)
@@ -537,6 +542,7 @@ try? "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n".write(toF
 let idemE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                          yabaiConfigPath: idemP + ".y", skhdConfigPath: idemP,
                          scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+idemE.manageSkhdConfig = true
 _ = try? idemE.importSkhd()
 check((try? idemE.importSkhd()) == 0, "importSkhd idempotent (second run imports nothing)")
 try? FileManager.default.removeItem(atPath: idemP)

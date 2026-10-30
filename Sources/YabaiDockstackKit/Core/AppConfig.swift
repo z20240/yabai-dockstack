@@ -4,6 +4,10 @@ public enum IndicatorStyle: String, Codable { case icon, flag }
 
 public struct AppConfig: Codable, Equatable {
     public var yabaiPath: String
+    /// Opt in to importing and writing the user's yabairc. Off for new and existing configs.
+    public var manageYabaiConfig: Bool
+    /// Opt in to importing and writing skhdrc, including shortcut edits.
+    public var manageSkhdConfig: Bool
     public var socketPath: String
     public var style: IndicatorStyle
     public var cellSize: Double
@@ -78,6 +82,8 @@ public struct AppConfig: Codable, Equatable {
 
     public static let defaults = AppConfig(
         yabaiPath: "/opt/homebrew/bin/yabai",
+        manageYabaiConfig: false,
+        manageSkhdConfig: false,
         socketPath: "/tmp/yabai-dockstack.sock",
         style: .icon, cellSize: 32, offset: 4,
         focusedAlpha: 1.0, unfocusedAlpha: 0.4,

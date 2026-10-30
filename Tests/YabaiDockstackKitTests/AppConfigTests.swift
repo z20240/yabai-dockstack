@@ -2,6 +2,28 @@ import XCTest
 @testable import YabaiDockstackKit
 
 final class AppConfigTests: XCTestCase {
+    func testSkhdManagementRequiresExplicitOptInAndPersistsIndependently() throws {
+        XCTAssertFalse(AppConfig.defaults.manageSkhdConfig)
+        XCTAssertFalse(AppConfig.load(from: nil).manageSkhdConfig)
+        XCTAssertFalse(AppConfig.load(from: Data(#"{"manageYabaiConfig":true}"#.utf8)).manageSkhdConfig)
+        var config = AppConfig.defaults
+        config.manageSkhdConfig = true
+        let loaded = AppConfig.load(from: try JSONEncoder().encode(config))
+        XCTAssertTrue(loaded.manageSkhdConfig)
+        XCTAssertFalse(loaded.manageYabaiConfig)
+        config.manageSkhdConfig = false
+        XCTAssertFalse(AppConfig.load(from: try JSONEncoder().encode(config)).manageSkhdConfig)
+    }
+    func testYabaiManagementRequiresExplicitOptInAndPersists() throws {
+        XCTAssertFalse(AppConfig.defaults.manageYabaiConfig)
+        XCTAssertFalse(AppConfig.load(from: nil).manageYabaiConfig)
+        XCTAssertFalse(AppConfig.load(from: Data(#"{"cellSize":24}"#.utf8)).manageYabaiConfig)
+        var config = AppConfig.defaults
+        config.manageYabaiConfig = true
+        XCTAssertTrue(AppConfig.load(from: try JSONEncoder().encode(config)).manageYabaiConfig)
+        config.manageYabaiConfig = false
+        XCTAssertFalse(AppConfig.load(from: try JSONEncoder().encode(config)).manageYabaiConfig)
+    }
     func testDefaultsWhenNil() {
         let c = AppConfig.load(from: nil)
         XCTAssertEqual(c.style, .icon)
