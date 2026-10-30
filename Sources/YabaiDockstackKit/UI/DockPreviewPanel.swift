@@ -60,15 +60,15 @@ public final class DockPreviewPanel {
                                    onClose: onClose == nil ? nil : { [weak self] id in self?.onClose?(id) })
             content.addSubview(cell)
         }
-        let effect = NSVisualEffectView(frame: CGRect(origin: .zero, size: frame.size))
+        let shell = RoundedPanelView(frame: CGRect(origin: .zero, size: frame.size), radius: 16)
+        let effect = NSVisualEffectView(frame: shell.bounds)
+        effect.autoresizingMask = [.width, .height]
         effect.material = .hudWindow
         effect.blendingMode = .behindWindow
         effect.state = .active
-        effect.wantsLayer = true
-        effect.layer?.cornerRadius = 16
-        effect.layer?.masksToBounds = true
         effect.addSubview(content)
-        p.contentView = effect
+        shell.addSubview(effect)
+        p.contentView = shell
         p.orderFrontRegardless()
         panel = p
         currentFrame = frame
