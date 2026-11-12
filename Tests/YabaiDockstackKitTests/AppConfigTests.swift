@@ -116,4 +116,26 @@ final class AppConfigTests: XCTestCase {
     func testWindowStripDefaultsOff() {
         XCTAssertFalse(AppConfig.load(from: #"{"style":"flag"}"#.data(using: .utf8)).windowStrip)
     }
+
+    func testMigrationEnablesOnlyWhenKeyAbsentAndRegionExists() {
+        var c = AppConfig.load(from: Data(#"{"cellSize":24}"#.utf8))
+        let keys = AppConfig.presentKeys(in: Data(#"{"cellSize":24}"#.utf8))
+        XCTAssertTrue(c.migrateManagement(presentKeys: keys, hasYabaiRegion: true, hasSkhdRegion: false))
+        XCTAssertTrue(c.manageYabaiConfig); XCTAssertFalse(c.manageSkhdConfig)
+    }
+    func testMigrationRespectsExplicitFalse() {
+        let d = Data(#"{"manageYabaiConfig":false,"manageSkhdConfig":false}"#.utf8)
+        var c = AppConfig.load(from: d)
+        XCTAssertFalse(c.migrateManagement(presentKeys: AppConfig.presentKeys(in: d), hasYabaiRegion: true, hasSkhdRegion: true))
+        XCTAssertFalse(c.manageYabaiConfig); XCTAssertFalse(c.manageSkhdConfig)
+    }
+    func testRcPathOverridesDefaultEmptyAndRoundTrip() throws {
+        XCTAssertEqual(AppConfig.defaults.yabaiRcPath, ""); XCTAssertEqual(AppConfig.defaults.skhdRcPath, "")
+        var c = AppConfig.defaults; c.yabaiRcPath = "/tmp/y"
+        XCTAssertEqual(AppConfig.load(from: try JSONEncoder().encode(c)).yabaiRcPath, "/tmp/y")
+    }
+    func testPresentKeysEmptyForNilOrInvalid() {
+        XCTAssertTrue(AppConfig.presentKeys(in: nil).isEmpty)
+        XCTAssertTrue(AppConfig.presentKeys(in: Data("nope".utf8)).isEmpty)
+    }
 }
