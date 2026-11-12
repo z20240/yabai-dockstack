@@ -30,13 +30,15 @@ public enum FreeformImporter {
         public var importedCount: Int
     }
 
+    /// True when the line starts with whitespace (inside an `if …; then` block or a
+    /// function, i.e. conditional). Such lines are never commented out: they are not
+    /// representable, and a then-block reduced to only a comment is a shell syntax error.
+    public static func isIndented(_ line: String) -> Bool {
+        line.first == " " || line.first == "\t"
+    }
+
     public static func importSkhd(fileText: String, current: [ShortcutBinding],
                                   catalog: [ShortcutAction], scriptsDir: String) -> SkhdImportResult {
-        var cmdToID: [String: String] = [:]
-        for a in catalog {
-            let resolved = a.command.replacingOccurrences(of: "${SCRIPTS}", with: scriptsDir)
-            cmdToID[normalizeCommand(resolved)] = a.id
-        }
         var bindings = current
         func setBinding(_ id: String, _ hk: Hotkey) {
             if let i = bindings.firstIndex(where: { $0.actionID == id }) {
@@ -45,17 +47,18 @@ public enum FreeformImporter {
                 bindings.append(ShortcutBinding(actionID: id, enabled: true, hotkey: hk))
             }
         }
+        // Same first-match classification as the panel (FaithfulSkhd), over the whole
+        // file: an action already bound earlier — including inside the managed region —
+        // isn't represented by a later hand-written line, so that line stays as it is.
+        let lines = fileText.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let roles = FaithfulSkhd.classify(lines, catalog: catalog, scriptsDir: scriptsDir)
         var out: [String] = []
         var count = 0
-        var seen = Set<String>()
         var inRegion = false
-        for raw in fileText.split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = String(raw)
+        for (line, role) in zip(lines, roles) {
             if ManagedRegion.isBeginMarker(line) { inRegion = true; out.append(line); continue }
             if ManagedRegion.isEndMarker(line)   { inRegion = false; out.append(line); continue }
-            if inRegion { out.append(line); continue }
-            if let (hk, cmd) = parseSkhdLine(line), let id = cmdToID[normalizeCommand(cmd)], !seen.contains(id) {
-                seen.insert(id)
+            if !inRegion, case .binding(let id, let hk) = role {
                 setBinding(id, hk)
                 out.append("# [yabai-dockstack imported] " + line)
                 count += 1
@@ -87,16 +90,22 @@ public enum FreeformImporter {
             if ManagedRegion.isEndMarker(line)   { inRegion = false; out.append(line); continue }
             if inRegion { out.append(line); continue }
 
-            let t = line.trimmingCharacters(in: .whitespaces)
+            // Indented = conditional (if-block / function): never commented out.
+            if isIndented(line) { out.append(line); continue }
             var imported = true
-            if let v = configValue(t, "layout"), let lay = YabaiSettings.Layout(rawValue: v), lay == .bsp || lay == .float {
-                s.layout = lay
-            } else if let v = intConfig(t, "top_padding")    { s.topPadding = v }
-            else if let v = intConfig(t, "bottom_padding")   { s.bottomPadding = v }
-            else if let v = intConfig(t, "left_padding")     { s.leftPadding = v }
-            else if let v = intConfig(t, "right_padding")    { s.rightPadding = v }
-            else if let v = intConfig(t, "window_gap")       { s.gap = v }
-            else if let r = YabaiRuleLine.parse(t) {
+            if let (key, v) = YabaiConfigLine.parse(line) {
+                switch (key, Int(v)) {
+                case ("layout", _):
+                    if let lay = YabaiSettings.Layout(rawValue: v), lay == .bsp || lay == .float { s.layout = lay }
+                    else { imported = false }
+                case ("top_padding", let n?):    s.topPadding = n
+                case ("bottom_padding", let n?): s.bottomPadding = n
+                case ("left_padding", let n?):   s.leftPadding = n
+                case ("right_padding", let n?):  s.rightPadding = n
+                case ("window_gap", let n?):     s.gap = n
+                default: imported = false
+                }
+            } else if let r = YabaiRuleLine.parse(line) {
                 if rulesByApp[r.app] == nil { order.append(r.app) }
                 rulesByApp[r.app] = r
             } else {
@@ -107,16 +116,5 @@ public enum FreeformImporter {
         }
         s.rules = order.compactMap { rulesByApp[$0] }
         return YabaiImportResult(settings: s, newText: out.joined(separator: "\n"), importedCount: count)
-    }
-
-    // "yabai -m config <key> <value>" -> value
-    private static func configValue(_ line: String, _ key: String) -> String? {
-        let prefix = "yabai -m config \(key) "
-        guard line.hasPrefix(prefix) else { return nil }
-        return line.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
-    }
-
-    private static func intConfig(_ line: String, _ key: String) -> Int? {
-        configValue(line, key).flatMap { Int($0) }
     }
 }

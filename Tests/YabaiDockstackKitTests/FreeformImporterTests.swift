@@ -185,3 +185,72 @@ final class YabaiRuleLineTests: XCTestCase {
         XCTAssertTrue(r.newText.contains("\ncmd - f4: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh"))
     }
 }
+
+// MARK: - Final review fixes
+
+extension FreeformImporterTests {
+
+    private static let scripts = "/Users/me/.config/yabai-dockstack/scripts"
+
+    /// I1: an action already bound inside the managed region is what FaithfulSkhd shows,
+    /// so a hand-written duplicate after the region must not be commented.
+    func testImportSkhdSkipsActionsAlreadyBoundInRegion() {
+        let region = ManagedRegion.replace(in: "", with: SkhdManagedConfig.generate(
+            [ShortcutBinding(actionID: "close-window", enabled: true, hotkey: Hotkey.parse("alt + cmd - backspace"))],
+            catalog: ShortcutCatalog.all, scriptsDir: Self.scripts))
+        let text = region + "alt - w : yabai -m window --close\n"
+        let r = FreeformImporter.importSkhd(fileText: text, current: [], catalog: ShortcutCatalog.all, scriptsDir: Self.scripts)
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertEqual(r.newText, text)
+        let v = FaithfulSkhd.parse(text, catalog: ShortcutCatalog.all, scriptsDir: Self.scripts)
+        XCTAssertEqual(v.bindings.first { $0.actionID == "close-window" }?.hotkey, Hotkey.parse("alt + cmd - backspace"))
+    }
+
+    /// I1: a line continuing the previous one (trailing backslash) is never a binding.
+    func testImportSkhdNeverCommentsContinuationLines() {
+        let text = "alt - r : \\\nalt - w : yabai -m window --close"
+        let r = FreeformImporter.importSkhd(fileText: text, current: [], catalog: ShortcutCatalog.all, scriptsDir: Self.scripts)
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertEqual(r.newText, text)
+    }
+
+    /// I4: trailing comments are handled the same way as YabaiFileState.
+    func testImportYabaiHandlesTrailingComment() {
+        let r = FreeformImporter.importYabai(fileText: "yabai -m config window_gap 6 # tight", current: .defaults)
+        XCTAssertEqual(r.importedCount, 1)
+        XCTAssertEqual(r.settings.gap, 6)
+        XCTAssertEqual(r.newText, "# [yabai-dockstack imported] yabai -m config window_gap 6 # tight")
+    }
+
+    /// I4: indented lines (if-blocks, functions) are never commented out.
+    func testImportYabaiNeverCommentsIndentedLines() {
+        let text = "if true; then\n  yabai -m config window_gap 6\n\tyabai -m rule --add app=\"A\" manage=off\nfi\nyabai -m config top_padding 3"
+        let r = FreeformImporter.importYabai(fileText: text, current: .defaults)
+        XCTAssertEqual(r.importedCount, 1)
+        XCTAssertEqual(r.settings.gap, YabaiSettings.defaults.gap)
+        XCTAssertEqual(r.newText, "if true; then\n  yabai -m config window_gap 6\n\tyabai -m rule --add app=\"A\" manage=off\nfi\n# [yabai-dockstack imported] yabai -m config top_padding 3")
+    }
+
+    func testImportSkhdNeverCommentsIndentedLines() {
+        let text = "  alt - w : yabai -m window --close"
+        let r = FreeformImporter.importSkhd(fileText: text, current: [], catalog: ShortcutCatalog.all, scriptsDir: Self.scripts)
+        XCTAssertEqual(r.importedCount, 0)
+        XCTAssertEqual(r.newText, text)
+        // Not represented by the panel either: it shows under "Other shortcuts".
+        let v = FaithfulSkhd.parse(text, catalog: ShortcutCatalog.all, scriptsDir: Self.scripts)
+        XCTAssertNil(v.bindings.first { $0.actionID == "close-window" }?.hotkey)
+        XCTAssertEqual(v.others, ["alt - w : yabai -m window --close"])
+    }
+
+    /// I4: one shared config-line classifier.
+    func testYabaiConfigLineParse() {
+        XCTAssertEqual(YabaiConfigLine.parse("yabai -m config window_gap 6 # tight")?.value, "6")
+        XCTAssertEqual(YabaiConfigLine.parse("yabai -m config window_gap 6\t# tight")?.key, "window_gap")
+        XCTAssertEqual(YabaiConfigLine.parse("yabai  -m\tconfig   layout\tbsp")?.value, "bsp")
+        XCTAssertEqual(YabaiConfigLine.parse("  yabai -m config layout bsp")?.value, "bsp")
+        XCTAssertNil(YabaiConfigLine.parse("yabai -m config window_gap"))
+        XCTAssertNil(YabaiConfigLine.parse("yabai -m config --space 2 window_gap 6"))
+        XCTAssertNil(YabaiConfigLine.parse("# yabai -m config window_gap 6"))
+        XCTAssertNil(YabaiConfigLine.parse("yabai -m rule --add app=\"A\" manage=off"))
+    }
+}
