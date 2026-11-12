@@ -23,7 +23,6 @@ public struct LiveRule: Equatable {
         let app = str(d, "app")
         let manage: Bool? = isNull(d, "manage") ? nil : (d["manage"] as? Bool)
         let sub = str(d, "sub-layer")
-        let catchAll = app == YabaiManagedConfig.floatCatchAllApp && manage == false
 
         var parts: [String] = []
         if !app.isEmpty { parts.append("app=\"\(app)\"") }
@@ -42,12 +41,15 @@ public struct LiveRule: Equatable {
         if (d["one-shot"] as? Bool) == true { parts.append("one-shot=on") }
         let summary = parts.joined(separator: " ")
 
-        let clean = ["title", "role", "subrole", "label", "scratchpad"].allSatisfy { str(d, $0).isEmpty }
+        // No condition or effect other than app / manage / sub-layer.
+        let onlyAppManageSub = ["title", "role", "subrole", "label", "scratchpad"].allSatisfy { str(d, $0).isEmpty }
             && num(d, "display") == 0 && num(d, "space") == 0 && num(d, "opacity") == 0
             && isNull(d, "sticky") && isNull(d, "mouse_follows_focus") && isNull(d, "native-fullscreen")
             && (grid.isEmpty || grid == "0:0:0:0:0:0")
             && (d["one-shot"] as? Bool) != true
-            && !app.isEmpty && app != YabaiManagedConfig.floatCatchAllApp
+        // The Float layout's catch-all: `app=".*" manage=off` (any sub-layer), nothing else.
+        let catchAll = onlyAppManageSub && app == YabaiManagedConfig.floatCatchAllApp && manage == false
+        let clean = onlyAppManageSub && !app.isEmpty && app != YabaiManagedConfig.floatCatchAllApp
         var rule: WindowRule?
         if clean, let m = manage {
             // Same sub-layer strictness as YabaiRuleLine.

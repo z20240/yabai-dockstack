@@ -19,32 +19,49 @@ public struct FaithfulYabaiView: Equatable {
     public var fieldDiffs: [YabaiField: FieldDiff]
     public var ruleDiffs: [String: RuleDiff]
     public var liveAvailable: Bool
+    /// yabai's layout when the panel can't represent it (e.g. `stack`): live first, else
+    /// the file's. `settings.layout` is then only a placeholder and must not be applied
+    /// until the user picks a layout.
+    public var unrepresentedLayout: String?
 }
 
 public enum FaithfulYabai {
+    /// What yabai itself uses for a setting nobody set: no padding, no gap, `float`
+    /// layout (shown as Off — there is no catch-all rule).
+    public static let builtInPadding = 0
+    public static let builtInGap = 0
+    public static let builtInLayout: YabaiSettings.Layout = .off
+
     public static func compose(live: YabaiLiveState?, file: YabaiFileState,
                                autoPaddingOriginal: Paddings?) -> FaithfulYabaiView {
-        let d = YabaiSettings.defaults
+        let p0 = builtInPadding
         guard let live else {
-            let s = YabaiSettings(layout: file.layout ?? d.layout, topPadding: file.top ?? d.topPadding,
-                                  bottomPadding: file.bottom ?? d.bottomPadding,
-                                  leftPadding: file.left ?? d.leftPadding, rightPadding: file.right ?? d.rightPadding,
-                                  gap: file.gap ?? d.gap, rules: file.rules)
+            let s = YabaiSettings(layout: file.layout ?? builtInLayout, topPadding: file.top ?? p0,
+                                  bottomPadding: file.bottom ?? p0,
+                                  leftPadding: file.left ?? p0, rightPadding: file.right ?? p0,
+                                  gap: file.gap ?? builtInGap, rules: file.rules)
             return FaithfulYabaiView(settings: s, otherRules: file.otherRules, fieldDiffs: [:],
-                                     ruleDiffs: [:], liveAvailable: false)
+                                     ruleDiffs: [:], liveAvailable: false,
+                                     unrepresentedLayout: file.unrepresentedLayout)
         }
 
         let layout: YabaiSettings.Layout
+        var unrepresented: String?
         switch live.layout {
         case "bsp": layout = .bsp
         case "float": layout = live.rules.contains(where: \.isCatchAll) ? .float : .off
-        default: layout = file.layout ?? d.layout
+        case let word?:
+            unrepresented = word
+            layout = file.layout ?? builtInLayout
+        case nil:
+            unrepresented = file.unrepresentedLayout
+            layout = file.layout ?? builtInLayout
         }
-        let top = autoPaddingOriginal?.top ?? live.top ?? file.top ?? d.topPadding
-        let left = autoPaddingOriginal?.left ?? live.left ?? file.left ?? d.leftPadding
-        let right = autoPaddingOriginal?.right ?? live.right ?? file.right ?? d.rightPadding
-        let bottom = live.bottom ?? file.bottom ?? d.bottomPadding
-        let gap = live.gap ?? file.gap ?? d.gap
+        let top = autoPaddingOriginal?.top ?? live.top ?? file.top ?? p0
+        let left = autoPaddingOriginal?.left ?? live.left ?? file.left ?? p0
+        let right = autoPaddingOriginal?.right ?? live.right ?? file.right ?? p0
+        let bottom = live.bottom ?? file.bottom ?? p0
+        let gap = live.gap ?? file.gap ?? builtInGap
 
         var diffs: [YabaiField: FieldDiff] = [:]
         let auto = autoPaddingOriginal != nil
@@ -53,7 +70,8 @@ public enum FaithfulYabai {
                 diffs[f] = FieldDiff(live: String(shown), file: String(file), autoPadding: autoPad)
             }
         }
-        if let fl = file.layout, fl != layout {
+        // An unrepresentable layout gets its own "!" instead of a file diff.
+        if unrepresented == nil, let fl = file.layout, fl != layout {
             diffs[.layout] = FieldDiff(live: layout.rawValue, file: fl.rawValue, autoPadding: false)
         }
         cmp(.top, shown: top, file: file.top, autoPad: auto)
@@ -81,10 +99,12 @@ public enum FaithfulYabai {
             rules.append(fr)
             ruleDiffs[fr.app] = .fileOnly
         }
-        let other = live.rules.filter { $0.windowRule == nil && !$0.isCatchAll }.map(\.summary)
+        // The catch-all is hidden only while it is what makes the layout Float.
+        let hideCatchAll = layout == .float && unrepresented == nil
+        let other = live.rules.filter { $0.windowRule == nil && !($0.isCatchAll && hideCatchAll) }.map(\.summary)
         let s = YabaiSettings(layout: layout, topPadding: top, bottomPadding: bottom, leftPadding: left,
                               rightPadding: right, gap: gap, rules: rules)
         return FaithfulYabaiView(settings: s, otherRules: other, fieldDiffs: diffs,
-                                 ruleDiffs: ruleDiffs, liveAvailable: true)
+                                 ruleDiffs: ruleDiffs, liveAvailable: true, unrepresentedLayout: unrepresented)
     }
 }

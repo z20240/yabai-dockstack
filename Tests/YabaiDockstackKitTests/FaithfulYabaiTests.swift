@@ -78,6 +78,83 @@ final class FaithfulYabaiTests: XCTestCase {
     func testNoLiveFallsBackToFileWithoutDiffs() {
         let v = FaithfulYabai.compose(live: nil, file: YabaiFileState.parse("yabai -m config window_gap 6"), autoPaddingOriginal: nil)
         XCTAssertEqual(v.settings.gap, 6); XCTAssertTrue(v.fieldDiffs.isEmpty); XCTAssertFalse(v.liveAvailable)
-        XCTAssertEqual(v.settings.topPadding, YabaiSettings.defaults.topPadding)
+        XCTAssertEqual(v.settings.topPadding, 0)
+    }
+
+    // MARK: - Final review fixes
+
+    /// I3: with nothing from yabai or the file, show yabai's own built-in defaults.
+    func testNoLiveFallsBackToYabaiBuiltInDefaults() {
+        let v = FaithfulYabai.compose(live: nil, file: YabaiFileState.parse("yabai -m rule --add app=\"A\" manage=off"),
+                                      autoPaddingOriginal: nil)
+        XCTAssertEqual([v.settings.topPadding, v.settings.bottomPadding, v.settings.leftPadding,
+                        v.settings.rightPadding, v.settings.gap], [0, 0, 0, 0, 0])
+        XCTAssertEqual(v.settings.layout, .off)
+        XCTAssertEqual(v.settings.rules, [WindowRule(app: "A", mode: .float)])
+    }
+    func testLiveFieldMissingFallsBackToFileThenBuiltInDefault() {
+        let v = FaithfulYabai.compose(live: YabaiLiveState(layout: "bsp"),
+                                      file: YabaiFileState.parse("yabai -m config window_gap 6"), autoPaddingOriginal: nil)
+        XCTAssertEqual(v.settings.gap, 6)
+        XCTAssertEqual(v.settings.topPadding, 0)
+        XCTAssertEqual(v.settings.layout, .bsp)
+    }
+
+    /// I2: a layout the panel can't represent is surfaced, live first.
+    func testUnrepresentableLayoutIsExposed() {
+        XCTAssertEqual(YabaiFileState.parse("yabai -m config layout stack").unrepresentedLayout, "stack")
+        XCTAssertNil(YabaiFileState.parse("yabai -m config layout stack\nyabai -m config layout bsp").unrepresentedLayout)
+        let live = FaithfulYabai.compose(live: YabaiLiveState(layout: "stack"),
+                                         file: YabaiFileState.parse("yabai -m config layout bsp"), autoPaddingOriginal: nil)
+        XCTAssertEqual(live.unrepresentedLayout, "stack")
+        XCTAssertNil(live.fieldDiffs[.layout])
+        let file = FaithfulYabai.compose(live: nil, file: YabaiFileState.parse("yabai -m config layout stack"),
+                                         autoPaddingOriginal: nil)
+        XCTAssertEqual(file.unrepresentedLayout, "stack")
+        let liveWins = FaithfulYabai.compose(live: YabaiLiveState(layout: "bsp"),
+                                             file: YabaiFileState.parse("yabai -m config layout stack"), autoPaddingOriginal: nil)
+        XCTAssertNil(liveWins.unrepresentedLayout)
+        XCTAssertEqual(liveWins.settings.layout, .bsp)
+    }
+
+    /// I5: only a bare `app=".*" manage=off` (sub-layer allowed) is the Float catch-all,
+    /// and it is hidden only while the layout is Float.
+    func testFileCatchAllStrictAndHiddenOnlyForFloat() {
+        let titled = "yabai -m rule --add app=\".*\" title=\"Preferences\" manage=off"
+        let f1 = YabaiFileState.parse("yabai -m config layout float\n" + titled)
+        XCTAssertEqual(f1.layout, .off)
+        XCTAssertEqual(f1.otherRules, [titled])
+        let bare = "yabai -m rule --add app=\".*\" manage=off sub-layer=normal"
+        let f2 = YabaiFileState.parse("yabai -m config layout float\n" + bare)
+        XCTAssertEqual(f2.layout, .float)
+        XCTAssertEqual(f2.otherRules, [])
+        let f3 = YabaiFileState.parse("yabai -m config layout bsp\n" + bare)
+        XCTAssertEqual(f3.layout, .bsp)
+        XCTAssertEqual(f3.otherRules, [bare])
+        // No layout line: yabai's built-in float, which the catch-all makes Float.
+        let f4 = YabaiFileState.parse(bare)
+        XCTAssertEqual(f4.layout, .float)
+        XCTAssertEqual(f4.otherRules, [])
+    }
+    func testLiveCatchAllStrictAndHiddenOnlyForFloat() {
+        func rule(_ title: String) -> String {
+            #"{"app":".*","title":"\#(title)","role":"","subrole":"","label":"","scratchpad":"","display":0,"space":0,"opacity":0.0,"manage":false,"sticky":null,"mouse_follows_focus":null,"sub-layer":"normal","native-fullscreen":null,"grid":"0:0:0:0:0:0","one-shot":false}"#
+        }
+        let titled = LiveRule.decodeList(Data("[\(rule("Preferences"))]".utf8))
+        XCTAssertEqual(titled.first?.isCatchAll, false)
+        let tv = FaithfulYabai.compose(live: YabaiLiveState(layout: "float", rules: titled), file: YabaiFileState(),
+                                       autoPaddingOriginal: nil)
+        XCTAssertEqual(tv.settings.layout, .off)
+        XCTAssertEqual(tv.otherRules.count, 1)
+        let bare = LiveRule.decodeList(Data("[\(rule(""))]".utf8))
+        XCTAssertEqual(bare.first?.isCatchAll, true)
+        let fv = FaithfulYabai.compose(live: YabaiLiveState(layout: "float", rules: bare), file: YabaiFileState(),
+                                       autoPaddingOriginal: nil)
+        XCTAssertEqual(fv.settings.layout, .float)
+        XCTAssertEqual(fv.otherRules, [])
+        let bv = FaithfulYabai.compose(live: YabaiLiveState(layout: "bsp", rules: bare), file: YabaiFileState(),
+                                       autoPaddingOriginal: nil)
+        XCTAssertEqual(bv.settings.layout, .bsp)
+        XCTAssertEqual(bv.otherRules.count, 1)
     }
 }
