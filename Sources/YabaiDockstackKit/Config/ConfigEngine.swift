@@ -129,23 +129,23 @@ public final class ConfigEngine {
     }
 
     public func applyYabai() -> (ok: Bool, output: String) {
-        guard manageYabaiConfig else { return (false, L10n.t("ui.yabai.managementHint")) }
+        guard manageYabaiConfig else { return (false, L10n.t("ui.yabai.notAllowed")) }
         return ConfigApplier.run(yabaiPath, ["--restart-service"])
     }
     private func requireYabaiManagement() throws {
         guard manageYabaiConfig else {
             throw NSError(domain: "ConfigEngine", code: 4, userInfo: [
-                NSLocalizedDescriptionKey: L10n.t("ui.yabai.managementHint")])
+                NSLocalizedDescriptionKey: L10n.t("ui.yabai.notAllowed")])
         }
     }
     public func applySkhd() -> (ok: Bool, output: String) {
-        guard manageSkhdConfig else { return (false, L10n.t("ui.keyboard.managementHint")) }
+        guard manageSkhdConfig else { return (false, L10n.t("ui.keyboard.notAllowed")) }
         return ConfigApplier.run(skhdPath, ["--reload"])
     }
     private func requireSkhdManagement() throws {
         guard manageSkhdConfig else {
             throw NSError(domain: "ConfigEngine", code: 5, userInfo: [
-                NSLocalizedDescriptionKey: L10n.t("ui.keyboard.managementHint")])
+                NSLocalizedDescriptionKey: L10n.t("ui.keyboard.notAllowed")])
         }
     }
 }

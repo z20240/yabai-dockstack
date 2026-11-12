@@ -190,6 +190,18 @@ final class ShortcutsPaneTests: XCTestCase {
     }
 
     @MainActor
+    func testSetBindingAloneIsNotAnUnsavedEdit() throws {
+        _ = NSApplication.shared
+        let (engine, _) = try makeEngine(fileText: Self.handWritten, allow: true)
+        let pane = ShortcutsPaneView(engine: engine)
+        XCTAssertFalse(pane.hasUnsavedEdits)
+        pane.setBinding(actionID: "open-window-switcher", hotkey: Hotkey(mods: [.cmd, .shift], key: "space"))
+        XCTAssertFalse(pane.hasUnsavedEdits, "setBinding mirrors a value already written to the file")
+        pane.setBinding(actionID: "toggle-show-desktop", hotkey: nil)
+        XCTAssertFalse(pane.hasUnsavedEdits)
+    }
+
+    @MainActor
     func testApplyCancelledWritesNothing() throws {
         _ = NSApplication.shared
         let (engine, path) = try makeEngine(fileText: Self.handWritten, allow: true)

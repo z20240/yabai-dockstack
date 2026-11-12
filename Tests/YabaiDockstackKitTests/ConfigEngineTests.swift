@@ -9,9 +9,12 @@ final class ConfigEngineTests: XCTestCase {
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: s + ".y", skhdConfigPath: s, scriptsDir: "/S")
         XCTAssertFalse(e.manageSkhdConfig)
-        XCTAssertThrowsError(try e.saveSkhd([]))
+        XCTAssertThrowsError(try e.saveSkhd([])) {
+            XCTAssertEqual($0.localizedDescription, L10n.t("ui.keyboard.notAllowed"))
+        }
         XCTAssertThrowsError(try e.importSkhd(base: e.faithfulSkhd().bindings))
         XCTAssertFalse(e.applySkhd().ok)
+        XCTAssertEqual(e.applySkhd().output, L10n.t("ui.keyboard.notAllowed"))
         XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
 
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -42,9 +45,12 @@ final class ConfigEngineTests: XCTestCase {
         let e = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                              yabaiConfigPath: y, skhdConfigPath: y + ".s", scriptsDir: "/S")
         XCTAssertFalse(e.manageYabaiConfig)
-        XCTAssertThrowsError(try e.saveYabai(.defaults))
+        XCTAssertThrowsError(try e.saveYabai(.defaults)) {
+            XCTAssertEqual($0.localizedDescription, L10n.t("ui.yabai.notAllowed"))
+        }
         XCTAssertThrowsError(try e.importYabai(base: .defaults))
         XCTAssertFalse(e.applyYabai().ok, "Must not run even a successful restart command")
+        XCTAssertEqual(e.applyYabai().output, L10n.t("ui.yabai.notAllowed"))
         XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
 
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
