@@ -351,8 +351,8 @@ public final class YabaiSettingsPaneView: NSView {
     @objc private func importTapped() {
         guard engine.manageYabaiConfig else { return }
         do {
-            let n = try engine.importYabai()
-            settings = engine.loadYabaiSettingsOrDefault()
+            let (n, s) = try engine.importYabai(base: settings)
+            settings = s
             syncFields()
             tableView.reloadData()
             showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedSettings"), n) : L10n.t("ui.status.nothingToImport"))

@@ -313,8 +313,8 @@ public final class ShortcutsPaneView: NSView {
     @objc private func importTapped() {
         guard engine.manageSkhdConfig else { return }
         do {
-            let n = try engine.importSkhd()
-            bindings = engine.loadBindingsOrDefault()
+            let (n, b) = try engine.importSkhd(base: bindings)
+            bindings = b
             buildList()
             showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedBindings"), n) : L10n.t("ui.status.nothingToImport"))
         } catch {
