@@ -151,3 +151,29 @@ extension FreeformImporterTests {
         XCTAssertEqual(r.settings.rules, [WindowRule(app: "^IINA$", mode: .pin)])
     }
 }
+
+final class YabaiRuleLineTests: XCTestCase {
+    func testRuleLineVariants() {
+        XCTAssertEqual(YabaiRuleLine.parse(#"yabai -m rule --add app="System Settings" manage=off"#), WindowRule(app: "System Settings", mode: .float))
+        XCTAssertEqual(YabaiRuleLine.parse("yabai -m rule --add manage=on app=^Finder$"), WindowRule(app: "^Finder$", mode: .manage))
+        XCTAssertEqual(YabaiRuleLine.parse(#"yabai -m rule --add app="IINA" manage=off sub-layer=above"#), WindowRule(app: "IINA", mode: .pin))
+        XCTAssertEqual(YabaiRuleLine.parse(#"  yabai -m rule --add app="Finder" manage=off  "#), WindowRule(app: "Finder", mode: .float))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="Finder" title="Copy" manage=off"#))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="Arc" space=2"#))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app=".*" manage=off"#))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="Finder""#))
+        XCTAssertTrue(YabaiRuleLine.isRuleAdd(#"yabai -m rule --add app="Finder" title="Copy" manage=off"#))
+        XCTAssertFalse(YabaiRuleLine.isRuleAdd("yabai -m config layout bsp"))
+    }
+    func testImportYabaiLeavesRulesWithExtraConditions() {
+        let r = FreeformImporter.importYabai(fileText: #"yabai -m rule --add app="Finder" title="Copy" manage=off"#, current: YabaiSettings.defaults)
+        XCTAssertEqual(r.importedCount, 0); XCTAssertFalse(r.newText.contains("[yabai-dockstack imported]"))
+    }
+    func testImportSkhdCommentsOnlyFirstMatchPerAction() {
+        let file = "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\ncmd - f4: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh"
+        let r = FreeformImporter.importSkhd(fileText: file, current: [], catalog: ShortcutCatalog.all,
+                                            scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+        XCTAssertEqual(r.importedCount, 1)
+        XCTAssertTrue(r.newText.contains("\ncmd - f4: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh"))
+    }
+}
