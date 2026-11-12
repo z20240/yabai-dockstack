@@ -1284,6 +1284,7 @@ do {
 print("FaithfulYabai")
 do {
     check(YabaiFileState.parse("yabai -m config window_gap 6\nyabai -m config window_gap 8").gap == 8, "file last wins")
+    check(YabaiFileState.parse("yabai -m config window_gap 6 # tight").gap == 6, "trailing comment stripped")
     check(YabaiFileState.parse("yabai -m config window_gap $GAP").gap == nil, "$GAP is unknown")
     let lj = #"[{"app":"Finder","title":"","role":"","subrole":"","label":"","scratchpad":"","display":0,"space":0,"opacity":0.0,"manage":false,"sticky":null,"mouse_follows_focus":null,"sub-layer":"normal","native-fullscreen":null,"grid":"0:0:0:0:0:0","one-shot":false}]"#
     let lrs = LiveRule.decodeList(Data(lj.utf8))
