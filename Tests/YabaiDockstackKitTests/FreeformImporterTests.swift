@@ -165,6 +165,14 @@ final class YabaiRuleLineTests: XCTestCase {
         XCTAssertTrue(YabaiRuleLine.isRuleAdd(#"yabai -m rule --add app="Finder" title="Copy" manage=off"#))
         XCTAssertFalse(YabaiRuleLine.isRuleAdd("yabai -m config layout bsp"))
     }
+    func testSubLayerAndQuoteStrictness() {
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="X" manage=on sub-layer=above"#))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="X" manage=off sub-layer=below"#))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="X" manage=on sub-layer=below"#))
+        XCTAssertEqual(YabaiRuleLine.parse(#"yabai -m rule --add app="X" manage=on sub-layer=normal"#), WindowRule(app: "X", mode: .manage))
+        XCTAssertEqual(YabaiRuleLine.parse(#"yabai -m rule --add app="X" manage=off sub-layer=normal"#), WindowRule(app: "X", mode: .float))
+        XCTAssertNil(YabaiRuleLine.parse(#"yabai -m rule --add app="X" manage="off"#))
+    }
     func testImportYabaiLeavesRulesWithExtraConditions() {
         let r = FreeformImporter.importYabai(fileText: #"yabai -m rule --add app="Finder" title="Copy" manage=off"#, current: YabaiSettings.defaults)
         XCTAssertEqual(r.importedCount, 0); XCTAssertFalse(r.newText.contains("[yabai-dockstack imported]"))
