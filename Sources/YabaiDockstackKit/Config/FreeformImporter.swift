@@ -47,13 +47,15 @@ public enum FreeformImporter {
         }
         var out: [String] = []
         var count = 0
+        var seen = Set<String>()
         var inRegion = false
         for raw in fileText.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = String(raw)
             if ManagedRegion.isBeginMarker(line) { inRegion = true; out.append(line); continue }
             if ManagedRegion.isEndMarker(line)   { inRegion = false; out.append(line); continue }
             if inRegion { out.append(line); continue }
-            if let (hk, cmd) = parseSkhdLine(line), let id = cmdToID[normalizeCommand(cmd)] {
+            if let (hk, cmd) = parseSkhdLine(line), let id = cmdToID[normalizeCommand(cmd)], !seen.contains(id) {
+                seen.insert(id)
                 setBinding(id, hk)
                 out.append("# [yabai-dockstack imported] " + line)
                 count += 1
@@ -94,7 +96,7 @@ public enum FreeformImporter {
             else if let v = intConfig(t, "left_padding")     { s.leftPadding = v }
             else if let v = intConfig(t, "right_padding")    { s.rightPadding = v }
             else if let v = intConfig(t, "window_gap")       { s.gap = v }
-            else if let r = parseRule(t) {
+            else if let r = YabaiRuleLine.parse(t) {
                 if rulesByApp[r.app] == nil { order.append(r.app) }
                 rulesByApp[r.app] = r
             } else {
@@ -116,18 +118,5 @@ public enum FreeformImporter {
 
     private static func intConfig(_ line: String, _ key: String) -> Int? {
         configValue(line, key).flatMap { Int($0) }
-    }
-
-    // yabai -m rule --add app="X" … manage=off|on …  (requires explicit manage=, skips ".*")
-    private static func parseRule(_ line: String) -> WindowRule? {
-        guard line.hasPrefix("yabai -m rule --add app=\"") else { return nil }
-        guard let s = line.range(of: "app=\""),
-              let e = line.range(of: "\"", range: s.upperBound..<line.endIndex) else { return nil }
-        let app = String(line[s.upperBound..<e.lowerBound])
-        if app == ".*" { return nil }
-        if line.contains("sub-layer=above") { return WindowRule(app: app, mode: .pin) }
-        if line.contains("manage=on")  { return WindowRule(app: app, mode: .manage) }
-        if line.contains("manage=off") { return WindowRule(app: app, mode: .float) }
-        return nil
     }
 }

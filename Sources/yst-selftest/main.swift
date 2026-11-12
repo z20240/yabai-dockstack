@@ -1261,6 +1261,22 @@ do {
     check(!r2 && !c2.manageYabaiConfig && !c2.manageSkhdConfig, "explicit false respected")
 }
 
+print("YabaiRuleLine")
+do {
+    check(YabaiRuleLine.parse(#"yabai -m rule --add app="System Settings" manage=off"#) == WindowRule(app: "System Settings", mode: .float), "quoted app with space")
+    check(YabaiRuleLine.parse("yabai -m rule --add manage=on app=^Finder$") == WindowRule(app: "^Finder$", mode: .manage), "key order free")
+    check(YabaiRuleLine.parse(#"yabai -m rule --add app="IINA" manage=off sub-layer=above"#) == WindowRule(app: "IINA", mode: .pin), "pin")
+    check(YabaiRuleLine.parse(#"yabai -m rule --add app="Finder" title="Copy" manage=off"#) == nil, "extra key rejected")
+    check(YabaiRuleLine.parse(#"yabai -m rule --add app="Arc" space=2"#) == nil, "no manage rejected")
+    check(YabaiRuleLine.parse(#"yabai -m rule --add app=".*" manage=off"#) == nil, "wildcard rejected")
+    check(YabaiRuleLine.isRuleAdd(#"yabai -m rule --add app="Finder" title="Copy" manage=off"#), "isRuleAdd")
+    let r = FreeformImporter.importYabai(fileText: #"yabai -m rule --add app="Finder" title="Copy" manage=off"#, current: YabaiSettings.defaults)
+    check(r.importedCount == 0 && !r.newText.contains("[yabai-dockstack imported]"), "importer leaves non-clean rule")
+    let f = "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\ncmd - f4: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh"
+    let sr = FreeformImporter.importSkhd(fileText: f, current: [], catalog: ShortcutCatalog.all, scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
+    check(sr.importedCount == 1 && sr.newText.contains("\ncmd - f4: sh"), "skhd first match only")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
