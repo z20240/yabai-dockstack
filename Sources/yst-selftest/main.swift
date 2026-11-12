@@ -1281,6 +1281,20 @@ do {
     check(sr.importedCount == 1 && sr.newText.contains("\ncmd - f4: sh"), "skhd first match only")
 }
 
+print("FaithfulYabai")
+do {
+    check(YabaiFileState.parse("yabai -m config window_gap 6\nyabai -m config window_gap 8").gap == 8, "file last wins")
+    check(YabaiFileState.parse("yabai -m config window_gap $GAP").gap == nil, "$GAP is unknown")
+    let lj = #"[{"app":"Finder","title":"","role":"","subrole":"","label":"","scratchpad":"","display":0,"space":0,"opacity":0.0,"manage":false,"sticky":null,"mouse_follows_focus":null,"sub-layer":"normal","native-fullscreen":null,"grid":"0:0:0:0:0:0","one-shot":false}]"#
+    let lrs = LiveRule.decodeList(Data(lj.utf8))
+    check(lrs.first?.windowRule == WindowRule(app: "Finder", mode: .float), "live rule decode")
+    let fv = FaithfulYabai.compose(live: YabaiLiveState(layout: "bsp", top: 12, bottom: 12, left: 12, right: 12, gap: 10, rules: lrs),
+                                   file: YabaiFileState.parse("yabai -m config window_gap 6"), autoPaddingOriginal: nil)
+    check(fv.fieldDiffs[.gap] == FieldDiff(live: "10", file: "6", autoPadding: false) && fv.fieldDiffs[.top] == nil, "compose gap diff")
+    let nv = FaithfulYabai.compose(live: nil, file: YabaiFileState.parse("yabai -m config window_gap 6"), autoPaddingOriginal: nil)
+    check(nv.settings.gap == 6 && nv.fieldDiffs.isEmpty && !nv.liveAvailable, "no-live fallback")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
