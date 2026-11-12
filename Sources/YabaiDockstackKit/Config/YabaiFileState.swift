@@ -36,7 +36,9 @@ public struct YabaiFileState: Equatable {
                 continue
             }
             guard line.hasPrefix(configPrefix) else { continue }
-            let toks = line.dropFirst(configPrefix.count).split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
+            var body = String(line.dropFirst(configPrefix.count))
+            if let c = body.range(of: "[ \\t]#", options: .regularExpression) { body = String(body[..<c.lowerBound]) }
+            let toks = body.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
             guard toks.count == 2 else { continue }
             let key = toks[0], val = toks[1]
             switch key {

@@ -12,6 +12,10 @@ final class FaithfulYabaiTests: XCTestCase {
         let f = YabaiFileState.parse("yabai -m config window_gap 6\n# yabai -m config window_gap 99\n# >>> yabai-dockstack:managed BEGIN\nyabai -m config window_gap 8\n# <<< yabai-dockstack:managed END")
         XCTAssertEqual(f.gap, 8)
     }
+    func testTrailingCommentStripped() {
+        XCTAssertEqual(YabaiFileState.parse("yabai -m config window_gap 6 # tight").gap, 6)
+        XCTAssertEqual(YabaiFileState.parse("yabai -m config window_gap 6\t# tight").gap, 6)
+    }
     func testShellVariableIsUnknownNotZero() {
         XCTAssertNil(YabaiFileState.parse("yabai -m config window_gap $GAP").gap)
         XCTAssertNil(YabaiFileState.parse("yabai -m config window_gap 6\nyabai -m config window_gap $GAP").gap)
