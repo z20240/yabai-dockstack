@@ -220,10 +220,14 @@ skhd's own lookup order and honouring `-c`; **Choose…** picks another file and
 With an option **on**, you edit from Settings. **Apply** asks for confirmation
 before it comments out hand-written lines it now manages (prefixed
 `# [yabai-dockstack imported]`, never deleted; the previous file is kept as
-`.bak`) and writes the managed section. Nothing is written on launch. Turning an
+`.bak`) and writes the managed section. Indented lines (inside `if` blocks or
+functions) are never commented out. Nothing is written on launch. Turning an
 option off stops future edits; an existing managed section keeps applying until
 you remove it. Hold-to-cycle switcher shortcuts (stored in dockstack's own
-settings) and automatic padding work regardless of either option.
+settings) and automatic padding work regardless of either option. The Switcher
+tab's **Search switcher** hotkey is the exception: it is an skhd binding, so it is
+written to `skhdrc` (with the same confirmation as Apply) and needs **Allow
+dockstack to edit skhdrc**.
 
 On launch the app:
 
@@ -513,7 +517,8 @@ Both are off by default — turn them on in **Settings → Appearance**.
 ## Drag windows between spaces
 
 Mission Control only lets you drag windows *from the current* space. Open the
-**search switcher** (Settings → Switcher → "Search switcher" hotkey): every
+**search switcher** (Settings → Switcher → "Search switcher" hotkey — an skhd
+binding, so it needs **Allow dockstack to edit skhdrc**): every
 space is shown as a mini desktop, grouped by display, with its windows tiled
 inside (based on @Signynt's Spaces View, #4). Each window carries a capsule with
 its app icon and project name; the space you're on is marked **Current**. Type

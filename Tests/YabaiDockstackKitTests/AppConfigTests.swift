@@ -149,4 +149,12 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(AppConfig.presentKeys(in: nil).isEmpty)
         XCTAssertTrue(AppConfig.presentKeys(in: Data("nope".utf8)).isEmpty)
     }
+
+    /// T9: a config.json that exists but can't be read is protected like an undecodable one.
+    func testUnreadableConfigIsProtected() {
+        XCTAssertTrue(AppConfig.isUnreadable(fileExists: true, data: nil))
+        XCTAssertTrue(AppConfig.isUnreadable(fileExists: true, data: Data("nope".utf8)))
+        XCTAssertFalse(AppConfig.isUnreadable(fileExists: true, data: Data(#"{"cellSize":24}"#.utf8)))
+        XCTAssertFalse(AppConfig.isUnreadable(fileExists: false, data: nil))
+    }
 }
