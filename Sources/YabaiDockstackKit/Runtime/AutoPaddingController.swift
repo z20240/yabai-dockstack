@@ -12,6 +12,9 @@ public final class AutoPaddingController {
 
     public init(client: YabaiClient) { self.client = client }
 
+    /// The user's own paddings while auto padding is adjusting them; nil when it's off.
+    public var userOriginal: Paddings? { enabled ? original : nil }
+
     public func update(enabled: Bool, cellSize: Double, stripEnabled: Bool, stripScale: Double) {
         self.enabled = enabled
         params = (cellSize, stripEnabled, stripScale)

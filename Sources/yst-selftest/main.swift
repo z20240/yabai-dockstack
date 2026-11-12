@@ -1335,6 +1335,14 @@ do {
     check(two == String(format: L10n.t("ui.apply.confirmBody"), 2, "/tmp/rc") && two != none, ">0 lines → comment-out body")
 }
 
+print("YabaiClient live state")
+do {
+    check(YabaiClient(yabaiPath: "/usr/bin/false").readLiveState() == nil, "no layout answer → nil")
+    check(YabaiClient(yabaiPath: "/nonexistent/yabai").readLiveState() == nil, "missing yabai → nil")
+    check(AutoPaddingController(client: YabaiClient(yabaiPath: "/usr/bin/false")).userOriginal == nil,
+          "auto padding off → no user original")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

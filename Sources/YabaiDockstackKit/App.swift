@@ -15,7 +15,12 @@ public enum YabaiDockstack {
     public static func main() {
         let args = CommandLine.arguments
         let configPath = "~/.config/yabai-dockstack/config.json"
-        var config = AppConfig.loadFromFile(configPath)
+        // Raw data read once: the decoded config plus which keys the file actually
+        // has (the one-time management migration below needs the latter).
+        let rawConfig = try? Data(contentsOf: URL(fileURLWithPath:
+            (configPath as NSString).expandingTildeInPath))
+        var config = AppConfig.load(from: rawConfig)
+        let presentConfigKeys = AppConfig.presentKeys(in: rawConfig)
         L10n.current = L10n.resolve(AppLanguage(rawValue: config.language) ?? .auto,
                                     preferred: Locale.preferredLanguages)
 
@@ -68,13 +73,25 @@ public enum YabaiDockstack {
         // Resolve skhd binary and config paths; build the config engine.
         let skhdPath = ["/opt/homebrew/bin/skhd", "/usr/local/bin/skhd"]
             .first { FileManager.default.fileExists(atPath: $0) } ?? "/opt/homebrew/bin/skhd"
-        let yabaiRcPath = RcDetector.detect(.yabai)
-        let skhdRcPath = RcDetector.detect(.skhd)
+        // rc paths: dockstack's override if set, otherwise the file the tool loads.
+        func effectiveRcPath(_ tool: RcTool, override: String) -> String {
+            override.isEmpty ? RcDetector.detect(tool) : (override as NSString).expandingTildeInPath
+        }
         let configEngine = ConfigEngine(yabaiPath: resolvedYabai, skhdPath: skhdPath,
-                                        yabaiConfigPath: yabaiRcPath, skhdConfigPath: skhdRcPath,
+                                        yabaiConfigPath: effectiveRcPath(.yabai, override: config.yabaiRcPath),
+                                        skhdConfigPath: effectiveRcPath(.skhd, override: config.skhdRcPath),
                                         scriptsDir: ConfigPaths.scriptsDir,
-                                        manageYabaiConfig: config.manageYabaiConfig,
-                                        manageSkhdConfig: config.manageSkhdConfig)
+                                        manageYabaiConfig: false, manageSkhdConfig: false)
+        // One-time migration: a config.json without manage* keys allows management
+        // exactly where the rc already has a dockstack region. Saved once so the
+        // decision sticks; only then do the engine's flags follow the config.
+        if config.migrateManagement(presentKeys: presentConfigKeys,
+                                    hasYabaiRegion: configEngine.hasYabaiRegion(),
+                                    hasSkhdRegion: configEngine.hasSkhdRegion()) {
+            config.save(to: configPath)
+        }
+        configEngine.manageYabaiConfig = config.manageYabaiConfig
+        configEngine.manageSkhdConfig = config.manageSkhdConfig
 
         // Write a default config file on first run so it's discoverable/editable.
         let expandedConfig = (configPath as NSString).expandingTildeInPath
@@ -285,6 +302,25 @@ public enum YabaiDockstack {
             loginIsEnabled: { LoginItem.isEnabled })
 
         settings.configEngine = configEngine
+        // The rc-backed panes: live yabai state, auto-padding originals, rc paths.
+        // A path change only edits dockstack's own config and repoints the engine
+        // (synchronously — the panes reload right after this returns).
+        settings.rcSources = RcSources(
+            liveYabai: { client.readLiveState() },
+            autoPaddingOriginal: { autoPadding.userOriginal },
+            detectedPath: { RcDetector.detect($0) },
+            pathOverride: { $0 == .yabai ? config.yabaiRcPath : config.skhdRcPath },
+            onPathChange: { tool, path in
+                switch tool {
+                case .yabai: config.yabaiRcPath = path
+                case .skhd: config.skhdRcPath = path
+                }
+                configEngine.setConfigPaths(
+                    yabai: tool == .yabai ? effectiveRcPath(.yabai, override: path) : configEngine.yabaiConfigPath,
+                    skhd: tool == .skhd ? effectiveRcPath(.skhd, override: path) : configEngine.skhdConfigPath)
+                config.save(to: configPath)
+                settings.updateConfig(config)
+            })
 
         // Permissions section: request the permission AND open the right pane, one
         // at a time (avoids the two prompts colliding at launch).

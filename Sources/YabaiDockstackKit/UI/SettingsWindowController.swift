@@ -117,8 +117,16 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     public func show() {
-        if window == nil { build() }
+        let built = window != nil
+        if !built { build() }
         syncControls()
+        // Re-read the rc files / live yabai each time the window is shown (a fresh
+        // build just read them). Unsaved edits are kept (force: false).
+        if built {
+            yabaiPane?.reload(force: false)
+            shortcutsPane?.reload(force: false)
+            syncSearchSwitcherHotkey()
+        }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         window?.center()
@@ -256,22 +264,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         wireRecorder(switcherAppRecorder, \.switcherHotkeyApp)
         wireRecorder(switcherSpaceRecorder, \.switcherHotkeySpace)
         switcherSearchRecorder.onChange = { [weak self] hk in
-            guard let engine = self?.configEngine, engine.manageSkhdConfig else { return }
-            let bindings = ShortcutBindings.setting(engine.loadBindingsOrDefault(),
-                                                    action: "open-window-switcher", hotkey: hk)
-            do {
-                try engine.saveSkhd(bindings)
-                _ = engine.applySkhd()
-            } catch {
-                NSLog("yabai-dockstack: saving the search switcher hotkey failed: \(error)")
-            }
-            // The Keyboard tab holds its own copy of the bindings — rebuild it so
-            // a later Apply there doesn't revert this.
-            guard let self else { return }
-            let selected = self.tabView.flatMap { tv in tv.selectedTabViewItem.map { tv.indexOfTabViewItem($0) } } ?? 0
-            self.buildContent()
-            self.tabView?.selectTabViewItem(at: selected)
-            self.syncControls()
+            self?.searchSwitcherHotkeyChanged(hk)
         }
 
         for f in [debounceField, pollField] {
@@ -324,15 +317,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         menuHoverCheck.title = L10n.t("ui.appearance.menuHover")
         windowStripCheck.title = L10n.t("ui.appearance.windowStrip")
         windowStripHelp.stringValue = L10n.t("ui.appearance.windowStripHelp")
-        // Surface the existing open-menu hotkey so it's discoverable.
-        let bindings = configEngine?.loadBindingsOrDefault() ?? []
-        func boundKey(_ action: String) -> Hotkey? {
-            bindings.first { $0.actionID == action && $0.enabled }?.hotkey
-        }
-        menuHoverHelp.stringValue = boundKey("open-window-menu").map {
-            String(format: L10n.t("ui.appearance.menuHoverHelp"), $0.displayString)
-        } ?? ""
-        switcherSearchRecorder.hotkey = boundKey("open-window-switcher")
+        syncSearchSwitcherHotkey()
         syncSkhdManagementControls()
         loginCheck.title = L10n.t("ui.appearance.login")
 
@@ -649,6 +634,45 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - Actions
 
+    /// Show what the skhdrc actually binds: the open-menu hotkey (hover help) and
+    /// the search switcher hotkey (recorder). Reads the file; never writes.
+    private func syncSearchSwitcherHotkey() {
+        let bindings = configEngine?.faithfulSkhd().bindings ?? []
+        func boundKey(_ action: String) -> Hotkey? {
+            bindings.first { $0.actionID == action && $0.enabled }?.hotkey
+        }
+        // Surface the existing open-menu hotkey so it's discoverable.
+        menuHoverHelp.stringValue = boundKey("open-window-menu").map {
+            String(format: L10n.t("ui.appearance.menuHoverHelp"), $0.displayString)
+        } ?? ""
+        switcherSearchRecorder.hotkey = boundKey("open-window-switcher")
+    }
+
+    /// The Switcher tab's search hotkey writes the skhdrc directly — same confirmation
+    /// rule as the Keyboard tab's Apply. Declining or a failed save puts the recorder
+    /// back; on success the Keyboard tab's row follows without losing its other edits.
+    private func searchSwitcherHotkeyChanged(_ hk: Hotkey?) {
+        guard let engine = configEngine, engine.manageSkhdConfig else { syncSearchSwitcherHotkey(); return }
+        let base = engine.faithfulSkhd().bindings
+        let previous = base.first { $0.actionID == "open-window-switcher" && $0.enabled }?.hotkey
+        let next = ShortcutBindings.setting(base, action: "open-window-switcher", hotkey: hk)
+        let plan = engine.skhdApplyPlan(next)
+        if plan.needsConfirmation
+            && !ApplyConfirmAlert.run(plan: plan, path: engine.skhdConfigPath, window: window) {
+            switcherSearchRecorder.hotkey = previous
+            return
+        }
+        do {
+            try engine.saveSkhd(next)
+        } catch {
+            NSLog("yabai-dockstack: saving the search switcher hotkey failed: \(error)")
+            switcherSearchRecorder.hotkey = previous
+            return
+        }
+        _ = engine.applySkhd()
+        shortcutsPane?.setBinding(actionID: "open-window-switcher", hotkey: hk)
+    }
+
     private func syncSkhdManagementControls() {
         switcherSearchRecorder.isEnabled = config.manageSkhdConfig
         switcherSearchHint.stringValue = L10n.t("ui.keyboard.notAllowed")
@@ -775,8 +799,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 extension SettingsWindowController: NSTabViewDelegate {
     /// The Keyboard tab may have changed the search switcher binding.
     public func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
-        guard let engine = configEngine else { return }
-        switcherSearchRecorder.hotkey = engine.loadBindingsOrDefault()
-            .first { $0.actionID == "open-window-switcher" && $0.enabled }?.hotkey
+        syncSearchSwitcherHotkey()
     }
 }
