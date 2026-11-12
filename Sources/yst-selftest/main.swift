@@ -1340,6 +1340,68 @@ do {
           "auto padding off → no user original")
 }
 
+print("rc read-only: final review fixes")
+do {
+    let scripts = "/Users/me/.config/yabai-dockstack/scripts"
+    // I1: importer and panel agree on the first match (region included).
+    let region = ManagedRegion.replace(in: "", with: SkhdManagedConfig.generate(
+        [ShortcutBinding(actionID: "close-window", enabled: true, hotkey: Hotkey.parse("alt + cmd - backspace"))],
+        catalog: ShortcutCatalog.all, scriptsDir: scripts))
+    let dupAfter = region + "alt - w : yabai -m window --close\n"
+    let i1 = FreeformImporter.importSkhd(fileText: dupAfter, current: [], catalog: ShortcutCatalog.all, scriptsDir: scripts)
+    check(i1.importedCount == 0 && i1.newText == dupAfter, "I1: duplicate after region not commented")
+    let cont = FreeformImporter.importSkhd(fileText: "alt - r : \\\nalt - w : yabai -m window --close",
+                                           current: [], catalog: ShortcutCatalog.all, scriptsDir: scripts)
+    check(cont.importedCount == 0, "I1: continuation line never commented")
+    // I4: one config-line classifier; indented lines never commented.
+    check(YabaiConfigLine.parse("yabai -m config window_gap 6 # tight")?.value == "6"
+          && YabaiConfigLine.parse("yabai  -m\tconfig   layout\tbsp")?.value == "bsp"
+          && YabaiConfigLine.parse("yabai -m config --space 2 window_gap 6") == nil, "I4: YabaiConfigLine.parse")
+    let tc = FreeformImporter.importYabai(fileText: "yabai -m config window_gap 6 # tight", current: .defaults)
+    check(tc.importedCount == 1 && tc.settings.gap == 6, "I4: trailing-comment line imported")
+    let ind = "if true; then\n  yabai -m config window_gap 6\nfi"
+    let iy = FreeformImporter.importYabai(fileText: ind, current: .defaults)
+    check(iy.importedCount == 0 && iy.newText == ind, "I4: indented yabai line not commented")
+    let isk = FreeformImporter.importSkhd(fileText: "  alt - w : yabai -m window --close", current: [],
+                                          catalog: ShortcutCatalog.all, scriptsDir: scripts)
+    check(isk.importedCount == 0, "I4: indented skhd line not commented")
+    // I3: yabai's built-in defaults when nothing says otherwise.
+    let i3 = FaithfulYabai.compose(live: nil, file: YabaiFileState.parse("yabai -m rule --add app=\"A\" manage=off"),
+                                   autoPaddingOriginal: nil)
+    check(i3.settings.topPadding == 0 && i3.settings.gap == 0 && i3.settings.layout == .off, "I3: built-in defaults")
+    // I2: unrepresentable layout surfaced, live first.
+    check(FaithfulYabai.compose(live: YabaiLiveState(layout: "stack"), file: YabaiFileState.parse("yabai -m config layout bsp"),
+                                autoPaddingOriginal: nil).unrepresentedLayout == "stack"
+          && YabaiFileState.parse("yabai -m config layout stack").unrepresentedLayout == "stack", "I2: unrepresented layout")
+    // I5: strict catch-all, hidden only for Float.
+    let titled = "yabai -m rule --add app=\".*\" title=\"Preferences\" manage=off"
+    let f5 = YabaiFileState.parse("yabai -m config layout float\n" + titled)
+    check(f5.layout == .off && f5.otherRules == [titled], "I5: titled .* rule is not the catch-all")
+    let bare = "yabai -m rule --add app=\".*\" manage=off"
+    check(YabaiFileState.parse("yabai -m config layout bsp\n" + bare).otherRules == [bare]
+          && YabaiFileState.parse("yabai -m config layout float\n" + bare).otherRules.isEmpty, "I5: catch-all hidden only for Float")
+    // M3 / M4: plans and writes refuse malformed or unreadable rc files.
+    let m = NSTemporaryDirectory() + "yst-final-\(UUID().uuidString)"
+    try? (ManagedRegion.beginLine + "\n" + ManagedRegion.beginLine + "\n").write(toFile: m, atomically: true, encoding: .utf8)
+    let me = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true", yabaiConfigPath: m,
+                          skhdConfigPath: m, scriptsDir: "/S", manageYabaiConfig: true, manageSkhdConfig: true)
+    check((try? me.yabaiApplyPlan(.defaults)) == nil && (try? me.skhdApplyPlan([])) == nil, "M3: plan throws on malformed markers")
+    let bytes = Data([0x79, 0x61, 0xff, 0xfe, 0x0a, 0x80])
+    try? bytes.write(to: URL(fileURLWithPath: m))
+    var m4Threw = 0
+    if (try? me.yabaiApplyPlan(.defaults)) == nil { m4Threw += 1 }
+    do { try me.saveYabai(.defaults) } catch { m4Threw += 1 }
+    do { try me.saveSkhd([]) } catch { m4Threw += 1 }
+    do { _ = try me.importYabai(base: .defaults) } catch { m4Threw += 1 }
+    check(m4Threw == 4 && (try? Data(contentsOf: URL(fileURLWithPath: m))) == bytes, "M4: non-UTF-8 rc never written")
+    try? FileManager.default.removeItem(atPath: m)
+    // T1 / T9
+    check(RcDetector.configFlag(for: .yabai, commandLines: ["/opt/homebrew/bin/yabai", "/opt/homebrew/bin/yabai -c /tmp/x"])
+          == "/tmp/x", "T1: first -c across all processes")
+    check(AppConfig.isUnreadable(fileExists: true, data: nil) && !AppConfig.isUnreadable(fileExists: false, data: nil),
+          "T9: existing but unreadable config.json is protected")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }
