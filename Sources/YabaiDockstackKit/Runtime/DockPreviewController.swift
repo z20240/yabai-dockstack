@@ -5,6 +5,7 @@ import CoreGraphics
 /// windows, show thumbnails (live → cached → icon), and focus on click.
 public final class DockPreviewController {
     private let client: YabaiClient
+    private let focuser: WindowFocuser
     private let cache: ThumbnailCache
     private let capturer = ThumbnailCapturer()
     private let panel = DockPreviewPanel()
@@ -18,7 +19,8 @@ public final class DockPreviewController {
     /// popover immediately (optimistic) until the queries catch up.
     private var pendingCloseIDs: Set<Int> = []
 
-    public init(client: YabaiClient, cache: ThumbnailCache) {
+    public init(client: YabaiClient, cache: ThumbnailCache, focuser: WindowFocuser? = nil) {
+        self.focuser = focuser ?? WindowFocuser(client: client)
         self.client = client
         self.cache = cache
     }
@@ -90,7 +92,7 @@ public final class DockPreviewController {
     }
 
     private func focus(_ id: Int) {
-        DispatchQueue.global(qos: .userInitiated).async { [client] in client.focus(windowId: id) }
+        DispatchQueue.global(qos: .userInitiated).async { [focuser] in focuser.focus(windowId: id) }
     }
 
     private func icon(for win: YabaiWindow) -> NSImage {

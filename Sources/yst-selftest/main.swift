@@ -38,15 +38,22 @@ do {
     func axWin(_ id: Int, _ extra: String) -> String {
         #"{"id":\#(id),"pid":1,"app":"A","frame":{"x":0,"y":0,"w":10,"h":10},"display":1,"space":1,"stack-index":0,"has-focus":false\#(extra)}"#
     }
-    let axJSON = "[" + [
+    let axJSON = Data(("[" + [
         axWin(10, #","has-ax-reference":false"#),                        // closed / tray-closed ghost
         axWin(11, #","has-ax-reference":true,"is-visible":false"#),      // other space
         axWin(12, #","has-ax-reference":true,"is-minimized":true"#),     // minimized
         axWin(13, #","has-ax-reference":true,"is-hidden":true"#),        // ⌘H hidden
         axWin(14, ""),                                                    // older yabai: no flag
-    ].joined(separator: ",") + "]"
-    check(YabaiWindow.decodeList(Data(axJSON.utf8)).map(\.id) == [11, 12, 13, 14],
+        axWin(15, #","has-ax-reference":false"#),                        // LINE re-shown from tray
+    ].joined(separator: ",") + "]").utf8)
+    check(YabaiWindow.decodeList(axJSON).map(\.id) == [11, 12, 13, 14],
           "has-ax-reference false → skipped; hidden/minimized/off-space/missing flag kept")
+    var asked: [Int] = []
+    check(YabaiWindow.decodeList(axJSON, isOrderedIn: { asked.append($0); return $0 == 15 }).map(\.id) == [11, 12, 13, 14, 15],
+          "no AX ref but ordered in (re-shown tray window) → kept")
+    check(asked == [10, 15], "ordered-in probe consulted only for windows without an AX ref")
+    check(!WindowServerProbe.isOrderedIn(0) && !WindowServerProbe.isOrderedIn(Int(UInt32.max) + 1),
+          "WindowServerProbe rejects invalid window ids")
 }
 
 print("StackBuilder")
@@ -191,9 +198,13 @@ if CommandLine.arguments.count > 1 {
     let path = CommandLine.arguments[1]
     print("Live decode: \(path)")
     let data = (try? Data(contentsOf: URL(fileURLWithPath: path))) ?? Data()
-    let liveWins = YabaiWindow.decodeList(data)
+    let liveWins = YabaiWindow.decodeList(data, isOrderedIn: WindowServerProbe.isOrderedIn)
     let liveStacks = StackBuilder.build(liveWins)
     check(!liveWins.isEmpty, "live query decoded \(liveWins.count) windows")
+    let withAX = Set(YabaiWindow.decodeList(data).map(\.id))
+    for w in liveWins where !withAX.contains(w.id) {
+        print("  info: rescued (no AX ref, ordered in): \(w.app) #\(w.id)")
+    }
     print("  info: \(liveStacks.count) stack(s) detected")
     for s in liveStacks {
         print("    stack \(s.key): \(s.windows.map { "\($0.app)#\($0.stackIndex)" }.joined(separator: ", "))")
@@ -837,6 +848,34 @@ do {
     check(StackReorderPlanner.dropIndex(offsetFromTop: 500, cell: 32, count: 3) == 2, "drop index clamps high")
     check(AppConfig.load(from: #"{"style":"flag"}"#.data(using: .utf8)).indicatorDragReorder,
           "drag reorder defaults on")
+}
+
+print("WindowFocuser")
+do {
+    func fakeYabai(focusExit: Int) -> String {
+        let path = NSTemporaryDirectory() + "fake-yabai-\(UUID().uuidString)"
+        let script = """
+        #!/bin/sh
+        case "$*" in
+          *--focus*) exit \(focusExit) ;;
+          *query*) echo '[{"id":7,"pid":42,"app":"Gather","frame":{"x":0,"y":0,"w":1,"h":1},"display":1,"space":1,"stack-index":0,"has-focus":false}]' ;;
+        esac
+        """
+        try? script.write(toFile: path, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
+        return path
+    }
+    var reopened: [Int] = []
+    WindowFocuser(client: YabaiClient(yabaiPath: fakeYabai(focusExit: 0)), reopen: { pid, _ in reopened.append(pid) })
+        .focus(windowId: 7)
+    check(reopened.isEmpty, "focus success → no reopen")
+    WindowFocuser(client: YabaiClient(yabaiPath: fakeYabai(focusExit: 1)), reopen: { pid, _ in reopened.append(pid) })
+        .focus(windowId: 7)
+    check(reopened == [42], "focus failure (tray window, no AX ref) → reopen owning app")
+    reopened = []
+    WindowFocuser(client: YabaiClient(yabaiPath: fakeYabai(focusExit: 1)), reopen: { pid, _ in reopened.append(pid) })
+        .focus(windowId: 999)
+    check(reopened.isEmpty, "focus failure for unknown window → nothing")
 }
 
 print("Menu hover")

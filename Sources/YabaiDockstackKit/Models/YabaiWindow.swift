@@ -62,15 +62,22 @@ public struct YabaiWindow: Equatable {
     /// windows without an AX reference. Yabai can retain closed windows in its
     /// query (and WindowServer can retain their IDs) after their AX window is gone.
     /// Missing flags are accepted for compatibility with older yabai versions.
-    /// Never throws.
-    public static func decodeList(_ data: Data) -> [YabaiWindow] {
+    ///
+    /// `isOrderedIn` rescues live windows yabai lost the AX reference for: apps
+    /// that close to the tray and later re-show the *same* window (LINE, our own
+    /// Settings) come back with the old id, and yabai never re-binds it. Such a
+    /// window is kept when WindowServer says it is ordered in (true for windows
+    /// on other spaces too); a tray-closed / dead one is ordered out → skipped.
+    /// Only consulted for `has-ax-reference: false` entries. Never throws.
+    public static func decodeList(_ data: Data,
+                                  isOrderedIn: ((Int) -> Bool)? = nil) -> [YabaiWindow] {
         guard let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return [] }
         var out: [YabaiWindow] = []
         let decoder = JSONDecoder()
         for element in arr {
             guard let elementData = try? JSONSerialization.data(withJSONObject: element),
                   let raw = try? decoder.decode(Raw.self, from: elementData),
-                  raw.hasAXReference != false else { continue }
+                  raw.hasAXReference != false || isOrderedIn?(raw.id) == true else { continue }
             out.append(YabaiWindow(
                 id: raw.id, pid: raw.pid, app: raw.app, title: raw.title ?? "",
                 frame: YRect(x: raw.frame.x, y: raw.frame.y, w: raw.frame.w, h: raw.frame.h),

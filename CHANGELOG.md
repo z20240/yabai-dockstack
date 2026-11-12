@@ -3,6 +3,19 @@
 All notable changes to yabai-dockstack. Full release notes and downloads live on
 the [GitHub Releases](https://github.com/z20240/yabai-dockstack/releases) page.
 
+## v0.4.1 — 2026-11-13
+
+- **Fix: tray apps vanished from the switcher.** v0.4.0 dropped every window yabai
+  reports with `has-ax-reference: false`. Apps that close to the tray and re-show
+  the *same* window (LINE, dockstack's own Settings) keep that flag forever —
+  yabai never re-binds the reused window id — so live, on-screen windows went
+  missing from the switcher, Spaces View, window strip, menu and Dock preview.
+  Such windows are now kept when WindowServer reports them ordered in (works
+  across spaces); tray-closed and dead windows are still filtered out.
+- **Focusing them works again**: yabai can't focus a window it has no AX
+  reference for, so dockstack falls back to reopening the app and AX-raising
+  that exact window.
+
 ## v0.4.0 — 2026-11-12
 
 - **Your rc files are yours** (#11, thanks @Signynt): dockstack no longer edits

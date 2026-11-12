@@ -46,8 +46,9 @@ public enum YabaiDockstack {
         let client = YabaiClient(yabaiPath: resolvedYabai)
 
         let renderer = OverlayRenderer(config: config)
+        let focuser = WindowFocuser(client: client)
         func focusWindow(_ id: Int) {
-            DispatchQueue.global(qos: .userInitiated).async { client.focus(windowId: id) }
+            DispatchQueue.global(qos: .userInitiated).async { focuser.focus(windowId: id) }
         }
         renderer.onClickWindow = { id in focusWindow(id) }
 
@@ -121,7 +122,8 @@ public enum YabaiDockstack {
         // plus a sticky mode reachable through the show-switcher socket command.
         // The tap is gated on yabai being present so a captured ⌘⇥ can never
         // black-hole the system switcher while yabai is down (5s heal re-checks).
-        let switcher = SwitcherController(client: client, cache: thumbCache, config: config)
+        let switcher = SwitcherController(client: client, cache: thumbCache, config: config,
+                                          focuser: focuser)
         let switcherTap = SwitcherKeyTap()
         switcher.onDismiss = { switcherTap.resetMachine() }
         func ensureSwitcherTap() {
@@ -139,7 +141,7 @@ public enum YabaiDockstack {
             renderer.update(stacks)
             dockController?.warmCache()
         }
-        let strip = WindowStripController(client: client)
+        let strip = WindowStripController(client: client, focuser: focuser)
         strip.setEnabled(config.windowStrip)
         strip.setScale(config.windowStripScale)
         coordinator.onWindows = { windows in
@@ -271,7 +273,7 @@ public enum YabaiDockstack {
         // The watcher needs Accessibility; Screen Recording only affects thumbnails.
         func ensureDockController() {
             if config.dockPreview, PermissionsHelper.hasAccessibility(), dockController == nil {
-                let dc = DockPreviewController(client: client, cache: thumbCache)
+                let dc = DockPreviewController(client: client, cache: thumbCache, focuser: focuser)
                 dc.start()
                 dockController = dc
             } else if !config.dockPreview, let dc = dockController {

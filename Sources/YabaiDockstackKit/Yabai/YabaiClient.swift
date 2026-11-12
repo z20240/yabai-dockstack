@@ -4,7 +4,13 @@ public final class YabaiClient {
     /// Mutable so the path can be changed at runtime (Settings). All holders share
     /// this instance, so an update applies everywhere immediately.
     public var path: String
-    public init(yabaiPath: String) { self.path = yabaiPath }
+    /// Rescues live windows yabai reports without an AX reference (see
+    /// `YabaiWindow.decodeList`). Swappable for tests.
+    public var isOrderedIn: ((Int) -> Bool)?
+    public init(yabaiPath: String, isOrderedIn: ((Int) -> Bool)? = WindowServerProbe.isOrderedIn) {
+        self.path = yabaiPath
+        self.isOrderedIn = isOrderedIn
+    }
 
     private func run(_ args: [String]) -> Data? {
         let proc = Process()
@@ -21,10 +27,11 @@ public final class YabaiClient {
 
     public func queryWindows() -> [YabaiWindow] {
         guard let data = run(["-m", "query", "--windows"]) else { return [] }
-        return YabaiWindow.decodeList(data)
+        return YabaiWindow.decodeList(data, isOrderedIn: isOrderedIn)
     }
 
-    /// False when yabai couldn't focus it (e.g. the window closed since the last query).
+    /// False when yabai couldn't focus it — e.g. a window it holds no AX
+    /// reference for (closed since the last query, or re-shown from a tray).
     @discardableResult
     public func focus(windowId: Int) -> Bool {
         let proc = Process()
@@ -104,7 +111,7 @@ public final class YabaiClient {
         guard let data = run(["-m", "query", "--windows", "--window"]),
               let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let single = try? JSONSerialization.data(withJSONObject: [obj]) else { return nil }
-        return YabaiWindow.decodeList(single).first
+        return YabaiWindow.decodeList(single, isOrderedIn: isOrderedIn).first
     }
 
     /// Absolute AX move — works without the scripting addition, including

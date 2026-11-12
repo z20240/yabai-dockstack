@@ -95,4 +95,20 @@ final class YabaiWindowDecodeTests: XCTestCase {
         XCTAssertEqual(wins.first { $0.id == 10 }?.scratchpad, "Spotify")
         XCTAssertNil(wins.first { $0.id == 11 }?.scratchpad)
     }
+
+    /// LINE / our Settings: closed to the tray and re-shown with the same id,
+    /// so yabai keeps `has-ax-reference: false` for a live window. Kept only
+    /// when WindowServer says it is ordered in; tray-closed ghosts stay out.
+    func testRescuesOrderedInWindowsWithoutAXReference() {
+        func entry(_ id: Int, ax: Bool) -> String {
+            #"{"id":\#(id),"pid":1,"app":"LINE","frame":{"x":0,"y":0,"w":10,"h":10},"display":1,"space":1,"stack-index":0,"has-focus":false,"has-ax-reference":\#(ax)}"#
+        }
+        let json = Data(("[" + [entry(1, ax: true), entry(2, ax: false), entry(3, ax: false)]
+            .joined(separator: ",") + "]").utf8)
+        var asked: [Int] = []
+        let wins = YabaiWindow.decodeList(json, isOrderedIn: { asked.append($0); return $0 == 2 })
+        XCTAssertEqual(wins.map(\.id), [1, 2])
+        XCTAssertEqual(asked, [2, 3], "probe consulted only for windows without an AX reference")
+        XCTAssertEqual(YabaiWindow.decodeList(json).map(\.id), [1], "no probe → old behaviour")
+    }
 }

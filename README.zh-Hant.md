@@ -28,13 +28,12 @@ dock 預覽、視窗切換器、cmd-tab 替代、選單列、Mission Control 替
 
 這是用 Swift 重寫的乾淨版本,**不是** stackline 的 fork(stackline 需要 Hammerspoon)。
 
-## 最新變更 — v0.4.0
+## 最新變更 — v0.4.1
 
-- **rc 檔由你作主**(#11,感謝 @Signynt)—— 只有在設定裡打開「允許 dockstack 編輯 …」後,
-  dockstack 才會修改 `yabairc` / `skhdrc`;已經有 managed 區段的使用者,升級時會自動打開一次。
-- **唯讀模式忠實呈現實際設定** —— yabai 分頁顯示 yabai 當下實際在跑的設定,跟檔案不同的
-  地方標 `!`;鍵盤分頁顯示 `skhdrc` 裡真正的快捷鍵。新增設定檔欄位,可以選擇、開啟 rc 檔。
-- **Apply 前會先確認**,才會註解掉手寫的行(只註解、不刪除,並保留 `.bak`)。啟動時不再寫檔。
+- **Tray 型 app 回到 switcher** —— 關到 tray 再叫回來的視窗(LINE、dockstack 自己的設定視窗)
+  在 v0.4.0 會整個消失,因為 yabai 弄丟了它們的 AX reference。現在 switcher、Spaces View、
+  window strip、選單和 Dock preview 都會再顯示它們,點擊也能正確 focus。
+- 真的關到 tray 的視窗(Surfshark、Gather 主視窗)一樣不顯示。
 
 完整紀錄:[CHANGELOG.md](CHANGELOG.md) ·
 [Releases](https://github.com/z20240/yabai-dockstack/releases)

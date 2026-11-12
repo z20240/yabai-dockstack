@@ -32,16 +32,13 @@ dock preview, window switcher, cmd-tab replacement, menu bar, Mission Control al
 
 It is a clean Swift rewrite — **not** a fork of stackline (which required Hammerspoon).
 
-## What's new — v0.4.0
+## What's new — v0.4.1
 
-- **Your rc files are yours** (#11, thanks @Signynt) — dockstack only edits
-  `yabairc` / `skhdrc` after you turn on **Allow dockstack to edit …** in
-  Settings; existing managed setups are switched on once at upgrade.
-- **Read-only view of what you really run** — the yabai tab shows yabai's live
-  settings with a `!` where your file differs; the Keyboard tab shows the
-  shortcuts actually in your `skhdrc`. A config-file row picks and opens the rc.
-- **Apply asks first** before commenting out hand-written lines (never deleted,
-  `.bak` kept). Nothing is written on launch.
+- **Tray apps are back in the switcher** — windows that close to the tray and
+  come back (LINE, dockstack's own Settings) showed up nowhere after v0.4.0:
+  yabai loses their AX reference. They now appear in the switcher, Spaces View,
+  window strip, menu and Dock preview again, and clicking them focuses the app.
+- Windows really closed to the tray (Surfshark, Gather's main window) stay hidden.
 
 Full history: [CHANGELOG.md](CHANGELOG.md) ·
 [Releases](https://github.com/z20240/yabai-dockstack/releases)
