@@ -24,6 +24,9 @@ public final class YabaiSettingsPaneView: NSView {
     private let otherRulesList = CollapsibleListView(titleKey: "ui.yabai.otherRules")
     /// Shown whenever no transient status is (e.g. "yabai isn't running").
     private var persistentStatus = ""
+    /// yabai runs a layout the panel can't represent and the user hasn't picked one yet:
+    /// no segment is selected and Apply refuses, so it never silently changes the layout.
+    private var layoutUnresolved = false
 
     /// Asked before an Apply that comments out hand-written lines or adds the managed
     /// section for the first time. Test seam; defaults to the confirmation alert.
@@ -131,6 +134,8 @@ public final class YabaiSettingsPaneView: NSView {
         // row stack this constraint is honoured directly — unlike inside an NSGridView,
         // whose column (sized by the narrow 80pt number fields) compressed it.
         layoutControl.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        layoutControl.target = self
+        layoutControl.action = #selector(layoutPicked)
 
         // Scalar form: a vertical stack of [right-aligned fixed-width label | control | !]
         // rows. Plain stacks keep each control at its own width, left-aligned, with no
@@ -348,6 +353,7 @@ public final class YabaiSettingsPaneView: NSView {
         faithful = view
         settings = view.settings
         baseline = view.settings
+        layoutUnresolved = view.unrepresentedLayout != nil
         rcRow.update(effectivePath: engine.yabaiConfigPath)
         syncFields()
         updateBadges()
@@ -376,6 +382,11 @@ public final class YabaiSettingsPaneView: NSView {
 
     private func updateBadges() {
         for (field, badge) in fieldBadges {
+            if field == .layout, let word = faithful?.unrepresentedLayout {
+                badge.toolTip = String(format: L10n.t("ui.yabai.layoutUnrepresented"), word)
+                badge.isHidden = false
+                continue
+            }
             guard let d = faithful?.fieldDiffs[field] else {
                 badge.isHidden = true
                 badge.toolTip = nil
@@ -412,10 +423,14 @@ public final class YabaiSettingsPaneView: NSView {
 
     /// Write `settings` values into all UI controls.
     private func syncFields() {
-        switch settings.layout {
-        case .bsp:   layoutControl.selectedSegment = 0
-        case .float: layoutControl.selectedSegment = 1
-        case .off:   layoutControl.selectedSegment = 2
+        if layoutUnresolved {
+            layoutControl.selectedSegment = -1   // nothing here matches what yabai runs
+        } else {
+            switch settings.layout {
+            case .bsp:   layoutControl.selectedSegment = 0
+            case .float: layoutControl.selectedSegment = 1
+            case .off:   layoutControl.selectedSegment = 2
+            }
         }
         topField.integerValue    = settings.topPadding
         bottomField.integerValue = settings.bottomPadding
@@ -448,6 +463,11 @@ public final class YabaiSettingsPaneView: NSView {
         settings = readFields(into: settings)
     }
 
+    /// An explicit layout choice; resolves an unrepresentable live layout.
+    @objc private func layoutPicked() {
+        if layoutControl.selectedSegment >= 0 { layoutUnresolved = false }
+    }
+
     // MARK: - Rules table actions
 
     @objc private func addRule() {
@@ -473,6 +493,11 @@ public final class YabaiSettingsPaneView: NSView {
         guard engine.manageYabaiConfig else { return }
         // End any in-progress field editing before reading values
         window?.makeFirstResponder(nil)
+        // Never write a layout the user didn't choose over one dockstack can't show.
+        if layoutUnresolved {
+            showStatus(false, L10n.t("ui.yabai.layoutUnrepresentedApply"))
+            return
+        }
         flushFields()
         // A file Apply would refuse (malformed markers, unreadable) is reported before
         // any dialog, and nothing is written.
@@ -496,6 +521,7 @@ public final class YabaiSettingsPaneView: NSView {
             // The file now holds exactly what yabai is restarting with.
             faithful?.fieldDiffs = [:]
             faithful?.ruleDiffs = [:]
+            faithful?.unrepresentedLayout = nil
             updateBadges()
         }
         showStatus(r.ok, r.ok ? L10n.t("ui.status.restartedYabai") : r.output)
@@ -504,10 +530,17 @@ public final class YabaiSettingsPaneView: NSView {
     @objc private func importTapped() {
         guard engine.manageYabaiConfig else { return }
         window?.makeFirstResponder(nil)
+        // Import writes the managed section (layout included): same rule as Apply.
+        if layoutUnresolved {
+            showStatus(false, L10n.t("ui.yabai.layoutUnrepresentedApply"))
+            return
+        }
         flushFields()
         do {
             let (n, s) = try engine.importYabai(base: settings)
+            // The file's managed section now holds exactly these settings.
             settings = s
+            baseline = s
             syncFields()
             showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedSettings"), n) : L10n.t("ui.status.nothingToImport"))
         } catch {
@@ -518,6 +551,7 @@ public final class YabaiSettingsPaneView: NSView {
     @objc private func resetTapped() {
         guard engine.manageYabaiConfig else { return }
         settings = DefaultTemplate.defaultYabaiSettings()
+        layoutUnresolved = false   // the template's layout is an explicit choice
         syncFields()
         // Do NOT auto-apply
     }
