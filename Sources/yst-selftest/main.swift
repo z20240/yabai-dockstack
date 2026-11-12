@@ -1249,6 +1249,18 @@ do {
           "falls back to first in lookup order")
 }
 
+print("AppConfig migration")
+do {
+    let d1 = Data(#"{"cellSize":24}"#.utf8)
+    var c1 = AppConfig.load(from: d1)
+    let r1 = c1.migrateManagement(presentKeys: AppConfig.presentKeys(in: d1), hasYabaiRegion: true, hasSkhdRegion: false)
+    check(r1 && c1.manageYabaiConfig && !c1.manageSkhdConfig, "absent keys take region presence")
+    let d2 = Data(#"{"manageYabaiConfig":false,"manageSkhdConfig":false}"#.utf8)
+    var c2 = AppConfig.load(from: d2)
+    let r2 = c2.migrateManagement(presentKeys: AppConfig.presentKeys(in: d2), hasYabaiRegion: true, hasSkhdRegion: true)
+    check(!r2 && !c2.manageYabaiConfig && !c2.manageSkhdConfig, "explicit false respected")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

@@ -8,6 +8,9 @@ public struct AppConfig: Codable, Equatable {
     public var manageYabaiConfig: Bool
     /// Opt in to importing and writing skhdrc, including shortcut edits.
     public var manageSkhdConfig: Bool
+    /// Explicit yabairc / skhdrc path; "" = auto-detect.
+    public var yabaiRcPath: String
+    public var skhdRcPath: String
     public var socketPath: String
     public var style: IndicatorStyle
     public var cellSize: Double
@@ -84,6 +87,8 @@ public struct AppConfig: Codable, Equatable {
         yabaiPath: "/opt/homebrew/bin/yabai",
         manageYabaiConfig: false,
         manageSkhdConfig: false,
+        yabaiRcPath: "",
+        skhdRcPath: "",
         socketPath: "/tmp/yabai-dockstack.sock",
         style: .icon, cellSize: 32, offset: 4,
         focusedAlpha: 1.0, unfocusedAlpha: 0.4,
@@ -132,6 +137,25 @@ public struct AppConfig: Codable, Equatable {
             return defaults
         }
         return cfg
+    }
+
+    /// Top-level JSON keys present in raw config data; empty for nil/invalid.
+    public static func presentKeys(in data: Data?) -> Set<String> {
+        guard let data,
+              let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
+        return Set(raw.keys)
+    }
+
+    /// One-time migration: a manage* key absent from the saved file takes the value of
+    /// whether its rc already has a dockstack region. Returns true if any key was absent
+    /// (caller should save so the decision is made once).
+    @discardableResult
+    public mutating func migrateManagement(presentKeys: Set<String>,
+                                           hasYabaiRegion: Bool, hasSkhdRegion: Bool) -> Bool {
+        var changed = false
+        if !presentKeys.contains("manageYabaiConfig") { manageYabaiConfig = hasYabaiRegion; changed = true }
+        if !presentKeys.contains("manageSkhdConfig") { manageSkhdConfig = hasSkhdRegion; changed = true }
+        return changed
     }
 
     /// Loads from a file path, expanding `~`. Missing file → defaults.
