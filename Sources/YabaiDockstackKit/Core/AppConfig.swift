@@ -125,6 +125,13 @@ public struct AppConfig: Codable, Equatable {
 
     public static func load(from data: Data?) -> AppConfig { loadResult(from: data).config }
 
+    /// True when a config.json exists (or returned data) but couldn't be read, parsed or
+    /// decoded. Such a file is never saved over at startup — a read failure is treated
+    /// like an undecodable file, not like a missing one.
+    public static func isUnreadable(fileExists: Bool, data: Data?) -> Bool {
+        (fileExists || data != nil) && !loadResult(from: data).decoded
+    }
+
     /// Like `load(from:)`, plus whether the data actually parsed and decoded. `decoded`
     /// is false for nil, unparseable or mistyped data (the config is then `defaults`),
     /// so callers can avoid saving defaults over a file they couldn't read.

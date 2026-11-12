@@ -17,13 +17,15 @@ public enum YabaiDockstack {
         let configPath = "~/.config/yabai-dockstack/config.json"
         // Raw data read once: the decoded config plus which keys the file actually
         // has (the one-time management migration below needs the latter).
-        let rawConfig = try? Data(contentsOf: URL(fileURLWithPath:
-            (configPath as NSString).expandingTildeInPath))
+        let configFile = (configPath as NSString).expandingTildeInPath
+        let rawConfig = try? Data(contentsOf: URL(fileURLWithPath: configFile))
         let loaded = AppConfig.loadResult(from: rawConfig)
         var config = loaded.config
         let presentConfigKeys = AppConfig.presentKeys(in: rawConfig)
-        // A config.json we couldn't parse/decode is never overwritten at startup.
-        let configUnreadable = rawConfig != nil && !loaded.decoded
+        // A config.json we couldn't read/parse/decode is never overwritten at startup
+        // (an existing file that fails to read is not "missing").
+        let configUnreadable = AppConfig.isUnreadable(
+            fileExists: FileManager.default.fileExists(atPath: configFile), data: rawConfig)
         if configUnreadable {
             NSLog("yabai-dockstack: config.json could not be read — using defaults, not saving over it")
         }
