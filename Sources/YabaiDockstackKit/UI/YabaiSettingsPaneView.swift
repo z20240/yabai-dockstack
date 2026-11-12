@@ -1,18 +1,35 @@
 import AppKit
 
 /// Yabai config pane: default layout, paddings, gap, and a window-rules table.
-/// Part of the Settings UI (Plan 2). UI-only; no unit tests.
+/// Always shows what yabai is running now (`FaithfulYabai`: live state, falling back
+/// to the rc file), with hover-only `!` badges where the file differs. Read-only unless
+/// "Allow dockstack to edit yabairc" is on; then those values are the editable start.
 public final class YabaiSettingsPaneView: NSView {
 
     // MARK: - State
 
     private let engine: ConfigEngine
-    private let rawFilePath: String
+    private let sources: RcSources
     private var settings: YabaiSettings
+    /// The faithful values last loaded; edits are "unsaved" while they differ from it.
+    private var baseline: YabaiSettings
+    private var faithful: FaithfulYabaiView?
     private let onManagementChange: (Bool) -> Void
     private let managementCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let managementHint = NSTextField(wrappingLabelWithString: "")
     private var managedViews: [NSView] = []
+    /// nil until the first updateManagementEnabled (from init).
+    private var managementEnabled: Bool?
+    private var rcRow: RcFileRowView!
+    private let otherRulesList = CollapsibleListView(titleKey: "ui.yabai.otherRules")
+    /// Shown whenever no transient status is (e.g. "yabai isn't running").
+    private var persistentStatus = ""
+
+    /// Asked before an Apply that comments out hand-written lines or adds the managed
+    /// section for the first time. Test seam; defaults to the confirmation alert.
+    lazy var confirm: (ApplyPlan, String) -> Bool = { [unowned self] plan, path in
+        ApplyConfirmAlert.run(plan: plan, path: path, window: self.window)
+    }
 
     // MARK: - Scalar controls
 
@@ -29,6 +46,9 @@ public final class YabaiSettingsPaneView: NSView {
     private let leftField   = NSTextField()
     private let rightField  = NSTextField()
     private let gapField    = NSTextField()
+
+    /// Hover-only "!" next to each scalar field.
+    private var fieldBadges: [YabaiField: NSTextField] = [:]
 
     // MARK: - Rules table
 
@@ -50,15 +70,16 @@ public final class YabaiSettingsPaneView: NSView {
 
     // MARK: - Init
 
-    public init(engine: ConfigEngine, rawFilePath: String,
+    public init(engine: ConfigEngine, sources: RcSources = .none,
                 onManagementChange: @escaping (Bool) -> Void = { _ in }) {
         self.engine = engine
+        self.sources = sources
         self.onManagementChange = onManagementChange
-        self.rawFilePath = rawFilePath
-        self.settings = engine.loadYabaiSettingsOrDefault()
+        self.settings = YabaiSettings.defaults
+        self.baseline = YabaiSettings.defaults
         super.init(frame: .zero)
         buildUI()
-        syncFields()
+        reload(force: true)
         updateManagementEnabled(engine.manageYabaiConfig)
     }
 
@@ -66,19 +87,41 @@ public final class YabaiSettingsPaneView: NSView {
 
     // MARK: - Build
 
+    /// A small orange "!" whose explanation lives only in its tooltip.
+    static func makeBadge() -> NSTextField {
+        let b = NSTextField(labelWithString: "!")
+        b.font = .boldSystemFont(ofSize: 13)
+        b.textColor = .systemOrange
+        b.isHidden = true
+        b.setContentHuggingPriority(.required, for: .horizontal)
+        return b
+    }
+
     private func buildUI() {
+        // rc file row: forwards path changes, then re-reads the (possibly new) file.
+        var rowSources = sources
+        let forward = sources.onPathChange
+        rowSources.onPathChange = { [weak self] tool, path in
+            forward(tool, path)
+            self?.reload(force: true)
+        }
+        rcRow = RcFileRowView(tool: .yabai, sources: rowSources,
+                              canCreateFile: { [weak self] in self?.engine.manageYabaiConfig ?? false },
+                              onStatus: { [weak self] ok, msg in self?.showStatus(ok, msg) })
+
         managementCheck.title = L10n.t("ui.yabai.manageConfig")
         managementCheck.target = self
         managementCheck.action = #selector(managementChanged)
         managementHint.stringValue = L10n.t("ui.yabai.managementHint")
         managementHint.font = .systemFont(ofSize: 11)
         managementHint.textColor = .secondaryLabelColor
-        let managementHeader = NSStackView(views: [managementCheck, managementHint])
+        let managementHeader = NSStackView(views: [rcRow, managementCheck, managementHint])
         managementHeader.orientation = .vertical
         managementHeader.alignment = .leading
         managementHeader.spacing = 6
         managementHeader.translatesAutoresizingMaskIntoConstraints = false
         managementHint.widthAnchor.constraint(equalTo: managementHeader.widthAnchor).isActive = true
+        rcRow.widthAnchor.constraint(equalTo: managementHeader.widthAnchor).isActive = true
         // Integer text fields: right-aligned, fixed width
         for f in [topField, bottomField, leftField, rightField, gapField] {
             f.alignment = .right
@@ -89,16 +132,16 @@ public final class YabaiSettingsPaneView: NSView {
         // whose column (sized by the narrow 80pt number fields) compressed it.
         layoutControl.widthAnchor.constraint(equalToConstant: 200).isActive = true
 
-        // Scalar form: a vertical stack of [right-aligned fixed-width label | control]
+        // Scalar form: a vertical stack of [right-aligned fixed-width label | control | !]
         // rows. Plain stacks keep each control at its own width, left-aligned, with no
         // NSGridView column-sizing quirks (which were squeezing the segmented control).
         let form = NSStackView(views: [
-            formRow(L10n.t("ui.yabai.defaultLayout"), layoutControl),
-            formRow(L10n.t("ui.yabai.topPadding"),    topField),
-            formRow(L10n.t("ui.yabai.bottomPadding"), bottomField),
-            formRow(L10n.t("ui.yabai.leftPadding"),   leftField),
-            formRow(L10n.t("ui.yabai.rightPadding"),  rightField),
-            formRow(L10n.t("ui.yabai.gap"),           gapField),
+            formRow(L10n.t("ui.yabai.defaultLayout"), layoutControl, .layout),
+            formRow(L10n.t("ui.yabai.topPadding"),    topField,      .top),
+            formRow(L10n.t("ui.yabai.bottomPadding"), bottomField,   .bottom),
+            formRow(L10n.t("ui.yabai.leftPadding"),   leftField,     .left),
+            formRow(L10n.t("ui.yabai.rightPadding"),  rightField,    .right),
+            formRow(L10n.t("ui.yabai.gap"),           gapField,      .gap),
         ])
         form.orientation = .vertical
         form.alignment   = .leading
@@ -121,14 +164,23 @@ public final class YabaiSettingsPaneView: NSView {
         modeCol.minWidth = 90
         modeCol.width    = 150
 
+        // Hover-only "!" for rules that differ between yabai and the file.
+        let diffCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("diff"))
+        diffCol.title    = ""
+        diffCol.minWidth = 20
+        diffCol.width    = 20
+        diffCol.maxWidth = 20
+
         tableView = NSTableView()
         tableView.addTableColumn(appCol)
         tableView.addTableColumn(modeCol)
+        tableView.addTableColumn(diffCol)
         tableView.dataSource = self
         tableView.delegate   = self
         tableView.rowHeight  = 24
         tableView.usesAlternatingRowBackgroundColors = true
-        tableView.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
+        // The App column absorbs extra width (the "!" column stays narrow).
+        tableView.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         tableView.allowsEmptySelection = true
 
         let tableScroll = NSScrollView()
@@ -153,11 +205,12 @@ public final class YabaiSettingsPaneView: NSView {
         ruleButtons.spacing     = 4
 
         // Content stack (scrolled)
-        let contentStack = NSStackView(views: [form, rulesHeader, tableScroll, ruleButtons])
+        let contentStack = NSStackView(views: [form, rulesHeader, tableScroll, ruleButtons, otherRulesList])
         contentStack.orientation = .vertical
         contentStack.alignment   = .leading
         contentStack.spacing     = 12
         contentStack.translatesAutoresizingMaskIntoConstraints = false
+        otherRulesList.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
 
         let scrollContent = FlippedDocumentView()
         scrollContent.translatesAutoresizingMaskIntoConstraints = false
@@ -190,13 +243,14 @@ public final class YabaiSettingsPaneView: NSView {
         let importButton = NSButton(title: L10n.t("ui.importExisting"), target: self, action: #selector(importTapped))
         importButton.bezelStyle = .rounded
 
-        let editButton = NSButton(title: L10n.t("ui.editRaw"), target: self, action: #selector(editRawTapped))
-        editButton.bezelStyle = .rounded
-
         let resetButton = NSButton(title: L10n.t("ui.resetDefaults"), target: self, action: #selector(resetTapped))
         resetButton.bezelStyle = .rounded
 
-        let bottomBar = NSStackView(views: [applyButton, importButton, editButton, resetButton, statusLabel])
+        // Re-reads the file and yabai's live state; never writes, so always enabled.
+        let reloadButton = NSButton(title: L10n.t("ui.rc.reload"), target: self, action: #selector(reloadTapped))
+        reloadButton.bezelStyle = .rounded
+
+        let bottomBar = NSStackView(views: [applyButton, importButton, resetButton, reloadButton, statusLabel])
         bottomBar.orientation = .horizontal
         bottomBar.spacing     = 8
         bottomBar.translatesAutoresizingMaskIntoConstraints = false
@@ -227,21 +281,35 @@ public final class YabaiSettingsPaneView: NSView {
             bottomBar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             bottomBar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
         ])
-        managedViews = [contentStack, bottomBar]
+        // rc-backed editors only: the rc row, "Other rules" and Reload never write
+        // the rc file, so they stay usable in read-only mode.
+        managedViews = [form, tableScroll, ruleButtons, applyButton, importButton, resetButton]
     }
 
+    /// Enable/disable editing. Turning it off discards unsaved edits and reloads the
+    /// faithful view; turning it on keeps the shown values as the starting point.
+    /// Never touches the rc file.
     public func updateManagementEnabled(_ enabled: Bool) {
         // Finish editing before disabling, including an active table field editor.
         if !enabled { window?.makeFirstResponder(nil) }
+        let wasEnabled = managementEnabled
+        managementEnabled = enabled
         engine.manageYabaiConfig = enabled
         managementCheck.state = enabled ? .on : .off
         managementHint.isHidden = enabled
         func update(_ view: NSView) {
+            // Plain labels (form captions, "!" badges) keep their look and tooltips.
+            if let label = view as? NSTextField, !label.isEditable { return }
             (view as? NSControl)?.isEnabled = enabled
             view.subviews.forEach(update)
         }
         managedViews.forEach(update)
-        tableView.reloadData()
+        if wasEnabled == true && !enabled {
+            reload(force: true)
+        } else {
+            refreshOtherRules()
+            tableView.reloadData()
+        }
     }
 
     @objc private func managementChanged() {
@@ -250,18 +318,94 @@ public final class YabaiSettingsPaneView: NSView {
         onManagementChange(enabled)
     }
 
-    /// One form row: a fixed-width right-aligned label next to its control, so all
-    /// controls line up at the same x without relying on NSGridView column sizing.
-    private func formRow(_ label: String, _ control: NSView) -> NSView {
+    /// One form row: a fixed-width right-aligned label next to its control and its
+    /// "!" badge, so all controls line up at the same x without NSGridView sizing.
+    private func formRow(_ label: String, _ control: NSView, _ field: YabaiField) -> NSView {
         let l = NSTextField(labelWithString: label)
         l.alignment = .right
         l.widthAnchor.constraint(equalToConstant: 120).isActive = true
         l.setContentHuggingPriority(.required, for: .horizontal)
-        let s = NSStackView(views: [l, control])
+        let badge = Self.makeBadge()
+        fieldBadges[field] = badge
+        let s = NSStackView(views: [l, control, badge])
         s.orientation = .horizontal
         s.alignment   = .centerY
         s.spacing     = 8
         return s
+    }
+
+    // MARK: - Reload
+
+    /// True when the controls hold values that differ from the last faithful load.
+    public var hasUnsavedEdits: Bool { readFields(into: settings) != baseline }
+
+    /// Re-read the rc file and yabai's live state and show them. With `force: false`
+    /// this is skipped while there are unsaved edits. Never writes anything.
+    public func reload(force: Bool) {
+        if !force && hasUnsavedEdits { return }
+        let view = FaithfulYabai.compose(live: sources.liveYabai(), file: engine.yabaiFileState(),
+                                         autoPaddingOriginal: sources.autoPaddingOriginal())
+        faithful = view
+        settings = view.settings
+        baseline = view.settings
+        rcRow.update(effectivePath: engine.yabaiConfigPath)
+        syncFields()
+        updateBadges()
+        refreshOtherRules()
+        persistentStatus = view.liveAvailable ? "" : L10n.t("ui.yabai.notRunning")
+        statusLabel.stringValue = persistentStatus
+        statusLabel.textColor = .secondaryLabelColor
+    }
+
+    @objc private func reloadTapped() { reload(force: true) }
+
+    /// "Other rules" is a read-only view of what can't be edited here; not-allow only.
+    private func refreshOtherRules() {
+        otherRulesList.setItems(faithful?.otherRules ?? [])
+        if engine.manageYabaiConfig { otherRulesList.isHidden = true }
+    }
+
+    private static func layoutName(_ raw: String) -> String {
+        switch raw {
+        case YabaiSettings.Layout.bsp.rawValue:   return "BSP"
+        case YabaiSettings.Layout.float.rawValue: return "Float"
+        case YabaiSettings.Layout.off.rawValue:   return "Off"
+        default: return raw
+        }
+    }
+
+    private func updateBadges() {
+        for (field, badge) in fieldBadges {
+            guard let d = faithful?.fieldDiffs[field] else {
+                badge.isHidden = true
+                badge.toolTip = nil
+                continue
+            }
+            let live = field == .layout ? Self.layoutName(d.live) : d.live
+            let file = field == .layout ? Self.layoutName(d.file) : d.file
+            var tip = String(format: L10n.t("ui.yabai.diff.field"), live, file)
+            if d.autoPadding { tip += "\n" + L10n.t("ui.yabai.diff.autoPadding") }
+            badge.toolTip = tip
+            badge.isHidden = false
+        }
+        tableView.reloadData()
+    }
+
+    /// Tooltip for a rule row's "!", or nil when the rule matches the file.
+    private func ruleDiffTip(app: String) -> String? {
+        guard let diff = faithful?.ruleDiffs[app] else { return nil }
+        switch diff {
+        case .liveOnly: return L10n.t("ui.yabai.diff.liveOnly")
+        case .fileOnly: return L10n.t("ui.yabai.diff.fileOnly")
+        case .modeDiffers(let fileMode):
+            let liveMode = faithful?.settings.rules.first { $0.app == app }?.mode ?? fileMode
+            return String(format: L10n.t("ui.yabai.diff.modeDiffers"),
+                          Self.modeName(liveMode), Self.modeName(fileMode))
+        }
+    }
+
+    private static func modeName(_ mode: WindowRule.Mode) -> String {
+        L10n.t(modes.first { $0.mode == mode }?.key ?? "ui.yabai.modeFloating")
     }
 
     // MARK: - Sync
@@ -281,20 +425,27 @@ public final class YabaiSettingsPaneView: NSView {
         tableView.reloadData()
     }
 
+    /// `base` with the scalar controls' current values.
+    private func readFields(into base: YabaiSettings) -> YabaiSettings {
+        var s = base
+        switch layoutControl.selectedSegment {
+        case 0: s.layout = .bsp
+        case 1: s.layout = .float
+        case 2: s.layout = .off
+        default: break
+        }
+        s.topPadding    = max(0, topField.integerValue)
+        s.bottomPadding = max(0, bottomField.integerValue)
+        s.leftPadding   = max(0, leftField.integerValue)
+        s.rightPadding  = max(0, rightField.integerValue)
+        s.gap           = max(0, gapField.integerValue)
+        return s
+    }
+
     /// Read scalar UI controls into `settings` before saving.
     /// (NSTextField may not have fired its action if the user didn't press Enter.)
     private func flushFields() {
-        switch layoutControl.selectedSegment {
-        case 0: settings.layout = .bsp
-        case 1: settings.layout = .float
-        case 2: settings.layout = .off
-        default: break
-        }
-        settings.topPadding    = max(0, topField.integerValue)
-        settings.bottomPadding = max(0, bottomField.integerValue)
-        settings.leftPadding   = max(0, leftField.integerValue)
-        settings.rightPadding  = max(0, rightField.integerValue)
-        settings.gap           = max(0, gapField.integerValue)
+        settings = readFields(into: settings)
     }
 
     // MARK: - Rules table actions
@@ -323,38 +474,35 @@ public final class YabaiSettingsPaneView: NSView {
         // End any in-progress field editing before reading values
         window?.makeFirstResponder(nil)
         flushFields()
+        // Commenting out hand-written lines (or adding the managed section for the
+        // first time) needs the user's OK; cancelling writes nothing.
+        let plan = engine.yabaiApplyPlan(settings)
+        if plan.needsConfirmation && !confirm(plan, engine.yabaiConfigPath) { return }
         do {
             try engine.saveYabai(settings)
-            let r = engine.applyYabai()
-            showStatus(r.ok, r.ok ? L10n.t("ui.status.restartedYabai") : r.output)
         } catch {
             showStatus(false, error.localizedDescription)
+            return
         }
-    }
-
-    @objc private func editRawTapped() {
-        guard engine.manageYabaiConfig else { return }
-        // `open -t` opens in the default GUI text editor (TextEdit, or whatever the
-        // user set for the text role) instead of the file's default app — which for
-        // dotfiles like ~/.yabairc is often a terminal editor.
-        let path = (rawFilePath as NSString).expandingTildeInPath
-        guard !path.isEmpty else { return }
-        if !FileManager.default.fileExists(atPath: path) {
-            FileManager.default.createFile(atPath: path, contents: Data(), attributes: nil)
+        baseline = settings
+        let r = engine.applyYabai()
+        if r.ok {
+            // The file now holds exactly what yabai is restarting with.
+            faithful?.fieldDiffs = [:]
+            faithful?.ruleDiffs = [:]
+            updateBadges()
         }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        p.arguments = ["-t", path]
-        try? p.run()
+        showStatus(r.ok, r.ok ? L10n.t("ui.status.restartedYabai") : r.output)
     }
 
     @objc private func importTapped() {
         guard engine.manageYabaiConfig else { return }
+        window?.makeFirstResponder(nil)
+        flushFields()
         do {
             let (n, s) = try engine.importYabai(base: settings)
             settings = s
             syncFields()
-            tableView.reloadData()
             showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedSettings"), n) : L10n.t("ui.status.nothingToImport"))
         } catch {
             showStatus(false, error.localizedDescription)
@@ -370,13 +518,15 @@ public final class YabaiSettingsPaneView: NSView {
 
     // MARK: - Status
 
-    /// Display a status message. `success` determines the label colour.
+    /// Display a transient status message (`success` picks the colour); afterwards the
+    /// persistent status (e.g. "yabai isn't running") comes back.
     private func showStatus(_ success: Bool, _ message: String) {
         statusLabel.stringValue = message
         statusLabel.textColor   = success ? .systemGreen : .systemRed
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
             guard let self, self.statusLabel.stringValue == message else { return }
-            self.statusLabel.stringValue = ""
+            self.statusLabel.stringValue = self.persistentStatus
+            self.statusLabel.textColor = .secondaryLabelColor
         }
     }
 }
@@ -433,6 +583,15 @@ extension YabaiSettingsPaneView: NSTableViewDelegate {
             }
             cell.selectItem(at: Self.modes.firstIndex { $0.mode == rule.mode } ?? 0)
             cell.isEnabled = engine.manageYabaiConfig
+            return cell
+
+        } else if colID == "diff" {
+            let cellID = NSUserInterfaceItemIdentifier("diffCell")
+            let cell = tableView.makeView(withIdentifier: cellID, owner: self) as? NSTextField
+                ?? { let b = Self.makeBadge(); b.identifier = cellID; b.alignment = .center; return b }()
+            let tip = ruleDiffTip(app: rule.app)
+            cell.toolTip = tip
+            cell.isHidden = tip == nil
             return cell
         }
 

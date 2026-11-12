@@ -87,8 +87,9 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     /// Set by the app BEFORE calling show() — enables the yabai and Keyboard tabs.
     public var configEngine: ConfigEngine?
-    public var yabaiRawPath: String?
     public var skhdRawPath: String?
+    /// Live yabai state, rc path detection/overrides for the rc-backed panes.
+    public var rcSources: RcSources = .none
 
     /// Set by the app: trigger the request + open the right System Settings pane.
     public var onGrantAccessibility: (() -> Void)?
@@ -418,7 +419,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         yabaiItem.label = L10n.t("ui.tab.yabai")
         if let engine = configEngine {
             engine.manageYabaiConfig = config.manageYabaiConfig
-            let pane = YabaiSettingsPaneView(engine: engine, rawFilePath: yabaiRawPath ?? "") { [weak self] enabled in
+            let pane = YabaiSettingsPaneView(engine: engine, sources: rcSources) { [weak self] enabled in
                 guard let self else { return }
                 self.config.manageYabaiConfig = enabled
                 self.onChange(self.config)

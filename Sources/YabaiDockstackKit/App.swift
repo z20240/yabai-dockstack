@@ -285,7 +285,6 @@ public enum YabaiDockstack {
             loginIsEnabled: { LoginItem.isEnabled })
 
         settings.configEngine = configEngine
-        settings.yabaiRawPath = yabaiRcPath
         settings.skhdRawPath = skhdRcPath
 
         // Permissions section: request the permission AND open the right pane, one
