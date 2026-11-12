@@ -30,6 +30,23 @@ final class SpacesSwitcherTests: XCTestCase {
         XCTAssertEqual(SpacesSwitcherModel.selectable(cards).map(\.id), [11, 31])
     }
 
+    func testSpacesFromWindowsStandsInBeforeTheSpacesQuery() {
+        let focused = YabaiWindow(id: 21, pid: 21, app: "A", title: "t21", frame: YRect(x: 0, y: 0, w: 200, h: 100),
+                                  display: 2, space: 4, stackIndex: 0, hasFocus: true)
+        let hidden = YabaiWindow(id: 31, pid: 31, app: "A", title: "t31", frame: YRect(x: 0, y: 0, w: 200, h: 100),
+                                 display: 1, space: 3, stackIndex: 0, hasFocus: false, isVisible: false)
+        let windows = [win(11, space: 1), win(12, space: 1), focused, hidden, win(99, space: 0)]
+        let spaces = SpacesSwitcherModel.spacesFromWindows(windows)
+        XCTAssertEqual(spaces, [SpaceInfo(index: 1, display: 1, isVisible: true),
+                                SpaceInfo(index: 3, display: 1, isVisible: false),
+                                SpaceInfo(index: 4, display: 2, isVisible: true, hasFocus: true)])
+        let cards = SpacesSwitcherModel.build(items: windows.map(item), windows: windows, spaces: spaces,
+                                              labels: [:], matching: [11, 21])
+        XCTAssertEqual(SpacesSwitcherModel.selectable(cards).map(\.id), [11, 21],
+                       "every selectable item is a visible tile, even before the spaces query")
+        XCTAssertTrue(SpacesSwitcherModel.spacesFromWindows([]).isEmpty)
+    }
+
     func testSpaceInfoDecodesFocus() {
         let json = #"[{"index":1,"display":1,"is-visible":true,"has-focus":true},{"index":2,"display":1}]"#
         XCTAssertEqual(SpaceInfo.decodeList(Data(json.utf8)).map(\.hasFocus), [true, false])

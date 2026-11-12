@@ -46,6 +46,21 @@ public enum SpacesSwitcherModel {
     }
 
     /// Keyboard order: matching tiles, card by card.
+    /// Stand-in spaces read off the windows' own space / display fields, for
+    /// before (or instead of) a successful `query --spaces`. A cold first
+    /// open then shows real, selectable tiles instead of an empty panel, and
+    /// the search switcher keeps working if the spaces query fails. Spaces
+    /// without windows and fullscreen flags are unknown until the real query.
+    public static func spacesFromWindows(_ windows: [YabaiWindow]) -> [SpaceInfo] {
+        Dictionary(grouping: windows.filter { $0.space > 0 }, by: \.space)
+            .map { space, ws in
+                SpaceInfo(index: space, display: ws[0].display,
+                          isVisible: ws.contains(where: \.isVisible),
+                          hasFocus: ws.contains(where: \.hasFocus))
+            }
+            .sorted { $0.index < $1.index }
+    }
+
     public static func selectable(_ cards: [SpaceCard]) -> [SwitcherItem] {
         cards.flatMap { $0.tiles.filter(\.matches).map(\.item) }
     }

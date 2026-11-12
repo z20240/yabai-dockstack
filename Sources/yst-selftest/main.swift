@@ -1056,6 +1056,13 @@ do {
           && cards[0].tiles.first?.aspect == 2, "tiles: stack order, query matches, aspect")
     check(cards[2].isFullscreen && cards[0].hasFocus && cards[1].tiles.isEmpty, "cards: fullscreen / focus flags")
     check(SpacesSwitcherModel.selectable(cards).map(\.id) == [11, 31], "only matching tiles are selectable")
+    let derived = SpacesSwitcherModel.spacesFromWindows(windows + [win(99, space: 0)])
+    check(derived == [SpaceInfo(index: 1, display: 1, isVisible: true), SpaceInfo(index: 3, display: 2, isVisible: true)],
+          "cold search open: stand-in spaces from the windows (space 0 skipped)")
+    let derivedCards = SpacesSwitcherModel.build(items: items, windows: windows, spaces: derived,
+                                                 labels: [:], matching: [11, 31])
+    check(SpacesSwitcherModel.selectable(derivedCards).map(\.id) == [11, 31],
+          "cold search open: every selectable item is a visible tile")
 
     let rects = [CGRect(x: 0, y: 0, width: 100, height: 50), CGRect(x: 120, y: 0, width: 100, height: 50),
                  CGRect(x: 10, y: 80, width: 100, height: 50)]

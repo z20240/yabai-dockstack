@@ -251,17 +251,18 @@ public final class SwitcherController {
                                     scope: scope, query: query)
             .filter { !pendingCloseIDs.contains($0.id) }
         if sticky {
-            // An empty space cache on first open is still search mode. Show
-            // the Spaces panel's search box until refreshAsync fills its cards,
-            // rather than opening the hold panel and leaving it behind later.
+            // Search mode always uses the Spaces view, so the panel never
+            // swaps views mid-open. Until `query --spaces` has answered (cold
+            // first open), or if it fails, derive the cards from the windows,
+            // so every selectable item is a tile the user can actually see.
             // Every window gets a tile; the query only decides which are lit.
             let all = SwitcherModel.build(windows: lastWindows, mru: mru.ids, scope: scope, query: "")
                 .filter { !pendingCloseIDs.contains($0.id) }
-            let c = SpacesSwitcherModel.build(items: all, windows: lastWindows, spaces: spaces,
+            let shownSpaces = spaces.isEmpty ? SpacesSwitcherModel.spacesFromWindows(lastWindows) : spaces
+            let c = SpacesSwitcherModel.build(items: all, windows: lastWindows, spaces: shownSpaces,
                                               labels: spaceLabels, matching: Set(items.map(\.id)))
             cards = c
-            // Preserve the cached MRU selection while space metadata loads.
-            if !spaces.isEmpty { items = SpacesSwitcherModel.selectable(c) }
+            items = SpacesSwitcherModel.selectable(c)
         } else {
             cards = nil
         }
@@ -280,6 +281,9 @@ public final class SwitcherController {
     private func render() {
         if spacesPanel.isDragging { renderPending = true; return }
         pointerGate = NSEvent.mouseLocation
+        // Never both on screen, whichever view this render picks (open() only
+        // enforces it once, before the first render).
+        if cards != nil { panel.hide() } else { spacesPanel.hide() }
         if let cards {
             let ids = cards.flatMap { $0.tiles.map(\.item.id) }
             let thumbs = Dictionary(ids.compactMap { id in cache.get(id).map { (id, $0) } },
