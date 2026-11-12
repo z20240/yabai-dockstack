@@ -268,4 +268,19 @@ final class YabaiSettingsPaneTests: XCTestCase {
         row.update(effectivePath: "/tmp/a/yabairc")
         XCTAssertFalse(row.showsMismatchWarning)
     }
+
+    /// M3: malformed markers are reported before any confirmation dialog.
+    @MainActor
+    func testMalformedMarkersReportedBeforeDialog() throws {
+        _ = NSApplication.shared
+        let text = "yabai -m config window_gap 6\n" + ManagedRegion.beginLine + "\n" + ManagedRegion.beginLine + "\n"
+        let (engine, path) = try makeEngine(fileText: text, allow: true)
+        let pane = YabaiSettingsPaneView(engine: engine)
+        var asked = false
+        pane.confirm = { _, _ in asked = true; return true }
+        try button(pane, "ui.apply").performClick(nil)
+        XCTAssertFalse(asked)
+        XCTAssertEqual(try String(contentsOfFile: path, encoding: .utf8), text)
+        XCTAssertTrue(descendants(pane).contains { ($0 as? NSTextField)?.stringValue.contains("malformed") == true })
+    }
 }

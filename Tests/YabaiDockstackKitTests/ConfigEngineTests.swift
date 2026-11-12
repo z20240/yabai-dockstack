@@ -152,7 +152,7 @@ final class ConfigEngineTests: XCTestCase {
             .write(toFile: p, atomically: true, encoding: .utf8)
         let e = engine(p, p + ".s"); e.manageYabaiConfig = true
         var s = YabaiSettings.defaults; s.gap = 9
-        let plan = e.yabaiApplyPlan(s)
+        let plan = try e.yabaiApplyPlan(s)
         XCTAssertEqual(plan, ApplyPlan(regionExists: false, linesToComment: 1))
         XCTAssertTrue(plan.needsConfirmation)
         try e.saveYabai(s)
@@ -160,7 +160,7 @@ final class ConfigEngineTests: XCTestCase {
         XCTAssertTrue(text.contains("# [yabai-dockstack imported] yabai -m config window_gap 6"))
         XCTAssertTrue(text.contains("\nyabai -m rule --add app=\"Finder\" title=\"Copy\" manage=off"))
         XCTAssertTrue(ManagedRegion.extract(from: text)?.contains("yabai -m config window_gap 9") ?? false)
-        let after = e.yabaiApplyPlan(s)
+        let after = try e.yabaiApplyPlan(s)
         XCTAssertEqual(after, ApplyPlan(regionExists: true, linesToComment: 0))
         XCTAssertFalse(after.needsConfirmation)
     }
@@ -175,7 +175,7 @@ final class ConfigEngineTests: XCTestCase {
                              skhdConfigPath: p, scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
         e.manageSkhdConfig = true
         let b = e.faithfulSkhd().bindings
-        XCTAssertEqual(e.skhdApplyPlan(b).linesToComment, 1)
+        XCTAssertEqual(try e.skhdApplyPlan(b).linesToComment, 1)
         try e.saveSkhd(b)
         let text = try String(contentsOfFile: p, encoding: .utf8)
         XCTAssertTrue(text.contains("# [yabai-dockstack imported] " + l1))
@@ -304,5 +304,62 @@ final class ConfigEngineTests: XCTestCase {
         let loaded = e.loadBindings()
         XCTAssertEqual(loaded.count, ShortcutCatalog.all.count, "must return one row per catalog action")
         XCTAssertEqual(loaded.first { $0.actionID == "balance" }?.enabled, true, "balance row enabled")
+    }
+
+    // MARK: - Final review fixes
+
+    /// I1: region first, then a hand-written second hotkey for the same action → the
+    /// panel shows the region binding, so Apply must leave the later line alone.
+    func testSkhdApplyLeavesDuplicateAfterRegion() throws {
+        let p = NSTemporaryDirectory() + "yst-i1-\(UUID().uuidString).skhdrc"
+        defer { try? FileManager.default.removeItem(atPath: p); try? FileManager.default.removeItem(atPath: p + ".bak") }
+        let region = ManagedRegion.replace(in: "", with: SkhdManagedConfig.generate(
+            [ShortcutBinding(actionID: "close-window", enabled: true, hotkey: Hotkey.parse("alt + cmd - backspace"))],
+            catalog: ShortcutCatalog.all, scriptsDir: "/S"))
+        try (region + "alt - w : yabai -m window --close\n").write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true", yabaiConfigPath: p + ".y",
+                             skhdConfigPath: p, scriptsDir: "/S", manageSkhdConfig: true)
+        let b = e.faithfulSkhd().bindings
+        XCTAssertEqual(try e.skhdApplyPlan(b).linesToComment, 0)
+        try e.saveSkhd(b)
+        let text = try String(contentsOfFile: p, encoding: .utf8)
+        XCTAssertTrue(text.contains("\nalt - w : yabai -m window --close"), text)
+        XCTAssertFalse(text.contains("[yabai-dockstack imported]"), text)
+    }
+
+    /// M3: malformed markers are reported by the plan itself, before any dialog.
+    func testApplyPlanThrowsOnMalformedMarkers() throws {
+        let p = NSTemporaryDirectory() + "yst-m3-\(UUID().uuidString)"
+        defer { try? FileManager.default.removeItem(atPath: p) }
+        try (ManagedRegion.beginLine + "\n" + ManagedRegion.beginLine + "\n").write(toFile: p, atomically: true, encoding: .utf8)
+        let e = ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true", yabaiConfigPath: p,
+                             skhdConfigPath: p, scriptsDir: "/S", manageYabaiConfig: true, manageSkhdConfig: true)
+        XCTAssertThrowsError(try e.yabaiApplyPlan(.defaults)) { XCTAssertTrue("\($0.localizedDescription)".contains("malformed")) }
+        XCTAssertThrowsError(try e.skhdApplyPlan([])) { XCTAssertTrue("\($0.localizedDescription)".contains("malformed")) }
+    }
+
+    /// M4: an rc that exists but isn't UTF-8 text is never replaced.
+    func testWritePathsRefuseUnreadableRc() throws {
+        let p = NSTemporaryDirectory() + "yst-m4-\(UUID().uuidString)"
+        defer { try? FileManager.default.removeItem(atPath: p); try? FileManager.default.removeItem(atPath: p + ".bak") }
+        let bytes = Data([0x79, 0x61, 0xff, 0xfe, 0x0a, 0x80])
+        try bytes.write(to: URL(fileURLWithPath: p))
+        let e = ConfigEngine(yabaiPath: "/bin/true", skhdPath: "/bin/true", yabaiConfigPath: p,
+                             skhdConfigPath: p, scriptsDir: "/S", manageYabaiConfig: true, manageSkhdConfig: true)
+        XCTAssertThrowsError(try e.yabaiApplyPlan(.defaults))
+        XCTAssertThrowsError(try e.skhdApplyPlan([]))
+        XCTAssertThrowsError(try e.saveYabai(.defaults))
+        XCTAssertThrowsError(try e.saveSkhd([]))
+        XCTAssertThrowsError(try e.importYabai(base: .defaults))
+        XCTAssertThrowsError(try e.importSkhd(base: []))
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: p)), bytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: p + ".bak"))
+        // A missing file is still fine to create.
+        let q = p + "-new"
+        defer { try? FileManager.default.removeItem(atPath: q) }
+        e.setConfigPaths(yabai: q, skhd: q + ".s")
+        XCTAssertEqual(try e.yabaiApplyPlan(.defaults).regionExists, false)
+        try e.saveYabai(.defaults)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: q))
     }
 }

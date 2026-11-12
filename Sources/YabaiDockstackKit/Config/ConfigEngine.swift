@@ -43,14 +43,17 @@ public final class ConfigEngine {
         FaithfulSkhd.parse(skhdFileText(), catalog: ShortcutCatalog.all, scriptsDir: scriptsDir)
     }
 
-    public func yabaiApplyPlan(_ settings: YabaiSettings) -> ApplyPlan {
-        let text = yabaiFileText()
+    /// What Apply would do to the yabairc. Throws — before any confirmation is shown —
+    /// exactly when `saveYabai` would refuse (unreadable file, malformed markers).
+    public func yabaiApplyPlan(_ settings: YabaiSettings) throws -> ApplyPlan {
+        let text = try writableText(yabaiWriter, "yabai", "write")
         return ApplyPlan(regionExists: ManagedRegion.extract(from: text) != nil,
                          linesToComment: FreeformImporter.importYabai(fileText: text, current: settings).importedCount)
     }
 
-    public func skhdApplyPlan(_ bindings: [ShortcutBinding]) -> ApplyPlan {
-        let text = skhdFileText()
+    /// What Apply would do to the skhdrc; throws when `saveSkhd` would refuse.
+    public func skhdApplyPlan(_ bindings: [ShortcutBinding]) throws -> ApplyPlan {
+        let text = try writableText(skhdWriter, "skhd", "write")
         return ApplyPlan(regionExists: ManagedRegion.extract(from: text) != nil,
                          linesToComment: FreeformImporter.importSkhd(fileText: text, current: bindings,
                              catalog: ShortcutCatalog.all, scriptsDir: scriptsDir).importedCount)
@@ -59,6 +62,14 @@ public final class ConfigEngine {
     private func malformed(_ what: String, _ verb: String) -> NSError {
         NSError(domain: "ConfigEngine", code: 3, userInfo: [NSLocalizedDescriptionKey:
             "Refusing to \(verb): the \(what) config has malformed yabai-dockstack managed markers (duplicate or unbalanced). Fix them by hand first."])
+    }
+
+    /// The rc text a write may build on: throws when the file exists but isn't readable
+    /// UTF-8 text, or when its managed markers are malformed. Nothing is written either way.
+    private func writableText(_ writer: ConfigFileWriter, _ what: String, _ verb: String) throws -> String {
+        let text = try writer.textForWriting()
+        guard !ManagedRegion.hasMalformedMarkers(in: text) else { throw malformed(what, verb) }
+        return text
     }
 
     public func loadYabaiSettings() -> YabaiSettings {
@@ -79,16 +90,14 @@ public final class ConfigEngine {
 
     public func saveYabai(_ settings: YabaiSettings) throws {
         try requireYabaiManagement()
-        let existing = yabaiWriter.currentText()
-        guard !ManagedRegion.hasMalformedMarkers(in: existing) else { throw malformed("yabai", "write") }
+        let existing = try writableText(yabaiWriter, "yabai", "write")
         let newText = FreeformImporter.importYabai(fileText: existing, current: settings).newText
         try yabaiWriter.writeRaw(ManagedRegion.replace(in: newText, with: YabaiManagedConfig.generate(settings)))
     }
 
     public func saveSkhd(_ bindings: [ShortcutBinding]) throws {
         try requireSkhdManagement()
-        let existing = skhdWriter.currentText()
-        guard !ManagedRegion.hasMalformedMarkers(in: existing) else { throw malformed("skhd", "write") }
+        let existing = try writableText(skhdWriter, "skhd", "write")
         let newText = FreeformImporter.importSkhd(fileText: existing, current: bindings,
                                                   catalog: ShortcutCatalog.all, scriptsDir: scriptsDir).newText
         try skhdWriter.writeRaw(ManagedRegion.replace(in: newText,
@@ -108,8 +117,7 @@ public final class ConfigEngine {
 
     public func importSkhd(base: [ShortcutBinding]) throws -> (count: Int, bindings: [ShortcutBinding]) {
         try requireSkhdManagement()
-        let existing = skhdWriter.currentText()
-        guard !ManagedRegion.hasMalformedMarkers(in: existing) else { throw malformed("skhd", "import") }
+        let existing = try writableText(skhdWriter, "skhd", "import")
         let r = FreeformImporter.importSkhd(fileText: existing, current: base,
                                             catalog: ShortcutCatalog.all, scriptsDir: scriptsDir)
         guard r.importedCount > 0 else { return (0, base) }
@@ -120,8 +128,7 @@ public final class ConfigEngine {
 
     public func importYabai(base: YabaiSettings) throws -> (count: Int, settings: YabaiSettings) {
         try requireYabaiManagement()
-        let existing = yabaiWriter.currentText()
-        guard !ManagedRegion.hasMalformedMarkers(in: existing) else { throw malformed("yabai", "import") }
+        let existing = try writableText(yabaiWriter, "yabai", "import")
         let r = FreeformImporter.importYabai(fileText: existing, current: base)
         guard r.importedCount > 0 else { return (0, base) }
         try yabaiWriter.writeRaw(ManagedRegion.replace(in: r.newText, with: YabaiManagedConfig.generate(r.settings)))
