@@ -45,7 +45,6 @@ public enum SpacesSwitcherModel {
         }
     }
 
-    /// Keyboard order: matching tiles, card by card.
     /// Stand-in spaces read off the windows' own space / display fields, for
     /// before (or instead of) a successful `query --spaces`. A cold first
     /// open then shows real, selectable tiles instead of an empty panel, and
@@ -61,6 +60,7 @@ public enum SpacesSwitcherModel {
             .sorted { $0.index < $1.index }
     }
 
+    /// Keyboard order: matching tiles, card by card.
     public static func selectable(_ cards: [SpaceCard]) -> [SwitcherItem] {
         cards.flatMap { $0.tiles.filter(\.matches).map(\.item) }
     }
