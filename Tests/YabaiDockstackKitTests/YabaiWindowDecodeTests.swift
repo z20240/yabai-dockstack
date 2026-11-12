@@ -19,6 +19,46 @@ final class YabaiWindowDecodeTests: XCTestCase {
         XCTAssertEqual(code.frame.w, 800.0)
     }
 
+    func testSkipsClosedWindowsEvenWhenWindowServerRetainsThem() throws {
+        let template = try XCTUnwrap(
+            (JSONSerialization.jsonObject(with: fixtureData()) as? [[String: Any]])?.first)
+        // Matches the stale kitty (zero-sized) and LinearMouse (normal-sized)
+        // windows: visibility and geometry alone cannot identify both ghosts.
+        let entries: [[String: Any]] = [0.0, 885.0].enumerated().map { index, width in
+            var entry = template
+            entry["id"] = 2615 + index
+            entry["app"] = index == 0 ? "kitty" : "LinearMouse"
+            entry["title"] = ""
+            entry["has-ax-reference"] = false
+            entry["is-visible"] = false
+            entry["frame"] = ["x": 10.0, "y": 605.0, "w": width, "h": 620.0]
+            return entry
+        }
+        let data = try JSONSerialization.data(withJSONObject: entries + [template])
+        XCTAssertEqual(YabaiWindow.decodeList(data).map(\.id), [try XCTUnwrap(template["id"] as? Int)])
+    }
+
+    func testKeepsRealWindowsRegardlessOfVisibilityAndSupportsMissingAXFlag() throws {
+        let template = try XCTUnwrap(
+            (JSONSerialization.jsonObject(with: fixtureData()) as? [[String: Any]])?.first)
+        let states: [[String: Any]] = [
+            ["has-ax-reference": true, "is-visible": true],
+            ["has-ax-reference": true, "is-visible": false], // another space / occluded
+            ["has-ax-reference": true, "is-visible": false, "is-minimized": true],
+            ["has-ax-reference": true, "is-visible": false, "is-hidden": true],
+            [:] // older yabai, without has-ax-reference
+        ]
+        let entries = states.enumerated().map { index, state in
+            var entry = template
+            entry.removeValue(forKey: "has-ax-reference")
+            entry["id"] = index + 100
+            entry.merge(state) { _, new in new }
+            return entry
+        }
+        let data = try JSONSerialization.data(withJSONObject: entries)
+        XCTAssertEqual(YabaiWindow.decodeList(data).map(\.id), [100, 101, 102, 103, 104])
+    }
+
     func testIsFloatingDecodesAndDefaultsToFalse() throws {
         let json = """
         [

@@ -41,6 +41,7 @@ public struct YabaiWindow: Equatable {
         let space: Int
         let stackIndex: Int
         let hasFocus: Bool
+        let hasAXReference: Bool?
         let isVisible: Bool?
         let isFloating: Bool?
         let isSticky: Bool?
@@ -49,6 +50,7 @@ public struct YabaiWindow: Equatable {
             case id, pid, app, title, frame, display, space
             case stackIndex = "stack-index"
             case hasFocus = "has-focus"
+            case hasAXReference = "has-ax-reference"
             case isVisible = "is-visible"
             case isFloating = "is-floating"
             case isSticky = "is-sticky"
@@ -56,14 +58,19 @@ public struct YabaiWindow: Equatable {
         }
     }
 
-    /// Decodes a yabai `query --windows` array, skipping malformed entries. Never throws.
+    /// Decodes a yabai `query --windows` array, skipping malformed entries and
+    /// windows without an AX reference. Yabai can retain closed windows in its
+    /// query (and WindowServer can retain their IDs) after their AX window is gone.
+    /// Missing flags are accepted for compatibility with older yabai versions.
+    /// Never throws.
     public static func decodeList(_ data: Data) -> [YabaiWindow] {
         guard let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return [] }
         var out: [YabaiWindow] = []
         let decoder = JSONDecoder()
         for element in arr {
             guard let elementData = try? JSONSerialization.data(withJSONObject: element),
-                  let raw = try? decoder.decode(Raw.self, from: elementData) else { continue }
+                  let raw = try? decoder.decode(Raw.self, from: elementData),
+                  raw.hasAXReference != false else { continue }
             out.append(YabaiWindow(
                 id: raw.id, pid: raw.pid, app: raw.app, title: raw.title ?? "",
                 frame: YRect(x: raw.frame.x, y: raw.frame.y, w: raw.frame.w, h: raw.frame.h),
