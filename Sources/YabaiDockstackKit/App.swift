@@ -68,8 +68,8 @@ public enum YabaiDockstack {
         // Resolve skhd binary and config paths; build the config engine.
         let skhdPath = ["/opt/homebrew/bin/skhd", "/usr/local/bin/skhd"]
             .first { FileManager.default.fileExists(atPath: $0) } ?? "/opt/homebrew/bin/skhd"
-        let yabaiRcPath = ConfigPaths.resolve(candidates: ConfigPaths.yabaiCandidates)
-        let skhdRcPath = ConfigPaths.resolve(candidates: ConfigPaths.skhdCandidates)
+        let yabaiRcPath = RcDetector.detect(.yabai)
+        let skhdRcPath = RcDetector.detect(.skhd)
         let configEngine = ConfigEngine(yabaiPath: resolvedYabai, skhdPath: skhdPath,
                                         yabaiConfigPath: yabaiRcPath, skhdConfigPath: skhdRcPath,
                                         scriptsDir: ConfigPaths.scriptsDir,

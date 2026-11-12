@@ -1229,6 +1229,26 @@ do {
     check(ScriptInstaller.scriptNames.contains("togglePinWindow.sh"), "toggle script is installed")
 }
 
+print("ConfigPaths.autoDetect")
+do {
+    check(ConfigPaths.lookupOrder(tool: .yabai, xdgConfigHome: "/x", home: "/h")
+          == ["/x/yabai/yabairc", "/h/.config/yabai/yabairc", "/h/.yabairc"]
+          && ConfigPaths.lookupOrder(tool: .skhd, xdgConfigHome: nil, home: "/h")
+          == ["/h/.config/skhd/skhdrc", "/h/.skhdrc"], "lookup order matches yabai/skhd")
+    check(ConfigPaths.autoDetect(tool: .yabai, xdgConfigHome: nil, home: "/h", configFlag: nil,
+                                 exists: { $0 == "/h/.yabairc" || $0 == "/h/.config/yabai/yabairc" })
+          == "/h/.config/yabai/yabairc", "prefers .config over home dotfile")
+    check(ConfigPaths.configFlag(inCommandLine: "/opt/homebrew/bin/yabai -c /tmp/my.rc") == "/tmp/my.rc"
+          && ConfigPaths.configFlag(inCommandLine: "/opt/homebrew/bin/skhd --config /tmp/s") == "/tmp/s"
+          && ConfigPaths.configFlag(inCommandLine: "/opt/homebrew/bin/yabai") == nil
+          && ConfigPaths.autoDetect(tool: .yabai, xdgConfigHome: nil, home: "/h",
+                                    configFlag: "/tmp/my.rc", exists: { _ in false }) == "/tmp/my.rc",
+          "-c / --config flag wins")
+    check(ConfigPaths.autoDetect(tool: .skhd, xdgConfigHome: nil, home: "/h", configFlag: nil,
+                                 exists: { _ in false }) == "/h/.config/skhd/skhdrc",
+          "falls back to first in lookup order")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

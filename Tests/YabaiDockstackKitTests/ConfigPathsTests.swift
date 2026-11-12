@@ -16,4 +16,30 @@ final class ConfigPathsTests: XCTestCase {
         let chosen = ConfigPaths.resolve(candidates: ["~/.nope-xyz-1", "~/.nope-xyz-2"], fileManager: .default)
         XCTAssertEqual(chosen, (("~/.nope-xyz-1") as NSString).expandingTildeInPath)
     }
+
+    func testYabaiLookupOrderMatchesYabai() {
+        XCTAssertEqual(ConfigPaths.lookupOrder(tool: .yabai, xdgConfigHome: "/x", home: "/h"),
+                       ["/x/yabai/yabairc", "/h/.config/yabai/yabairc", "/h/.yabairc"])
+        XCTAssertEqual(ConfigPaths.lookupOrder(tool: .skhd, xdgConfigHome: nil, home: "/h"),
+                       ["/h/.config/skhd/skhdrc", "/h/.skhdrc"])
+    }
+
+    func testAutoDetectPrefersDotConfigOverHomeDotfile() {
+        let p = ConfigPaths.autoDetect(tool: .yabai, xdgConfigHome: nil, home: "/h", configFlag: nil,
+                                       exists: { $0 == "/h/.yabairc" || $0 == "/h/.config/yabai/yabairc" })
+        XCTAssertEqual(p, "/h/.config/yabai/yabairc")
+    }
+
+    func testAutoDetectConfigFlagWins() {
+        XCTAssertEqual(ConfigPaths.configFlag(inCommandLine: "/opt/homebrew/bin/yabai -c /tmp/my.rc"), "/tmp/my.rc")
+        XCTAssertEqual(ConfigPaths.configFlag(inCommandLine: "/opt/homebrew/bin/skhd --config /tmp/s"), "/tmp/s")
+        XCTAssertNil(ConfigPaths.configFlag(inCommandLine: "/opt/homebrew/bin/yabai"))
+        XCTAssertEqual(ConfigPaths.autoDetect(tool: .yabai, xdgConfigHome: nil, home: "/h",
+                                              configFlag: "/tmp/my.rc", exists: { _ in false }), "/tmp/my.rc")
+    }
+
+    func testAutoDetectFallsBackToFirstInOrder() {
+        XCTAssertEqual(ConfigPaths.autoDetect(tool: .skhd, xdgConfigHome: nil, home: "/h", configFlag: nil,
+                                              exists: { _ in false }), "/h/.config/skhd/skhdrc")
+    }
 }
