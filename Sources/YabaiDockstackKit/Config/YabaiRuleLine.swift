@@ -33,6 +33,22 @@ public enum YabaiRuleLine {
         }
     }
 
+    /// The Float layout's catch-all: `app=".*" manage=off`, optionally `sub-layer=…`, and
+    /// no other condition (a `title=…` etc. makes it an ordinary rule).
+    public static func isCatchAll(_ line: String) -> Bool {
+        guard isRuleAdd(line) else { return false }
+        let t = line.trimmingCharacters(in: .whitespaces)
+        guard let toks = tokenize(String(t.dropFirst(prefix.count))) else { return false }
+        var kv: [String: String] = [:]
+        for tok in toks {
+            guard let eq = tok.firstIndex(of: "=") else { return false }
+            let key = String(tok[..<eq])
+            guard ["app", "manage", "sub-layer"].contains(key), kv[key] == nil else { return false }
+            kv[key] = String(tok[tok.index(after: eq)...])
+        }
+        return kv["app"] == YabaiManagedConfig.floatCatchAllApp && kv["manage"] == "off"
+    }
+
     /// Whitespace-split; double quotes group (and are removed).
     private static func tokenize(_ s: String) -> [String]? {
         var toks: [String] = [], cur = "", inQ = false, has = false
