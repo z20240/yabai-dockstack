@@ -19,8 +19,14 @@ public enum YabaiDockstack {
         // has (the one-time management migration below needs the latter).
         let rawConfig = try? Data(contentsOf: URL(fileURLWithPath:
             (configPath as NSString).expandingTildeInPath))
-        var config = AppConfig.load(from: rawConfig)
+        let loaded = AppConfig.loadResult(from: rawConfig)
+        var config = loaded.config
         let presentConfigKeys = AppConfig.presentKeys(in: rawConfig)
+        // A config.json we couldn't parse/decode is never overwritten at startup.
+        let configUnreadable = rawConfig != nil && !loaded.decoded
+        if configUnreadable {
+            NSLog("yabai-dockstack: config.json could not be read — using defaults, not saving over it")
+        }
         L10n.current = L10n.resolve(AppLanguage(rawValue: config.language) ?? .auto,
                                     preferred: Locale.preferredLanguages)
 
@@ -85,19 +91,18 @@ public enum YabaiDockstack {
         // One-time migration: a config.json without manage* keys allows management
         // exactly where the rc already has a dockstack region. Saved once so the
         // decision sticks; only then do the engine's flags follow the config.
+        // A missing config.json always migrates, so this also writes the first-run
+        // file. An unreadable one is left alone (migrated in memory only).
         if config.migrateManagement(presentKeys: presentConfigKeys,
                                     hasYabaiRegion: configEngine.hasYabaiRegion(),
-                                    hasSkhdRegion: configEngine.hasSkhdRegion()) {
+                                    hasSkhdRegion: configEngine.hasSkhdRegion()),
+           !configUnreadable {
             config.save(to: configPath)
         }
         configEngine.manageYabaiConfig = config.manageYabaiConfig
         configEngine.manageSkhdConfig = config.manageSkhdConfig
 
-        // Write a default config file on first run so it's discoverable/editable.
-        let expandedConfig = (configPath as NSString).expandingTildeInPath
-        if !FileManager.default.fileExists(atPath: expandedConfig) {
-            config.save(to: configPath)
-        }
+        // (First run: the migration save above already wrote config.json.)
 
         // Install/refresh bundled helper scripts (only writes to the scripts dir,
         // never touches the user's rc files). Overwrites when an update ships

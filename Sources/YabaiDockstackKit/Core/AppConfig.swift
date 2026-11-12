@@ -123,10 +123,15 @@ public struct AppConfig: Codable, Equatable {
         switcherWallpaperPath: "",
         switcherWallpaperDarkPath: "")
 
-    public static func load(from data: Data?) -> AppConfig {
+    public static func load(from data: Data?) -> AppConfig { loadResult(from: data).config }
+
+    /// Like `load(from:)`, plus whether the data actually parsed and decoded. `decoded`
+    /// is false for nil, unparseable or mistyped data (the config is then `defaults`),
+    /// so callers can avoid saving defaults over a file they couldn't read.
+    public static func loadResult(from data: Data?) -> (config: AppConfig, decoded: Bool) {
         guard let data,
               let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return defaults
+            return (defaults, false)
         }
         // Merge raw over defaults at the JSON-object level, then decode.
         var merged = (try? JSONSerialization.jsonObject(
@@ -134,9 +139,9 @@ public struct AppConfig: Codable, Equatable {
         for (k, v) in raw { merged[k] = v }
         guard let mergedData = try? JSONSerialization.data(withJSONObject: merged),
               let cfg = try? JSONDecoder().decode(AppConfig.self, from: mergedData) else {
-            return defaults
+            return (defaults, false)
         }
-        return cfg
+        return (cfg, true)
     }
 
     /// Top-level JSON keys present in raw config data; empty for nil/invalid.
