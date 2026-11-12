@@ -7,7 +7,7 @@ public enum YabaiManagedConfig {
     /// their floating branch. Marked synthetic so `parse` never surfaces it as a
     /// user rule. `.off`, by contrast, just floats the layout and leaves windows
     /// untouched (native feel).
-    static let floatCatchAllApp = ".*"
+    public static let floatCatchAllApp = ".*"
 
     public static func generate(_ s: YabaiSettings) -> String {
         var lines: [String] = []
