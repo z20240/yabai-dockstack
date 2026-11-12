@@ -34,6 +34,20 @@ check(wins.first { $0.id == 1 }?.isFloating == false, "is-floating defaults to f
 check(YabaiWindow.decodeList(#"[{"id":5,"pid":1,"app":"G","frame":{"x":0,"y":0,"w":1,"h":1},"display":1,"space":2,"stack-index":0,"has-focus":false,"is-sticky":true}]"#.data(using: .utf8)!).first?.isSticky == true,
       "is-sticky decoded")
 check(wins.first { $0.id == 1 }?.isSticky == false, "is-sticky defaults to false when key missing")
+do {
+    func axWin(_ id: Int, _ extra: String) -> String {
+        #"{"id":\#(id),"pid":1,"app":"A","frame":{"x":0,"y":0,"w":10,"h":10},"display":1,"space":1,"stack-index":0,"has-focus":false\#(extra)}"#
+    }
+    let axJSON = "[" + [
+        axWin(10, #","has-ax-reference":false"#),                        // closed / tray-closed ghost
+        axWin(11, #","has-ax-reference":true,"is-visible":false"#),      // other space
+        axWin(12, #","has-ax-reference":true,"is-minimized":true"#),     // minimized
+        axWin(13, #","has-ax-reference":true,"is-hidden":true"#),        // ⌘H hidden
+        axWin(14, ""),                                                    // older yabai: no flag
+    ].joined(separator: ",") + "]"
+    check(YabaiWindow.decodeList(Data(axJSON.utf8)).map(\.id) == [11, 12, 13, 14],
+          "has-ax-reference false → skipped; hidden/minimized/off-space/missing flag kept")
+}
 
 print("StackBuilder")
 let f = YRect(x: 0, y: 25, w: 800, h: 900)
@@ -798,34 +812,6 @@ do {
     check(StackReorderPlanner.dropIndex(offsetFromTop: 500, cell: 32, count: 3) == 2, "drop index clamps high")
     check(AppConfig.load(from: #"{"style":"flag"}"#.data(using: .utf8)).indicatorDragReorder,
           "drag reorder defaults on")
-}
-
-print("WindowFocuser")
-do {
-    func fakeYabai(focusExit: Int) -> String {
-        let path = NSTemporaryDirectory() + "fake-yabai-\(UUID().uuidString)"
-        let script = """
-        #!/bin/sh
-        case "$*" in
-          *--focus*) exit \(focusExit) ;;
-          *query*) echo '[{"id":7,"pid":42,"app":"Gather","frame":{"x":0,"y":0,"w":1,"h":1},"display":1,"space":1,"stack-index":0,"has-focus":false}]' ;;
-        esac
-        """
-        try? script.write(toFile: path, atomically: true, encoding: .utf8)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
-        return path
-    }
-    var reopened: [Int] = []
-    WindowFocuser(client: YabaiClient(yabaiPath: fakeYabai(focusExit: 0)), reopen: { reopened.append($0) })
-        .focus(windowId: 7)
-    check(reopened.isEmpty, "focus success → no reopen")
-    WindowFocuser(client: YabaiClient(yabaiPath: fakeYabai(focusExit: 1)), reopen: { reopened.append($0) })
-        .focus(windowId: 7)
-    check(reopened == [42], "focus failure (tray window, no AX ref) → reopen owning app")
-    reopened = []
-    WindowFocuser(client: YabaiClient(yabaiPath: fakeYabai(focusExit: 1)), reopen: { reopened.append($0) })
-        .focus(windowId: 999)
-    check(reopened.isEmpty, "focus failure for unknown window → nothing")
 }
 
 print("Menu hover")

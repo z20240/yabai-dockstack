@@ -7,7 +7,6 @@ import AppKit
 /// display's strip to move it to that space.
 public final class WindowStripController {
     private let client: YabaiClient
-    private let focuser: WindowFocuser
     private var enabled = false
     private var panels: [Int: NSPanel] = [:]
     private var views: [Int: StripView] = [:]
@@ -25,9 +24,8 @@ public final class WindowStripController {
 
     static let baseHeight: CGFloat = 24
 
-    public init(client: YabaiClient, focuser: WindowFocuser) {
+    public init(client: YabaiClient) {
         self.client = client
-        self.focuser = focuser
     }
 
     public func setEnabled(_ on: Bool) {
@@ -86,7 +84,7 @@ public final class WindowStripController {
             let content = StripView(strip: strip, scale: scale, maxWidth: ns.visibleFrame.width / 2,
                                     onClick: { [weak self] id in
                                         DispatchQueue.global(qos: .userInitiated).async {
-                                            self?.focuser.focus(windowId: id)
+                                            self?.client.focus(windowId: id)
                                         }
                                     },
                                     onClose: { [weak self] id in

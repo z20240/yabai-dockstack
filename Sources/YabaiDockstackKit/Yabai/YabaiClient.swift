@@ -24,8 +24,7 @@ public final class YabaiClient {
         return YabaiWindow.decodeList(data)
     }
 
-    /// False when yabai couldn't focus it — e.g. a window an app closed to its
-    /// tray / menu bar: still listed, but without an AX reference.
+    /// False when yabai couldn't focus it (e.g. the window closed since the last query).
     @discardableResult
     public func focus(windowId: Int) -> Bool {
         let proc = Process()

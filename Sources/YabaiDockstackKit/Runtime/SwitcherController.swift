@@ -6,7 +6,6 @@ import AppKit
 /// ticks (MRU + a warm window list so activation paints instantly).
 public final class SwitcherController {
     private let client: YabaiClient
-    private let focuser: WindowFocuser
     private let cache: ThumbnailCache
     private let capturer = ThumbnailCapturer()
     private let visibilityProbe = WindowVisibilityProbe()
@@ -59,16 +58,15 @@ public final class SwitcherController {
     /// reset the key tap's machine (e.g. after a mouse-click commit mid-hold).
     public var onDismiss: (() -> Void)?
 
-    public convenience init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig, focuser: WindowFocuser? = nil) {
-        self.init(client: client, cache: cache, config: config, focuser: focuser,
+    public convenience init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig) {
+        self.init(client: client, cache: cache, config: config,
                   panel: SwitcherPanel(), spacesPanel: SpacesPanel())
     }
 
-    init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig, focuser: WindowFocuser? = nil,
+    init(client: YabaiClient, cache: ThumbnailCache, config: AppConfig,
          panel: SwitcherPanel, spacesPanel: SpacesPanel) {
         self.panel = panel
         self.spacesPanel = spacesPanel
-        self.focuser = focuser ?? WindowFocuser(client: client)
         self.client = client
         self.cache = cache
         self.config = config
@@ -225,7 +223,7 @@ public final class SwitcherController {
         lastCommitAt = Date()
         hide()
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.focuser.focus(windowId: id)
+            self?.client.focus(windowId: id)
         }
     }
 
@@ -360,7 +358,7 @@ public final class SwitcherController {
             guard let self else { return }
             switch action {
             case .focusSpace(let s): self.client.focus(spaceId: s)
-            case .focusWindow(let id): self.focuser.focus(windowId: id)
+            case .focusWindow(let id): self.client.focus(windowId: id)
             case .nothing: break
             }
         }
