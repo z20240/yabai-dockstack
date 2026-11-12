@@ -495,6 +495,25 @@ check(ybOff.importedCount == 0 && ybOff.settings.layout == YabaiSettings.default
 let ybDup = FreeformImporter.importYabai(fileText: "yabai -m rule --add app=\"Finder\" manage=off sub-layer=normal\nyabai -m rule --add app=\"Finder\" manage=on sub-layer=normal", current: YabaiSettings.defaults)
 check(ybDup.settings.rules == [WindowRule(app: "Finder", mode: .manage)], "importYabai rule de-dupe later wins")
 
+print("ConfigEngine apply plan")
+do {
+    let apP = NSTemporaryDirectory() + "yst-applyplan.yabairc"
+    try? "yabai -m config window_gap 6\nyabai -m rule --add app=\"Finder\" title=\"Copy\" manage=off\n".write(toFile: apP, atomically: true, encoding: .utf8)
+    let apE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
+                           yabaiConfigPath: apP, skhdConfigPath: apP + ".s", scriptsDir: "/S")
+    apE.manageYabaiConfig = true
+    var apS = YabaiSettings.defaults; apS.gap = 9
+    let apPlan = apE.yabaiApplyPlan(apS)
+    check(apPlan == ApplyPlan(regionExists: false, linesToComment: 1) && apPlan.needsConfirmation, "apply plan before save")
+    try? apE.saveYabai(apS)
+    let apT = (try? String(contentsOfFile: apP, encoding: .utf8)) ?? ""
+    check(apT.contains("# [yabai-dockstack imported] yabai -m config window_gap 6"), "save comments hand-written gap")
+    check(ManagedRegion.extract(from: apT)?.contains("yabai -m config window_gap 9") == true, "save writes panel gap")
+    check(apE.yabaiApplyPlan(apS) == ApplyPlan(regionExists: true, linesToComment: 0), "apply plan after save")
+    try? FileManager.default.removeItem(atPath: apP)
+    try? FileManager.default.removeItem(atPath: apP + ".bak")
+}
+
 print("ConfigEngine import")
 let impP = NSTemporaryDirectory() + "yst-imp.skhdrc"
 try? "cmd - f3: sh ~/.config/yabai/scripts/taggleShowHideDesktop.sh\n".write(toFile: impP, atomically: true, encoding: .utf8)
@@ -502,7 +521,7 @@ let impE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                         yabaiConfigPath: impP + ".y", skhdConfigPath: impP,
                         scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
 impE.manageSkhdConfig = true
-check((try? impE.importSkhd()) == 1, "engine importSkhd migrates one binding")
+check((try? impE.importSkhd(base: impE.faithfulSkhd().bindings))?.count == 1, "engine importSkhd migrates one binding")
 let impText = (try? String(contentsOfFile: impP, encoding: .utf8)) ?? ""
 check(impText.contains("# [yabai-dockstack imported] cmd - f3:"), "engine import comments original")
 check(ManagedRegion.extract(from: impText) != nil, "engine import creates managed region")
@@ -518,7 +537,7 @@ try? "yabai -m config window_gap 7\n".write(toFile: impY, atomically: true, enco
 let impYE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                          yabaiConfigPath: impY, skhdConfigPath: impY + ".s", scriptsDir: "/S")
 impYE.manageYabaiConfig = true
-check((try? impYE.importYabai()) == 1, "engine importYabai migrates one setting")
+check((try? impYE.importYabai(base: .defaults))?.count == 1, "engine importYabai migrates one setting")
 check(impYE.loadYabaiSettings().gap == 7, "engine importYabai: gap reflects imported value")
 try? FileManager.default.removeItem(atPath: impY)
 try? FileManager.default.removeItem(atPath: impY + ".bak")
@@ -529,8 +548,8 @@ let idemE = ConfigEngine(yabaiPath: "/usr/bin/true", skhdPath: "/usr/bin/true",
                          yabaiConfigPath: idemP + ".y", skhdConfigPath: idemP,
                          scriptsDir: "/Users/me/.config/yabai-dockstack/scripts")
 idemE.manageSkhdConfig = true
-_ = try? idemE.importSkhd()
-check((try? idemE.importSkhd()) == 0, "importSkhd idempotent (second run imports nothing)")
+_ = try? idemE.importSkhd(base: idemE.faithfulSkhd().bindings)
+check((try? idemE.importSkhd(base: idemE.faithfulSkhd().bindings))?.count == 0, "importSkhd idempotent (second run imports nothing)")
 try? FileManager.default.removeItem(atPath: idemP)
 try? FileManager.default.removeItem(atPath: idemP + ".bak")
 
