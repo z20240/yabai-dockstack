@@ -202,16 +202,28 @@ open yabai-dockstack.app
 
 ### First launch
 
-Dockstack leaves your `yabairc` untouched by default. To manage layouts, padding,
-gaps, or window rules from Settings → yabai, enable **Allow dockstack to edit yabairc**.
-The controls below it stay disabled until you opt in. Turning it off stops future
-edits and automatic imports; it preserves any existing managed section.
+Dockstack never touches your `yabairc` or `skhdrc` unless you ask it to. Settings
+→ yabai has **Allow dockstack to edit yabairc** and Settings → Keyboard has
+**Allow dockstack to edit skhdrc**; both are off by default. (If your rc already
+has a dockstack-managed section, the matching option is switched on once at
+upgrade.)
 
-The Keyboard tab has a separate **Allow dockstack to edit skhdrc** option, also
-off by default. Enable it to import or edit skhd shortcuts, including the search
-switcher shortcut on the Switcher tab. Turning it off preserves existing shortcuts
-and blocks future file edits. Hold-to-cycle shortcuts stored in dockstack's own
-settings and runtime automatic padding work independently of both options.
+With an option **off**, the tab is a read-only, faithful view. The yabai tab shows
+what yabai is running now; a `!` marks a value that differs from the file (hover
+for details), and it falls back to the file when yabai isn't running. The Keyboard
+tab shows the bindings actually in `skhdrc`, with other shortcuts in a collapsed
+"Other shortcuts" list. Edit the file yourself (**Open in editor**); **Reload**
+re-reads it. The config-file row shows the rc in use, auto-detected in yabai's /
+skhd's own lookup order and honouring `-c`; **Choose…** picks another file and
+**Reset to auto** goes back.
+
+With an option **on**, you edit from Settings. **Apply** asks for confirmation
+before it comments out hand-written lines it now manages (prefixed
+`# [yabai-dockstack imported]`, never deleted; the previous file is kept as
+`.bak`) and writes the managed section. Nothing is written on launch. Turning an
+option off stops future edits; an existing managed section keeps applying until
+you remove it. Hold-to-cycle switcher shortcuts (stored in dockstack's own
+settings) and automatic padding work regardless of either option.
 
 On launch the app:
 
