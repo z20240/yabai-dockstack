@@ -651,7 +651,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func syncSkhdManagementControls() {
         switcherSearchRecorder.isEnabled = config.manageSkhdConfig
-        switcherSearchHint.stringValue = L10n.t("ui.keyboard.managementHint")
+        switcherSearchHint.stringValue = L10n.t("ui.keyboard.notAllowed")
         switcherSearchHint.font = .systemFont(ofSize: 11)
         switcherSearchHint.preferredMaxLayoutWidth = 300
         switcherSearchHint.textColor = .secondaryLabelColor

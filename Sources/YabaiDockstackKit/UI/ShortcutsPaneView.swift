@@ -240,8 +240,9 @@ public final class ShortcutsPaneView: NSView {
     @objc private func reloadTapped() { reload(force: true) }
 
     /// Set one action's hotkey (nil unbinds it) without touching the other rows'
-    /// unsaved edits — for a change already written elsewhere (the Switcher tab's
-    /// search hotkey), so the row's saved value moves with it.
+    /// unsaved edits. Contract: the caller must ALREADY have written this value to the
+    /// skhdrc (e.g. the Switcher tab's search hotkey after its own save) — the row's
+    /// saved baseline moves with it, so this alone never counts as an unsaved edit.
     public func setBinding(actionID: String, hotkey: Hotkey?) {
         bindings = ShortcutBindings.setting(bindings, action: actionID, hotkey: hotkey)
         baseline = ShortcutBindings.setting(baseline, action: actionID, hotkey: hotkey)
