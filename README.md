@@ -32,23 +32,16 @@ dock preview, window switcher, cmd-tab replacement, menu bar, Mission Control al
 
 It is a clean Swift rewrite — **not** a fork of stackline (which required Hammerspoon).
 
-## What's new — v0.3.2
+## What's new — v0.4.0
 
-v0.3.2 lines up the Record Hotkey button for shortcuts that have no hotkey yet.
-The rest arrived in v0.3.1:
-
-- **Pin windows on top** (#7, needs yabai's scripting addition) — a Window Rules
-  mode keeps an app above other windows, and a shortcut pins / unpins the
-  focused window.
-- **Window strip** — follows light / dark mode, shows empty spaces as small
-  slots, drags across displays (a copy of the chip follows the pointer), and
-  closes a window from its hover ✕.
-- **Search switcher** (thanks @Signynt, #6) — the hotkey toggles it, it stays
-  open across space changes and opens faster; ⌘⌫ / ⌥⌫ edit the search.
-
-New in v0.3.0: the Spaces-style search switcher, drag windows between spaces,
-project-aware labels, the window strip, Hyper Key and auto yabai padding — see
-the changelog.
+- **Your rc files are yours** (#11, thanks @Signynt) — dockstack only edits
+  `yabairc` / `skhdrc` after you turn on **Allow dockstack to edit …** in
+  Settings; existing managed setups are switched on once at upgrade.
+- **Read-only view of what you really run** — the yabai tab shows yabai's live
+  settings with a `!` where your file differs; the Keyboard tab shows the
+  shortcuts actually in your `skhdrc`. A config-file row picks and opens the rc.
+- **Apply asks first** before commenting out hand-written lines (never deleted,
+  `.bak` kept). Nothing is written on launch.
 
 Full history: [CHANGELOG.md](CHANGELOG.md) ·
 [Releases](https://github.com/z20240/yabai-dockstack/releases)

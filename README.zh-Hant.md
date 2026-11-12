@@ -28,20 +28,13 @@ dock 預覽、視窗切換器、cmd-tab 替代、選單列、Mission Control 替
 
 這是用 Swift 重寫的乾淨版本,**不是** stackline 的 fork(stackline 需要 Hammerspoon)。
 
-## 最新變更 — v0.3.2
+## 最新變更 — v0.4.0
 
-v0.3.2 修正鍵盤設定裡尚未設定快捷鍵的列,「Record Hotkey」按鈕會跟其他列對齊。
-以下是 v0.3.1 帶來的更新:
-
-- **視窗置頂**(#7,需要 yabai scripting addition)—— Window Rules 新增模式,讓某個 app
-  永遠浮在其他視窗上面;也有快捷鍵可以置頂 / 取消置頂目前的視窗。
-- **視窗列** —— 跟著系統亮色 / 暗色切換;空的 space 也會顯示成小格子;可以跨螢幕拖曳
-  (拖曳時有個標籤分身跟著游標);hover 出現 ✕ 可直接關閉視窗。
-- **搜尋式切換器**(感謝 @Signynt,#6)—— 快捷鍵改成開 / 關切換,切換 space 時不會關閉,
-  開啟更快;⌘⌫ 清空搜尋、⌥⌫ 刪除一個字。
-
-v0.3.0 新增的 Spaces 風格搜尋式切換器、拖曳視窗到其他 space、依專案顯示標籤、視窗列、
-Hyper Key 和自動調整 padding,請見 changelog。
+- **rc 檔由你作主**(#11,感謝 @Signynt)—— 只有在設定裡打開「允許 dockstack 編輯 …」後,
+  dockstack 才會修改 `yabairc` / `skhdrc`;已經有 managed 區段的使用者,升級時會自動打開一次。
+- **唯讀模式忠實呈現實際設定** —— yabai 分頁顯示 yabai 當下實際在跑的設定,跟檔案不同的
+  地方標 `!`;鍵盤分頁顯示 `skhdrc` 裡真正的快捷鍵。新增設定檔欄位,可以選擇、開啟 rc 檔。
+- **Apply 前會先確認**,才會註解掉手寫的行(只註解、不刪除,並保留 `.bak`)。啟動時不再寫檔。
 
 完整紀錄:[CHANGELOG.md](CHANGELOG.md) ·
 [Releases](https://github.com/z20240/yabai-dockstack/releases)
@@ -152,6 +145,23 @@ open yabai-dockstack.app
 > Command Line Tools:`DEVELOPER_DIR=/Library/Developer/CommandLineTools ./scripts/bundle.sh`。
 
 ### 首次啟動
+
+除非你允許,dockstack 不會修改你的 `yabairc` 或 `skhdrc`。設定 → yabai 有
+**允許 dockstack 編輯 yabairc**,設定 → 鍵盤有 **允許 dockstack 編輯 skhdrc**,
+預設都是關閉。(如果你的 rc 檔已經有 dockstack 管理的區段,升級時對應的選項會自動打開一次。)
+
+選項**關閉**時,分頁是唯讀的,並忠實呈現實際設定:yabai 分頁顯示 yabai 當下實際在跑的值,
+跟檔案不同的地方標 `!`(滑鼠移上去看說明),yabai 沒在跑時改顯示檔案內容;鍵盤分頁顯示
+`skhdrc` 裡真正的快捷鍵,其他快捷鍵收在「Other shortcuts」裡。要修改請自己編輯檔案
+(**Open in editor**),**Reload** 會重新讀取。設定檔欄位顯示目前使用的 rc 檔,依 yabai / skhd
+自己的尋找順序自動偵測(也會看 `-c`);**Choose…** 可以改選其他檔案,**Reset to auto** 回到自動偵測。
+
+選項**打開**時,可以在設定裡編輯。**Apply** 在註解掉它接手管理的手寫行之前會先確認
+(行首加上 `# [yabai-dockstack imported]`,只註解、不刪除,原檔保留為 `.bak`),再寫入管理區段。
+有縮排的行(`if` 區塊或函式裡)一律不註解。啟動時不會寫任何檔案。關閉選項後就不會再寫入,
+但已經寫入的管理區段會持續生效,直到你手動刪除。按住循環的切換器快捷鍵(存在 dockstack
+自己的設定裡)和自動 padding 不受這兩個選項影響。例外是切換器分頁的**搜尋切換器**快捷鍵:
+它是 skhd 的綁定,會寫進 `skhdrc`(跟 Apply 一樣會先確認),需要打開**允許 dockstack 編輯 skhdrc**。
 
 啟動後 app 會:
 

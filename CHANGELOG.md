@@ -3,6 +3,29 @@
 All notable changes to yabai-dockstack. Full release notes and downloads live on
 the [GitHub Releases](https://github.com/z20240/yabai-dockstack/releases) page.
 
+## v0.4.0 — 2026-11-12
+
+- **Your rc files are yours** (#11, thanks @Signynt): dockstack no longer edits
+  `yabairc` / `skhdrc` unless you turn on **Allow dockstack to edit yabairc** /
+  **…skhdrc** (Settings → yabai / Keyboard). Both are off by default; if your rc
+  already has a dockstack-managed section, the matching option is switched on
+  once at upgrade. Nothing is written on launch any more.
+- **Read-only view that shows what you really run**: with editing off, the yabai
+  tab shows yabai's live settings and marks values that differ from the file with
+  a `!` (hover for details); the Keyboard tab shows the bindings actually in your
+  `skhdrc`, with everything else under a collapsed **Other shortcuts** list
+  (rules with extra conditions go under **Other rules**). **Reload** re-reads.
+- **Config-file row**: shows the rc in use (detected in yabai's / skhd's own
+  lookup order, honouring `-c`), with **Choose…**, **Reset to auto** and
+  **Open in editor**.
+- **Apply asks first**: before commenting out hand-written lines it now manages
+  (prefixed `# [yabai-dockstack imported]`, never deleted, `.bak` kept) or adding
+  a managed section, Apply shows a confirmation. Rules with extra conditions,
+  indented lines and lines dockstack can't represent are left alone. The Switcher
+  tab's search hotkey uses the same confirmation.
+- **Safer writes**: refuses rc files with broken managed markers or that aren't
+  readable text, and never overwrites an unreadable `config.json` with defaults.
+
 ## v0.3.2 — 2026-10-22
 
 - **Keyboard settings**: a shortcut with no hotkey yet (such as the new
