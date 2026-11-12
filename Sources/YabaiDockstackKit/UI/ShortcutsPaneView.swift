@@ -391,7 +391,13 @@ public final class ShortcutsPaneView: NSView {
         window?.makeFirstResponder(nil)
         // Commenting out hand-written lines (or adding the managed section for the
         // first time) needs the user's OK; cancelling writes nothing.
-        let plan = engine.skhdApplyPlan(bindings)
+        // A file Apply would refuse (malformed markers, unreadable) is reported before
+        // any dialog, and nothing is written.
+        let plan: ApplyPlan
+        do { plan = try engine.skhdApplyPlan(bindings) } catch {
+            showStatus(false, error.localizedDescription)
+            return
+        }
         if plan.needsConfirmation && !confirm(plan, engine.skhdConfigPath) { return }
         do {
             try engine.saveSkhd(bindings)

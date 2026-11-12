@@ -318,4 +318,19 @@ final class ShortcutsPaneTests: XCTestCase {
         XCTAssertEqual(status?.0, false)
         XCTAssertEqual(status?.1, String(format: L10n.t("ui.rc.createFailed"), path))
     }
+
+    /// M3: malformed markers are reported before any confirmation dialog.
+    @MainActor
+    func testMalformedMarkersReportedBeforeDialog() throws {
+        _ = NSApplication.shared
+        let text = Self.handWritten + ManagedRegion.beginLine + "\n" + ManagedRegion.beginLine + "\n"
+        let (engine, path) = try makeEngine(fileText: text, allow: true)
+        let pane = ShortcutsPaneView(engine: engine)
+        var asked = false
+        pane.confirm = { _, _ in asked = true; return true }
+        try button(pane, "ui.apply").performClick(nil)
+        XCTAssertFalse(asked)
+        XCTAssertEqual(try String(contentsOfFile: path, encoding: .utf8), text)
+        XCTAssertTrue(statusShows(pane, containing: "malformed"))
+    }
 }

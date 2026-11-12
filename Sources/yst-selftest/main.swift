@@ -517,13 +517,13 @@ do {
                            yabaiConfigPath: apP, skhdConfigPath: apP + ".s", scriptsDir: "/S")
     apE.manageYabaiConfig = true
     var apS = YabaiSettings.defaults; apS.gap = 9
-    let apPlan = apE.yabaiApplyPlan(apS)
-    check(apPlan == ApplyPlan(regionExists: false, linesToComment: 1) && apPlan.needsConfirmation, "apply plan before save")
+    let apPlan = try? apE.yabaiApplyPlan(apS)
+    check(apPlan == ApplyPlan(regionExists: false, linesToComment: 1) && apPlan?.needsConfirmation == true, "apply plan before save")
     try? apE.saveYabai(apS)
     let apT = (try? String(contentsOfFile: apP, encoding: .utf8)) ?? ""
     check(apT.contains("# [yabai-dockstack imported] yabai -m config window_gap 6"), "save comments hand-written gap")
     check(ManagedRegion.extract(from: apT)?.contains("yabai -m config window_gap 9") == true, "save writes panel gap")
-    check(apE.yabaiApplyPlan(apS) == ApplyPlan(regionExists: true, linesToComment: 0), "apply plan after save")
+    check((try? apE.yabaiApplyPlan(apS)) == ApplyPlan(regionExists: true, linesToComment: 0), "apply plan after save")
     try? FileManager.default.removeItem(atPath: apP)
     try? FileManager.default.removeItem(atPath: apP + ".bak")
 }

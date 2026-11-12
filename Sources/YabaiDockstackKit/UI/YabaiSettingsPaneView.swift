@@ -474,9 +474,15 @@ public final class YabaiSettingsPaneView: NSView {
         // End any in-progress field editing before reading values
         window?.makeFirstResponder(nil)
         flushFields()
+        // A file Apply would refuse (malformed markers, unreadable) is reported before
+        // any dialog, and nothing is written.
+        let plan: ApplyPlan
+        do { plan = try engine.yabaiApplyPlan(settings) } catch {
+            showStatus(false, error.localizedDescription)
+            return
+        }
         // Commenting out hand-written lines (or adding the managed section for the
         // first time) needs the user's OK; cancelling writes nothing.
-        let plan = engine.yabaiApplyPlan(settings)
         if plan.needsConfirmation && !confirm(plan, engine.yabaiConfigPath) { return }
         do {
             try engine.saveYabai(settings)

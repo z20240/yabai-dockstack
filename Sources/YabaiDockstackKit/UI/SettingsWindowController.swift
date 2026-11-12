@@ -89,6 +89,11 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     public var configEngine: ConfigEngine?
     /// Live yabai state, rc path detection/overrides for the rc-backed panes.
     public var rcSources: RcSources = .none
+    /// Asked before the search hotkey's write comments out hand-written lines or adds
+    /// the managed section. Test seam; defaults to the confirmation alert.
+    lazy var confirmApply: (ApplyPlan, String) -> Bool = { [unowned self] plan, path in
+        ApplyConfirmAlert.run(plan: plan, path: path, window: self.window)
+    }
 
     /// Set by the app: trigger the request + open the right System Settings pane.
     public var onGrantAccessibility: (() -> Void)?
@@ -656,21 +661,36 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         let base = engine.faithfulSkhd().bindings
         let previous = base.first { $0.actionID == "open-window-switcher" && $0.enabled }?.hotkey
         let next = ShortcutBindings.setting(base, action: "open-window-switcher", hotkey: hk)
-        let plan = engine.skhdApplyPlan(next)
-        if plan.needsConfirmation
-            && !ApplyConfirmAlert.run(plan: plan, path: engine.skhdConfigPath, window: window) {
+        // A file the save would refuse (malformed markers, unreadable) is reported
+        // before any dialog, and nothing is written.
+        let plan: ApplyPlan
+        do { plan = try engine.skhdApplyPlan(next) } catch {
+            showSwitcherSearchError(error)
+            switcherSearchRecorder.hotkey = previous
+            return
+        }
+        if plan.needsConfirmation && !confirmApply(plan, engine.skhdConfigPath) {
             switcherSearchRecorder.hotkey = previous
             return
         }
         do {
             try engine.saveSkhd(next)
         } catch {
-            NSLog("yabai-dockstack: saving the search switcher hotkey failed: \(error)")
+            showSwitcherSearchError(error)
             switcherSearchRecorder.hotkey = previous
             return
         }
+        syncSkhdManagementControls()   // clears an earlier error
         _ = engine.applySkhd()
         shortcutsPane?.setBinding(actionID: "open-window-switcher", hotkey: hk)
+    }
+
+    /// The search hotkey's write was refused: say why under the recorder.
+    private func showSwitcherSearchError(_ error: Error) {
+        NSLog("yabai-dockstack: saving the search switcher hotkey failed: \(error)")
+        switcherSearchHint.stringValue = error.localizedDescription
+        switcherSearchHint.textColor = .systemRed
+        switcherSearchHint.isHidden = false
     }
 
     private func syncSkhdManagementControls() {
