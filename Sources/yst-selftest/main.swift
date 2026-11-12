@@ -1320,6 +1320,14 @@ do {
     check(e.bindings.allSatisfy { !$0.enabled && $0.hotkey == nil } && e.others.isEmpty, "unmatched unbound")
 }
 
+print("ApplyConfirmAlert")
+do {
+    let none = ApplyConfirmAlert.informativeText(plan: ApplyPlan(regionExists: false, linesToComment: 0), path: "/tmp/rc")
+    let two = ApplyConfirmAlert.informativeText(plan: ApplyPlan(regionExists: false, linesToComment: 2), path: "/tmp/rc")
+    check(none == String(format: L10n.t("ui.apply.confirmBodyNewRegion"), "/tmp/rc"), "0 lines → new-region body")
+    check(two == String(format: L10n.t("ui.apply.confirmBody"), 2, "/tmp/rc") && two != none, ">0 lines → comment-out body")
+}
+
 print("")
 if failures == 0 { print("ALL SELF-TESTS PASSED") }
 else { print("\(failures) SELF-TEST(S) FAILED"); exit(1) }

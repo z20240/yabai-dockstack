@@ -9,12 +9,21 @@ public enum ApplyConfirmAlert {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = L10n.t("ui.apply.confirmTitle")
-        alert.informativeText = String(format: L10n.t("ui.apply.confirmBody"), plan.linesToComment,
-                                       (path as NSString).abbreviatingWithTildeInPath)
+        alert.informativeText = informativeText(plan: plan, path: path)
         alert.addButton(withTitle: L10n.t("ui.apply"))
         alert.addButton(withTitle: L10n.t("ui.cancel"))
         guard let window else { return alert.runModal() == .alertFirstButtonReturn }
         alert.beginSheetModal(for: window) { NSApp.stopModal(withCode: $0) }
         return NSApp.runModal(for: alert.window) == .alertFirstButtonReturn
+    }
+
+    /// The alert's body: "comment out N line(s)…" when Apply comments anything out,
+    /// otherwise "add dockstack's managed section to the end of <path>…".
+    public static func informativeText(plan: ApplyPlan, path: String) -> String {
+        let shown = (path as NSString).abbreviatingWithTildeInPath
+        guard plan.linesToComment > 0 else {
+            return String(format: L10n.t("ui.apply.confirmBodyNewRegion"), shown)
+        }
+        return String(format: L10n.t("ui.apply.confirmBody"), plan.linesToComment, shown)
     }
 }

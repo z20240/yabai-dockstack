@@ -174,7 +174,7 @@ public enum L10nStrings {
         "ui.yabai.colApp": "App",
         "ui.yabai.colMode": "Mode",
         "ui.keyboard.manageConfig": "Allow dockstack to edit skhdrc",
-        "ui.keyboard.managementHint": "Enable “Allow dockstack to edit skhdrc” in Keyboard settings to change these shortcuts. Your existing skhdrc is left untouched while this is off.",
+        "ui.keyboard.managementHint": "Read-only: this shows the shortcuts in your skhdrc. To change them, edit your skhdrc (Open in editor) or enable “Allow dockstack to edit skhdrc”. An existing dockstack-managed section in the file keeps applying.",
         "ui.yabai.manageConfig": "Allow dockstack to edit yabairc",
         "ui.yabai.managementHint": "Read-only: this shows what yabai is running now. To change it, edit your yabairc (Open in editor) or enable “Allow dockstack to edit yabairc”. An existing dockstack-managed section in the file keeps applying.",
         "ui.yabai.defaultLayout": "Default layout:",
@@ -194,9 +194,11 @@ public enum L10nStrings {
         "ui.rc.open": "Open in editor",
         "ui.rc.reload": "Reload",
         "ui.rc.missing": "%@ doesn't exist. Create it yourself, or allow dockstack to edit it.",
+        "ui.rc.createFailed": "Couldn't create %@.",
         "ui.rc.mismatch": "The running tool loads %@, not this file.",
         "ui.yabai.notRunning": "yabai isn't running — showing the config file",
         "ui.yabai.otherRules": "Other rules (%d)",
+        "ui.keyboard.otherShortcuts": "Other shortcuts (%d)",
         "ui.yabai.diff.field": "yabai is running %@; the file says %@",
         "ui.yabai.diff.autoPadding": "Auto padding is adjusting this value; your own setting is shown.",
         "ui.yabai.diff.liveOnly": "Not in the file (added at runtime)",
@@ -204,6 +206,7 @@ public enum L10nStrings {
         "ui.yabai.diff.modeDiffers": "yabai is running this rule as %@; the file says %@",
         "ui.apply.confirmTitle": "Update the config file?",
         "ui.apply.confirmBody": "This will comment out %d hand-written line(s) in %@ (never deleted) and write dockstack's managed section. A backup is saved as .bak.",
+        "ui.apply.confirmBodyNewRegion": "This will add dockstack's managed section to the end of %@. Nothing else in the file changes. A backup is saved as .bak.",
     ]
 
     public static let zhHant: [String: String] = [
@@ -373,7 +376,7 @@ public enum L10nStrings {
         "ui.yabai.colApp": "App",
         "ui.yabai.colMode": "模式",
         "ui.keyboard.manageConfig": "允許 dockstack 編輯 skhdrc",
-        "ui.keyboard.managementHint": "在鍵盤設定中啟用「允許 dockstack 編輯 skhdrc」即可變更快捷鍵。關閉時不會修改現有的 skhdrc。",
+        "ui.keyboard.managementHint": "唯讀：這裡顯示 skhdrc 中實際設定的快捷鍵。要變更，請自行編輯 skhdrc(在編輯器中開啟)，或啟用「允許 dockstack 編輯 skhdrc」。檔案中既有的 dockstack 管理區段仍會持續生效。",
         "ui.yabai.manageConfig": "允許 dockstack 編輯 yabairc",
         "ui.yabai.managementHint": "唯讀：這裡顯示 yabai 目前實際執行的設定。要變更，請自行編輯 yabairc(在編輯器中開啟)，或啟用「允許 dockstack 編輯 yabairc」。檔案中既有的 dockstack 管理區段仍會持續生效。",
         "ui.yabai.defaultLayout": "預設佈局:",
@@ -393,9 +396,11 @@ public enum L10nStrings {
         "ui.rc.open": "在編輯器中開啟",
         "ui.rc.reload": "重新載入",
         "ui.rc.missing": "%@ 不存在。請自行建立，或允許 dockstack 編輯它。",
+        "ui.rc.createFailed": "無法建立 %@。",
         "ui.rc.mismatch": "執行中的程式載入的是 %@，而不是這個檔案。",
         "ui.yabai.notRunning": "yabai 未執行 — 顯示設定檔內容",
         "ui.yabai.otherRules": "其他規則 (%d)",
+        "ui.keyboard.otherShortcuts": "其他快捷鍵 (%d)",
         "ui.yabai.diff.field": "yabai 正在使用 %@；檔案寫的是 %@",
         "ui.yabai.diff.autoPadding": "自動邊距正在調整此值；這裡顯示的是你自己的設定。",
         "ui.yabai.diff.liveOnly": "不在檔案中(執行時加入)",
@@ -403,6 +408,7 @@ public enum L10nStrings {
         "ui.yabai.diff.modeDiffers": "yabai 以「%@」執行此規則；檔案寫的是「%@」",
         "ui.apply.confirmTitle": "要更新設定檔嗎？",
         "ui.apply.confirmBody": "這會將 %2$@ 中 %1$d 行手寫設定註解掉(不會刪除)，並寫入 dockstack 管理的區段。備份會存為 .bak。",
+        "ui.apply.confirmBodyNewRegion": "這會在 %@ 的結尾加入 dockstack 管理的區段，檔案其他內容不會變更。備份會存為 .bak。",
     ]
 
     public static let ja: [String: String] = [
@@ -572,7 +578,7 @@ public enum L10nStrings {
         "ui.yabai.colApp": "アプリ",
         "ui.yabai.colMode": "モード",
         "ui.keyboard.manageConfig": "dockstack に skhdrc の編集を許可",
-        "ui.keyboard.managementHint": "ショートカットを変更するには、キーボード設定で「dockstack に skhdrc の編集を許可」を有効にしてください。無効の間は既存の skhdrc を変更しません。",
+        "ui.keyboard.managementHint": "読み取り専用：skhdrc に実際に設定されているショートカットを表示しています。変更するには skhdrc を編集する(エディタで開く)か、「dockstack に skhdrc の編集を許可」を有効にしてください。ファイル内の既存の dockstack 管理セクションは引き続き適用されます。",
         "ui.yabai.manageConfig": "dockstack に yabairc の編集を許可",
         "ui.yabai.managementHint": "読み取り専用：yabai が現在実行している設定を表示しています。変更するには yabairc を編集する(エディタで開く)か、「dockstack に yabairc の編集を許可」を有効にしてください。ファイル内の既存の dockstack 管理セクションは引き続き適用されます。",
         "ui.yabai.defaultLayout": "デフォルトレイアウト:",
@@ -592,9 +598,11 @@ public enum L10nStrings {
         "ui.rc.open": "エディタで開く",
         "ui.rc.reload": "再読み込み",
         "ui.rc.missing": "%@ が存在しません。自分で作成するか、dockstack に編集を許可してください。",
+        "ui.rc.createFailed": "%@ を作成できませんでした。",
         "ui.rc.mismatch": "実行中のツールが読み込んでいるのは %@ で、このファイルではありません。",
         "ui.yabai.notRunning": "yabai が実行されていません — 設定ファイルの内容を表示しています",
         "ui.yabai.otherRules": "その他のルール (%d)",
+        "ui.keyboard.otherShortcuts": "その他のショートカット (%d)",
         "ui.yabai.diff.field": "yabai は %@ で動作中、ファイルの値は %@ です",
         "ui.yabai.diff.autoPadding": "自動余白がこの値を調整中のため、ご自身の設定値を表示しています。",
         "ui.yabai.diff.liveOnly": "ファイルにありません(実行時に追加)",
@@ -602,5 +610,6 @@ public enum L10nStrings {
         "ui.yabai.diff.modeDiffers": "yabai はこのルールを「%@」で実行中、ファイルでは「%@」です",
         "ui.apply.confirmTitle": "設定ファイルを更新しますか？",
         "ui.apply.confirmBody": "%2$@ 内の手書きの %1$d 行をコメントアウトし(削除はしません)、dockstack の管理セクションを書き込みます。バックアップは .bak として保存されます。",
+        "ui.apply.confirmBodyNewRegion": "%@ の末尾に dockstack の管理セクションを追加します。ファイルの他の部分は変更されません。バックアップは .bak として保存されます。",
     ]
 }

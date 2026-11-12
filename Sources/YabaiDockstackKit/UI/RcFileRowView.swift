@@ -152,16 +152,17 @@ public final class RcFileRowView: NSView {
                                        (path as NSString).abbreviatingWithTildeInPath))
                 return
             }
+            let createFailed = String(format: L10n.t("ui.rc.createFailed"),
+                                      (path as NSString).abbreviatingWithTildeInPath)
             do {
                 try fm.createDirectory(atPath: (path as NSString).deletingLastPathComponent,
                                        withIntermediateDirectories: true)
                 guard fm.createFile(atPath: path, contents: Data()) else {
-                    onStatus(false, String(format: L10n.t("ui.rc.missing"),
-                                           (path as NSString).abbreviatingWithTildeInPath))
+                    onStatus(false, createFailed)
                     return
                 }
             } catch {
-                onStatus(false, error.localizedDescription)
+                onStatus(false, createFailed + " " + error.localizedDescription)
                 return
             }
         }

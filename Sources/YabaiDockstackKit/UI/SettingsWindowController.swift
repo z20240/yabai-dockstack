@@ -87,7 +87,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     /// Set by the app BEFORE calling show() — enables the yabai and Keyboard tabs.
     public var configEngine: ConfigEngine?
-    public var skhdRawPath: String?
     /// Live yabai state, rc path detection/overrides for the rc-backed panes.
     public var rcSources: RcSources = .none
 
@@ -435,7 +434,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         keyboardItem.label = L10n.t("ui.tab.keyboard")
         if let engine = configEngine {
             engine.manageSkhdConfig = config.manageSkhdConfig
-            let pane = ShortcutsPaneView(engine: engine, rawFilePath: skhdRawPath ?? "") { [weak self] enabled in
+            let pane = ShortcutsPaneView(engine: engine, sources: rcSources) { [weak self] enabled in
                 guard let self else { return }
                 self.config.manageSkhdConfig = enabled
                 self.syncSkhdManagementControls()

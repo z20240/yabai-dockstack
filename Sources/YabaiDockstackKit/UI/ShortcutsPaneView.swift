@@ -2,22 +2,39 @@ import AppKit
 
 /// Keyboard Shortcuts pane: a Raycast-style grouped list of skhd bindings.
 /// Each row has an enable checkbox, an action title, and a RecordHotkeyControl.
-/// Bindings are looked up by actionID (never by row index) so the list can be
-/// rebuilt without losing the in-memory state.
+/// Always shows what the skhdrc actually binds (`FaithfulSkhd`: catalog actions found
+/// in the whole file, others unbound), plus a read-only "Other shortcuts (N)" list of
+/// every line it can't represent. Read-only unless "Allow dockstack to edit skhdrc" is
+/// on; then those bindings are the editable start. Bindings are looked up by actionID
+/// (never by row index); the rows are built once and synced in place.
 public final class ShortcutsPaneView: NSView {
     // MARK: - State
 
     private let engine: ConfigEngine
-    private let rawFilePath: String
-    private var bindings: [ShortcutBinding]
+    private let sources: RcSources
+    private var bindings: [ShortcutBinding] = []
+    /// The faithful bindings last loaded; edits are "unsaved" while they differ from it.
+    private var baseline: [ShortcutBinding] = []
+    private var otherLines: [String] = []
     private let onManagementChange: (Bool) -> Void
     private let managementCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let managementHint = NSTextField(wrappingLabelWithString: "")
     private var managedViews: [NSView] = []
+    /// nil until the first updateManagementEnabled (from init).
+    private var managementEnabled: Bool?
+    private var rcRow: RcFileRowView!
+    private let otherShortcutsList = CollapsibleListView(titleKey: "ui.keyboard.otherShortcuts")
 
-    // Per-actionID refs for cheap refreshConflicts() updates
+    // Per-actionID refs for in-place syncing and cheap refreshConflicts() updates
     private var titleLabels: [String: NSTextField] = [:]
     private var checkboxes: [String: NSButton] = [:]
+    private var recorders: [String: RecordHotkeyControl] = [:]
+
+    /// Asked before an Apply that comments out hand-written lines or adds the managed
+    /// section for the first time. Test seam; defaults to the confirmation alert.
+    lazy var confirm: (ApplyPlan, String) -> Bool = { [unowned self] plan, path in
+        ApplyConfirmAlert.run(plan: plan, path: path, window: self.window)
+    }
 
     // MARK: - Subviews
 
@@ -37,14 +54,14 @@ public final class ShortcutsPaneView: NSView {
 
     // MARK: - Init
 
-    public init(engine: ConfigEngine, rawFilePath: String,
+    public init(engine: ConfigEngine, sources: RcSources = .none,
                 onManagementChange: @escaping (Bool) -> Void = { _ in }) {
         self.onManagementChange = onManagementChange
         self.engine = engine
-        self.rawFilePath = rawFilePath
-        self.bindings = engine.loadBindingsOrDefault()
+        self.sources = sources
         super.init(frame: .zero)
         buildUI()
+        reload(force: true)
         updateManagementEnabled(engine.manageSkhdConfig)
     }
 
@@ -53,18 +70,30 @@ public final class ShortcutsPaneView: NSView {
     // MARK: - UI Setup
 
     private func buildUI() {
+        // rc file row: forwards path changes, then re-reads the (possibly new) file.
+        var rowSources = sources
+        let forward = sources.onPathChange
+        rowSources.onPathChange = { [weak self] tool, path in
+            forward(tool, path)
+            self?.reload(force: true)
+        }
+        rcRow = RcFileRowView(tool: .skhd, sources: rowSources,
+                              canCreateFile: { [weak self] in self?.engine.manageSkhdConfig ?? false },
+                              onStatus: { [weak self] ok, msg in self?.showStatus(ok, msg) })
+
         managementCheck.title = L10n.t("ui.keyboard.manageConfig")
         managementCheck.target = self
         managementCheck.action = #selector(managementChanged)
         managementHint.stringValue = L10n.t("ui.keyboard.managementHint")
         managementHint.font = .systemFont(ofSize: 11)
         managementHint.textColor = .secondaryLabelColor
-        let managementHeader = NSStackView(views: [managementCheck, managementHint])
+        let managementHeader = NSStackView(views: [rcRow, managementCheck, managementHint])
         managementHeader.orientation = .vertical
         managementHeader.alignment = .leading
         managementHeader.spacing = 6
         managementHeader.translatesAutoresizingMaskIntoConstraints = false
         managementHint.widthAnchor.constraint(equalTo: managementHeader.widthAnchor).isActive = true
+        rcRow.widthAnchor.constraint(equalTo: managementHeader.widthAnchor).isActive = true
         // Vertical stack that holds section headers + row views
         listStack = NSStackView()
         listStack.orientation = .vertical
@@ -72,16 +101,26 @@ public final class ShortcutsPaneView: NSView {
         listStack.spacing = 4
         listStack.translatesAutoresizingMaskIntoConstraints = false
 
+        // The list, then the read-only "Other shortcuts" under it. Kept outside
+        // listStack so disabling the rows doesn't disable its disclosure.
+        let contentStack = NSStackView(views: [listStack, otherShortcutsList])
+        contentStack.orientation = .vertical
+        contentStack.alignment = .leading
+        contentStack.spacing = 14
+        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        listStack.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        otherShortcutsList.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+
         // Document view for the scroll view — flipped so the list opens at the
         // top (GENERAL) instead of scrolled to the bottom.
         let scrollContent = FlippedScrollContent()
         scrollContent.translatesAutoresizingMaskIntoConstraints = false
-        scrollContent.addSubview(listStack)
+        scrollContent.addSubview(contentStack)
         NSLayoutConstraint.activate([
-            listStack.topAnchor.constraint(equalTo: scrollContent.topAnchor, constant: 8),
-            listStack.leadingAnchor.constraint(equalTo: scrollContent.leadingAnchor, constant: 12),
-            listStack.trailingAnchor.constraint(equalTo: scrollContent.trailingAnchor, constant: -12),
-            listStack.bottomAnchor.constraint(equalTo: scrollContent.bottomAnchor, constant: -8),
+            contentStack.topAnchor.constraint(equalTo: scrollContent.topAnchor, constant: 8),
+            contentStack.leadingAnchor.constraint(equalTo: scrollContent.leadingAnchor, constant: 12),
+            contentStack.trailingAnchor.constraint(equalTo: scrollContent.trailingAnchor, constant: -12),
+            contentStack.bottomAnchor.constraint(equalTo: scrollContent.bottomAnchor, constant: -8),
         ])
 
         let scrollView = NSScrollView()
@@ -104,13 +143,14 @@ public final class ShortcutsPaneView: NSView {
         let importButton = NSButton(title: L10n.t("ui.importExisting"), target: self, action: #selector(importTapped))
         importButton.bezelStyle = .rounded
 
-        let editButton = NSButton(title: L10n.t("ui.editRaw"), target: self, action: #selector(editRawTapped))
-        editButton.bezelStyle = .rounded
-
         let resetButton = NSButton(title: L10n.t("ui.resetDefaults"), target: self, action: #selector(resetTapped))
         resetButton.bezelStyle = .rounded
 
-        let bottomBar = NSStackView(views: [applyButton, importButton, editButton, resetButton, statusLabel])
+        // Re-reads the file; never writes, so always enabled.
+        let reloadButton = NSButton(title: L10n.t("ui.rc.reload"), target: self, action: #selector(reloadTapped))
+        reloadButton.bezelStyle = .rounded
+
+        let bottomBar = NSStackView(views: [applyButton, importButton, resetButton, reloadButton, statusLabel])
         bottomBar.orientation = .horizontal
         bottomBar.spacing = 8
         bottomBar.translatesAutoresizingMaskIntoConstraints = false
@@ -142,21 +182,35 @@ public final class ShortcutsPaneView: NSView {
             bottomBar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             bottomBar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
         ])
-        managedViews = [listStack, bottomBar]
+        // rc-backed editors only: the rc row, "Other shortcuts" and Reload never
+        // write the rc file, so they stay usable in read-only mode.
+        managedViews = [listStack, applyButton, importButton, resetButton]
     }
 
+    /// Enable/disable editing. Turning it off discards unsaved edits and reloads the
+    /// faithful view; turning it on keeps the shown bindings as the starting point.
+    /// Never touches the rc file.
     public func updateManagementEnabled(_ enabled: Bool) {
         // Stop active editing and shortcut recording when management is disabled.
         if !enabled { window?.makeFirstResponder(nil) }
+        let wasEnabled = managementEnabled
+        managementEnabled = enabled
         engine.manageSkhdConfig = enabled
         managementCheck.state = enabled ? .on : .off
         managementHint.isHidden = enabled
         func update(_ view: NSView) {
+            // Plain labels (titles, section headers) keep their look and conflict colour.
+            if let label = view as? NSTextField, !label.isEditable { return }
             (view as? RecordHotkeyControl)?.isEnabled = enabled
             (view as? NSControl)?.isEnabled = enabled
             view.subviews.forEach(update)
         }
         managedViews.forEach(update)
+        if wasEnabled == true && !enabled {
+            reload(force: true)
+        } else {
+            refreshOtherShortcuts()
+        }
     }
 
     @objc private func managementChanged() {
@@ -165,9 +219,54 @@ public final class ShortcutsPaneView: NSView {
         onManagementChange(enabled)
     }
 
+    // MARK: - Reload
+
+    /// True when the rows hold bindings that differ from the last faithful load.
+    public var hasUnsavedEdits: Bool { bindings != baseline }
+
+    /// Re-read the skhdrc and show its bindings. With `force: false` this is skipped
+    /// while there are unsaved edits. Never writes anything.
+    public func reload(force: Bool) {
+        if !force && hasUnsavedEdits { return }
+        let view = engine.faithfulSkhd()
+        bindings = view.bindings
+        baseline = view.bindings
+        otherLines = view.others
+        rcRow.update(effectivePath: engine.skhdConfigPath)
+        syncRows()
+        refreshOtherShortcuts()
+    }
+
+    @objc private func reloadTapped() { reload(force: true) }
+
+    /// Set one action's hotkey (nil unbinds it) without touching the other rows'
+    /// unsaved edits — for a change already written elsewhere (the Switcher tab's
+    /// search hotkey), so the row's saved value moves with it.
+    public func setBinding(actionID: String, hotkey: Hotkey?) {
+        bindings = ShortcutBindings.setting(bindings, action: actionID, hotkey: hotkey)
+        baseline = ShortcutBindings.setting(baseline, action: actionID, hotkey: hotkey)
+        syncRows()
+    }
+
+    /// "Other shortcuts" is a read-only view of what can't be edited here; not-allow only.
+    private func refreshOtherShortcuts() {
+        otherShortcutsList.setItems(otherLines)
+        if engine.manageSkhdConfig { otherShortcutsList.isHidden = true }
+    }
+
+    /// Push `bindings` into the existing rows' checkboxes and recorders.
+    private func syncRows() {
+        for (actionID, recorder) in recorders {
+            let b = bindings.first { $0.actionID == actionID }
+            recorder.hotkey = b?.hotkey
+            checkboxes[actionID]?.state = b?.enabled == true ? .on : .off
+        }
+        refreshConflicts()
+    }
+
     // MARK: - List Building
 
-    /// Rebuild the entire grouped list from the current `bindings`.
+    /// Build the grouped list (one row per catalog action) from the current `bindings`.
     private func buildList() {
         // Tear down old rows
         for view in listStack.arrangedSubviews {
@@ -176,6 +275,7 @@ public final class ShortcutsPaneView: NSView {
         }
         titleLabels.removeAll()
         checkboxes.removeAll()
+        recorders.removeAll()
 
         let sections = ShortcutSections.build(bindings)
         for (sectionIndex, section) in sections.enumerated() {
@@ -239,6 +339,8 @@ public final class ShortcutsPaneView: NSView {
         let recorder = RecordHotkeyControl(frame: .zero)
         recorder.isEnabled = engine.manageSkhdConfig
         recorder.hotkey = row.binding.hotkey
+        recorder.identifier = NSUserInterfaceItemIdentifier(actionID)
+        recorders[actionID] = recorder
         recorder.onChange = { [weak self] newHotkey in
             guard let self, self.engine.manageSkhdConfig else { return }
             guard let idx = self.bindings.firstIndex(where: { $0.actionID == actionID }) else { return }
@@ -285,37 +387,31 @@ public final class ShortcutsPaneView: NSView {
 
     @objc private func applyTapped() {
         guard engine.manageSkhdConfig else { return }
+        window?.makeFirstResponder(nil)
+        // Commenting out hand-written lines (or adding the managed section for the
+        // first time) needs the user's OK; cancelling writes nothing.
+        let plan = engine.skhdApplyPlan(bindings)
+        if plan.needsConfirmation && !confirm(plan, engine.skhdConfigPath) { return }
         do {
             try engine.saveSkhd(bindings)
-            let r = engine.applySkhd()
-            showStatus(r.ok, r.ok ? L10n.t("ui.status.reloadedSkhd") : r.output)
         } catch {
             showStatus(false, error.localizedDescription)
+            return
         }
-    }
-
-    @objc private func editRawTapped() {
-        guard engine.manageSkhdConfig else { return }
-        // `open -t` opens in the default GUI text editor (TextEdit, or whatever the
-        // user set for the text role) instead of the file's default app — which for
-        // dotfiles like ~/.skhdrc is often a terminal editor.
-        let path = (rawFilePath as NSString).expandingTildeInPath
-        guard !path.isEmpty else { return }
-        if !FileManager.default.fileExists(atPath: path) {
-            FileManager.default.createFile(atPath: path, contents: Data(), attributes: nil)
-        }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        p.arguments = ["-t", path]
-        try? p.run()
+        baseline = bindings
+        let r = engine.applySkhd()
+        showStatus(r.ok, r.ok ? L10n.t("ui.status.reloadedSkhd") : r.output)
     }
 
     @objc private func importTapped() {
         guard engine.manageSkhdConfig else { return }
+        window?.makeFirstResponder(nil)
         do {
             let (n, b) = try engine.importSkhd(base: bindings)
+            // The file's managed section now holds exactly these bindings.
             bindings = b
-            buildList()
+            baseline = b
+            syncRows()
             showStatus(true, n > 0 ? String(format: L10n.t("ui.status.importedBindings"), n) : L10n.t("ui.status.nothingToImport"))
         } catch {
             showStatus(false, error.localizedDescription)
@@ -325,7 +421,7 @@ public final class ShortcutsPaneView: NSView {
     @objc private func resetTapped() {
         guard engine.manageSkhdConfig else { return }
         bindings = DefaultTemplate.defaultBindings()
-        buildList()
+        syncRows()
         // Do NOT auto-apply — user must press Apply
     }
 
