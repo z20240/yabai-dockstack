@@ -118,6 +118,19 @@ public final class YabaiClient {
         AutoPadding.parse(run(["-m", "config", key]).map { String(decoding: $0, as: UTF8.self) })
     }
 
+    /// What yabai is running now: layout, paddings/gap and `rule --list`. nil when
+    /// yabai isn't reachable (no layout answer). Runs 7 short `yabai -m` calls.
+    public func readLiveState() -> YabaiLiveState? {
+        guard let layout = run(["-m", "config", "layout"])
+                .map({ String(decoding: $0, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) }),
+              !layout.isEmpty else { return nil }
+        return YabaiLiveState(layout: layout,
+                              top: configInt("top_padding"), bottom: configInt("bottom_padding"),
+                              left: configInt("left_padding"), right: configInt("right_padding"),
+                              gap: configInt("window_gap"),
+                              rules: run(["-m", "rule", "--list"]).map(LiveRule.decodeList) ?? [])
+    }
+
     public func setConfig(_ key: String, _ value: Int) {
         _ = run(["-m", "config", key, String(value)])
     }

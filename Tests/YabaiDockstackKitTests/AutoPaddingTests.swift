@@ -50,6 +50,16 @@ final class AutoPaddingTests: XCTestCase {
         XCTAssertTrue(calls.contains("-m config top_padding 10"), calls)
     }
 
+    func testUserOriginalOnlyWhileEnabled() throws {
+        let (path, _) = try fakeYabai()
+        let c = AutoPaddingController(client: YabaiClient(yabaiPath: path))
+        XCTAssertNil(c.userOriginal)
+        c.update(enabled: true, cellSize: 32, stripEnabled: true, stripScale: 0.8)
+        XCTAssertEqual(c.userOriginal, Paddings(left: 10, right: 10, top: 10))
+        c.update(enabled: false, cellSize: 32, stripEnabled: true, stripScale: 0.8)
+        XCTAssertNil(c.userOriginal)
+    }
+
     func testConfigDefaultsOff() {
         XCTAssertFalse(AppConfig.defaults.autoPadding)
         XCTAssertFalse(AppConfig.load(from: #"{"style":"flag"}"#.data(using: .utf8)).autoPadding)
