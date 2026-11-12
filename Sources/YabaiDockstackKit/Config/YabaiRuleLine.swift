@@ -16,22 +16,25 @@ public enum YabaiRuleLine {
         guard isRuleAdd(line) else { return nil }
         let t = line.trimmingCharacters(in: .whitespaces)
         var kv: [String: String] = [:]
-        for tok in tokenize(String(t.dropFirst(prefix.count))) {
+        guard let toks = tokenize(String(t.dropFirst(prefix.count))) else { return nil }
+        for tok in toks {
             guard let eq = tok.firstIndex(of: "=") else { return nil }
             let key = String(tok[..<eq])
             guard ["app", "manage", "sub-layer"].contains(key), kv[key] == nil else { return nil }
             kv[key] = String(tok[tok.index(after: eq)...])
         }
         guard let app = kv["app"], !app.isEmpty, app != ".*", let manage = kv["manage"] else { return nil }
-        switch manage {
-        case "on": return WindowRule(app: app, mode: .manage)
-        case "off": return WindowRule(app: app, mode: kv["sub-layer"] == "above" ? .pin : .float)
+        let sub = kv["sub-layer"]
+        switch (manage, sub) {
+        case ("on", nil), ("on", "normal"): return WindowRule(app: app, mode: .manage)
+        case ("off", nil), ("off", "normal"): return WindowRule(app: app, mode: .float)
+        case ("off", "above"): return WindowRule(app: app, mode: .pin)
         default: return nil
         }
     }
 
     /// Whitespace-split; double quotes group (and are removed).
-    private static func tokenize(_ s: String) -> [String] {
+    private static func tokenize(_ s: String) -> [String]? {
         var toks: [String] = [], cur = "", inQ = false, has = false
         for c in s {
             if c == "\"" { inQ.toggle(); has = true }
@@ -39,6 +42,7 @@ public enum YabaiRuleLine {
                 if has { toks.append(cur); cur = ""; has = false }
             } else { cur.append(c); has = true }
         }
+        if inQ { return nil }
         if has { toks.append(cur) }
         return toks
     }
