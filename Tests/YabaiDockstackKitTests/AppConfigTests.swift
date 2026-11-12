@@ -24,6 +24,17 @@ final class AppConfigTests: XCTestCase {
         config.manageYabaiConfig = false
         XCTAssertFalse(AppConfig.load(from: try JSONEncoder().encode(config)).manageYabaiConfig)
     }
+    func testLoadResultReportsWhetherDataDecoded() {
+        XCTAssertFalse(AppConfig.loadResult(from: Data(#"{"cellSize":24"#.utf8)).decoded)
+        XCTAssertFalse(AppConfig.loadResult(from: Data(#"{"cellSize":"x"}"#.utf8)).decoded)
+        XCTAssertFalse(AppConfig.loadResult(from: nil).decoded)
+        let ok = AppConfig.loadResult(from: Data(#"{"cellSize":24}"#.utf8))
+        XCTAssertTrue(ok.decoded)
+        XCTAssertEqual(ok.config.cellSize, 24)
+        XCTAssertEqual(AppConfig.loadResult(from: Data(#"{"cellSize":"x"}"#.utf8)).config.cellSize,
+                       AppConfig.defaults.cellSize)
+    }
+
     func testDefaultsWhenNil() {
         let c = AppConfig.load(from: nil)
         XCTAssertEqual(c.style, .icon)

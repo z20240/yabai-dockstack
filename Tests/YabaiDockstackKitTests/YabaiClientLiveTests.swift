@@ -11,6 +11,7 @@ final class YabaiClientLiveTests: XCTestCase {
     private func fakeYabai() throws -> String {
         let dir = NSTemporaryDirectory() + "fyl-\(UUID().uuidString)"
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(atPath: dir) }
         let path = dir + "/yabai"
         let script = """
         #!/bin/sh

@@ -1271,6 +1271,10 @@ do {
     var c2 = AppConfig.load(from: d2)
     let r2 = c2.migrateManagement(presentKeys: AppConfig.presentKeys(in: d2), hasYabaiRegion: true, hasSkhdRegion: true)
     check(!r2 && !c2.manageYabaiConfig && !c2.manageSkhdConfig, "explicit false respected")
+    check(!AppConfig.loadResult(from: Data(#"{"cellSize":24"#.utf8)).decoded, "corrupt JSON → not decoded")
+    check(!AppConfig.loadResult(from: Data(#"{"cellSize":"x"}"#.utf8)).decoded, "mistyped value → not decoded")
+    let lr = AppConfig.loadResult(from: Data(#"{"cellSize":24}"#.utf8))
+    check(lr.decoded && lr.config.cellSize == 24, "valid partial JSON → decoded")
 }
 
 print("YabaiRuleLine")
