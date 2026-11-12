@@ -269,6 +269,56 @@ final class YabaiSettingsPaneTests: XCTestCase {
         XCTAssertFalse(row.showsMismatchWarning)
     }
 
+    // MARK: - Final review fixes
+
+    private func layoutControl(_ pane: NSView) throws -> NSSegmentedControl {
+        try XCTUnwrap(descendants(pane).compactMap { $0 as? NSSegmentedControl }.first)
+    }
+
+    /// I2: yabai runs a layout the panel can't represent (stack) → no segment selected,
+    /// a "!" naming it, and Apply refuses (no dialog, no write) until a layout is picked.
+    @MainActor
+    func testUnrepresentedLayoutBlocksApplyUntilPicked() throws {
+        _ = NSApplication.shared
+        let text = "yabai -m config window_gap 6\n"
+        let (engine, path) = try makeEngine(fileText: text, allow: true)
+        let pane = YabaiSettingsPaneView(engine: engine, sources: sources(live: YabaiLiveState(layout: "stack", gap: 6)))
+        let seg = try layoutControl(pane)
+        XCTAssertEqual(seg.selectedSegment, -1)
+        XCTAssertTrue(badges(pane).contains { $0.toolTip?.contains("stack") == true })
+        XCTAssertFalse(pane.hasUnsavedEdits)
+        var asked = false
+        pane.confirm = { _, _ in asked = true; return false }
+        try button(pane, "ui.apply").performClick(nil)
+        XCTAssertFalse(asked)
+        XCTAssertEqual(try String(contentsOfFile: path, encoding: .utf8), text)
+        XCTAssertTrue(descendants(pane).contains {
+            ($0 as? NSTextField)?.stringValue == L10n.t("ui.yabai.layoutUnrepresentedApply")
+        })
+        // Import writes the managed section (layout included), so it refuses too.
+        try button(pane, "ui.importExisting").performClick(nil)
+        XCTAssertEqual(try String(contentsOfFile: path, encoding: .utf8), text)
+        // Picking a layout explicitly unblocks Apply.
+        seg.selectedSegment = 0
+        _ = seg.sendAction(seg.action, to: seg.target)
+        XCTAssertTrue(pane.hasUnsavedEdits)
+        try button(pane, "ui.apply").performClick(nil)
+        XCTAssertTrue(asked)
+    }
+
+    /// M1: after Import the panel holds exactly what the region now says.
+    @MainActor
+    func testImportUpdatesBaseline() throws {
+        _ = NSApplication.shared
+        let (engine, path) = try makeEngine(fileText: "yabai -m config window_gap 6\nyabai -m config top_padding 3\n", allow: true)
+        // yabai runs gap 10, so the import (file says 6) changes what the panel shows.
+        let pane = YabaiSettingsPaneView(engine: engine, sources: sources(live: YabaiLiveState(layout: "bsp", gap: 10)))
+        try button(pane, "ui.importExisting").performClick(nil)
+        XCTAssertEqual(try gapField(pane).stringValue, "6")
+        XCTAssertNotNil(ManagedRegion.extract(from: try String(contentsOfFile: path, encoding: .utf8)))
+        XCTAssertFalse(pane.hasUnsavedEdits)
+    }
+
     /// M3: malformed markers are reported before any confirmation dialog.
     @MainActor
     func testMalformedMarkersReportedBeforeDialog() throws {
